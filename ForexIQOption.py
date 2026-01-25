@@ -115,6 +115,18 @@ def is_market_open(asset_name):
         
     return True
 
+def get_real_spread(api, iq_ticker, instrument_type="forex"):
+    try:
+        # Recupera i dati in tempo reale per lo strumento
+        # 'get_realtime_candles' o 'get_all_realtime_candles' a seconda della versione
+        # Qui usiamo un approccio basato sul filtraggio dei dati live
+        data = api.get_orderbook(iq_ticker, 1) # Chiede il primo livello del book
+        ask = float(data['asks'][0][0])
+        bid = float(data['bids'][0][0])
+        return ask - bid
+    except:
+        return SIMULATED_SPREAD # Fallback se l'API non risponde
+
 def play_notification_sound():
     audio_html = """
         <audio autoplay><source src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" type="audio/mpeg"></audio>
@@ -432,27 +444,41 @@ def run_sentinel(api_conn):
                 if not is_running and not recent_signals:
                     p_unit, p_fmt, p_mult, a_type = get_asset_params(label)
                     rischio_euro = current_balance * (current_risk / 100) 
-                    
+
+                    # Calcolo spread reale se connesso
+                    current_spread = SIMULATED_SPREAD
+
+                    if api_conn:
+                        current_spread = get_real_spread(api_conn, iq_ticker, instrument_type)
+
                     if s_action == "COMPRA":
-                        entry_with_spread = curr_v * (1 + SIMULATED_SPREAD)
+                        entry_with_spread = curr_v + current_spread
                         distanza_sl = entry_with_spread * 0.002 
                         sl_prezzo = entry_with_spread - distanza_sl
                         tp_prezzo = entry_with_spread + (distanza_sl * 1.5)
                         side_iq = "buy"
                     else:
-                        entry_with_spread = curr_v * (1 - SIMULATED_SPREAD)
+                        entry_with_spread = curr_v - current_spread
                         distanza_sl = entry_with_spread * 0.002
                         sl_prezzo = entry_with_spread + distanza_sl
                         tp_prezzo = entry_with_spread - (distanza_sl * 1.5)
                         side_iq = "sell"
                     
+                    costo_spread_apertura = inv_effettivo_calcolato * (current_spread / entry_with_spread)
+
                     percentuale_distanza_sl = (distanza_sl / entry_with_spread)
                     inv_effettivo_calcolato = rischio_euro / percentuale_distanza_sl
                     costo_spread_apertura = inv_effettivo_calcolato * SIMULATED_SPREAD
 
                     mercato_aperto = is_market_open(label)
-                    iq_order_id = "DEMO-ID"
-                    
+
+                    if check:
+                        iq_order_id = str(order_id) # Salva l'ID reale ricevuto dal broker
+                        debug_list.append(f"✅ Ordine IQ Eseguito: {iq_order_id}")
+                    else:
+                        iq_order_id = "ERROR" # Evita che resti "DEMO-ID"
+                        stato_iniziale = '❌ ERRORE API'
+
                     if not mercato_aperto:
                         stato_iniziale = '⛔ CHIUSO'
                         inv_effettivo = "0.00"
@@ -809,10 +835,16 @@ st.sidebar.markdown("---")
 
 # --- 5. ESECUZIONE MOTORE ---
 if st.session_state.get('iq_api'):
-    # 1. Cerca nuove opportunità
-    run_sentinel(st.session_state['iq_api'])
-    # 2. Aggiorna immediatamente gli stop loss di quelle aperte
+    # Prima controlliamo lo stato dei trade esistenti (Trailing Stop)
     update_signal_outcomes(st.session_state['iq_api'])
+    
+    # Poi cerchiamo nuovi segnali
+    run_sentinel(st.session_state['iq_api'])
+    
+    # Se è stato appena aperto un trade, facciamo un secondo check veloce
+    # per inizializzare subito il monitoraggio senza aspettare 60 secondi
+    if st.session_state.get('last_alert'):
+        update_signal_outcomes(st.session_state['iq_api'])
 
 # --- 6. POPUP ALERT ---
 if st.session_state.get('last_alert'):
