@@ -56,28 +56,14 @@ asset_map = {
     "USDCHF": {"yf": "USDCHF=X", "iq": "USDCHF"},
     "NZDUSD": {"yf": "NZDUSD=X", "iq": "NZDUSD"},
     # Crypto su IQ Option spesso hanno nomi diversi o sono CFD
-    "BTC-USD": {"yf": "BTC-USD", "iq": "BTCUSD"},
-    "ETH-USD": {"yf": "ETH-USD", "iq": "ETHUSD"}
+    "BTC-USD": {"yf": "BTC-USD", "iq": "BITCOIN"},
+    "ETH-USD": {"yf": "ETH-USD", "iq": "ETHEREUM"}
 }
 
 # Refresh automatico ogni 60 secondi
 st_autorefresh(interval=60 * 1000, key="sentinel_refresh")
 
 # --- 2. FUNZIONI TECNICHE ---
-
-def init_iq_session(email, password):
-    """Inizializza la connessione a IQ Option"""
-    try:
-        api = IQ_Option(email, password)
-        check, reason = api.connect()
-        if check:
-            api.change_balance("PRACTICE") # Forza Conto Practice
-            return api, "Connesso"
-        else:
-            return None, f"Errore: {reason}"
-    except Exception as e:
-        return None, f"Exception: {str(e)}"
-
 def save_history_permanently():
     """Salva la cronologia attuale su un file fisico CSV"""
     try:
@@ -176,9 +162,9 @@ def get_session_status():
         return {"Tokyo 🇯🇵": False, "Londra 🇬🇧": False, "New York 🇺🇸": False}
 
     sessions = {
-        "Tokyo 🇯🇵": (time(0,0), time(9,0)), 
-        "Londra 🇬🇧": (time(9,0), time(18,0)), 
-        "New York 🇺🇸": (time(14,0), time(23,0))
+        "Tokyo 🇯🇵": (datetime.time(0,0), datetime.time(9,0)), 
+        "Londra 🇬🇧": (datetime.time(9,0), datetime.time(18,0)), 
+        "New York 🇺🇸": (datetime.time(14,0), datetime.time(23,0))
     }
     return {name: start <= now_time <= end for name, (start, end) in sessions.items()}
 
@@ -491,7 +477,7 @@ def run_sentinel(api_conn):
                                 instrument_type = "crypto" if "BTC" in label or "ETH" in label else "forex"
                                 
                                 # Tentativo di acquisto
-                                # check, order_id = api_conn.buy(inv_effettivo_calcolato, iq_ticker, side_iq, 1) # Sintassi semplificata per binaria
+                                #check, order_id = api_conn.buy(inv_effettivo_calcolato, iq_ticker, side_iq, 1) # Sintassi semplificata per binaria
                                 # Sintassi per FOREX/CFD (richiede buy_order)
                                 check, order_id = api_conn.buy_order(
                                     instrument_type=instrument_type, 
@@ -617,33 +603,6 @@ if api and api.check_connect():
     st.sidebar.metric("Saldo attuale", f"{api.get_balance():.2f} {api.get_currency()}")
 else:
     st.sidebar.warning("🔴 Disconnesso")
-
-# Sidebar per il Login
-st.sidebar.header("Credenziali")
-email = st.sidebar.text_input("Email IQ Option")
-password = st.sidebar.text_input("Password IQ Option", type="password")
-scelta_conto = st.sidebar.selectbox("Tipo Conto", ["PRACTICE", "REAL"])
-
-if st.sidebar.button("🔑 IQ Option Login"):
-    if email and password:
-        Iq = IQ_Option(email, password)
-        check, reason = Iq.connect()
-        
-        if check:
-            st.sidebar.success("Connesso con successo!")
-            Iq.change_balance(scelta_conto)
-            st.write(f"Saldo attuale: {Iq.get_balance()} {Iq.get_currency()}")
-        else:
-            st.sidebar.error(f"Errore: {reason}")
-    else:
-        st.sidebar.warning("Inserisci email e password")
-
-status_color = "green" if st.session_state['iq_status'] == "Connesso" else "red"
-st.sidebar.markdown(f"Status: **:{status_color}[{st.session_state['iq_status']}]**")
-
-# --- ESECUZIONE AGGIORNAMENTO DATI ---
-# Passiamo l'oggetto API per verificare i trade
-update_signal_outcomes(st.session_state['iq_api'])
 
 def get_equity_data():
     initial_balance = st.session_state.get('balance_val', 1000)
@@ -848,9 +807,12 @@ with st.sidebar.popover("🗑️ **Reset Cronologia**"):
 
 st.sidebar.markdown("---")
 
-# --- 5. ESECUZIONE SENTINEL ---
-if 'signal_history' in st.session_state:
+# --- 5. ESECUZIONE MOTORE ---
+if st.session_state.get('iq_api'):
+    # 1. Cerca nuove opportunità
     run_sentinel(st.session_state['iq_api'])
+    # 2. Aggiorna immediatamente gli stop loss di quelle aperte
+    update_signal_outcomes(st.session_state['iq_api'])
 
 # --- 6. POPUP ALERT ---
 if st.session_state.get('last_alert'):
@@ -915,7 +877,7 @@ if api and api.check_connect():
                 # Pulizia nome asset per API
                 iq_asset = asset.replace("=", "").upper()
                 
-                check, order_id = api.buy_order_train_data(
+                check, order_id = api.buy_order(
                     instrument_type="cfd", # Usiamo CFD come richiesto
                     instrument_id=iq_asset.lower(),
                     side=direzione,
