@@ -173,11 +173,14 @@ def get_session_status():
     if is_weekend:
         return {"Tokyo 🇯🇵": False, "Londra 🇬🇧": False, "New York 🇺🇸": False}
 
+    # Correzione: usa direttamente 'time' (importato da datetime) 
+    # invece di 'datetime.time'
     sessions = {
-        "Tokyo 🇯🇵": (datetime.time(0,0), datetime.time(9,0)), 
-        "Londra 🇬🇧": (datetime.time(9,0), datetime.time(18,0)), 
-        "New York 🇺🇸": (datetime.time(14,0), datetime.time(23,0))
+        "Tokyo 🇯🇵": (time(0, 0), time(9, 0)), 
+        "Londra 🇬🇧": (time(9, 0), time(18, 0)), 
+        "New York 🇺🇸": (time(14, 0), time(23, 0))
     }
+    
     return {name: start <= now_time <= end for name, (start, end) in sessions.items()}
 
 def get_instruments_data(api, asset_type):
