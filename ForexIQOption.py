@@ -87,16 +87,16 @@ def load_history_from_csv():
     return pd.DataFrame(columns=cols)
 
 def send_telegram_msg(msg):
-    token = "8235666467:AAGCsvEhlrzl7bH537bJTjsSwQ3P3PMRW10" 
-    chat_id = "7191509088" 
+    # Carica le credenziali dai secrets invece di scriverle in chiaro
     try:
+        token = st.secrets["telegram"]["token"]
+        chat_id = st.secrets["telegram"]["chat_id"]
+        
         url = f"https://api.telegram.org/bot{token}/sendMessage"
         params = {"chat_id": chat_id, "text": msg, "parse_mode": "Markdown"}
         r = requests.get(url, params=params, timeout=5)
-        if r.status_code != 200:
-            st.toast(f"Errore Telegram: {r.status_code}", icon="⚠️")
     except Exception as e:
-        print(f"Errore: {e}")
+        print(f"Errore caricamento Secrets o invio Telegram: {e}")
 
 def get_now_rome():
     return datetime.now(rome_tz)
@@ -473,113 +473,72 @@ def run_sentinel(api_conn):
                         if last_sig > (get_now_rome().replace(minute=get_now_rome().minute - 30)).strftime("%H:%M:%S"):
                            recent_signals = True
               
-                if not is_running and not recent_signals:
+def run_sentinel(api_conn):
+    
+    for label, tickers in assets:
+        yf_ticker = tickers['yf']
+        iq_ticker = tickers['iq']
+        
+        try:
+            # Recupero dati
+            df_rt_s = yf.download(yf_ticker, period="2d", interval="1m", progress=False)
+            if df_rt_s.empty: continue
+            
+            s_action = None
+            if curr_v < low_bb and rsi_d < 60 and rsi_fast < 25 and curr_adx < 30:
+                s_action = "COMPRA"
+            elif curr_v > up_bb and rsi_d > 40 and rsi_fast > 75 and curr_adx < 30:
+                s_action = "VENDI"
+
+            if s_action:
+                # 1. Controllo se c'è già una posizione aperta per questo asset
+                hist = st.session_state['signal_history']
+                is_running = not hist.empty and ((hist['Asset'] == label) & (hist['Stato'] == 'In Corso')).any()
+                
+                if not is_running:
                     p_unit, p_fmt, p_mult, a_type = get_asset_params(label)
-                    rischio_euro = current_balance * (current_risk / 100) 
-
-                    # Calcolo spread reale se connesso
-                    current_spread = SIMULATED_SPREAD
-
-                    if api_conn:
-                        current_spread = get_real_spread(api_conn, iq_ticker, instrument_type)
-
-                    if s_action == "COMPRA":
-                        entry_with_spread = curr_v + current_spread
-                        distanza_sl = entry_with_spread * 0.002 
-                        sl_prezzo = entry_with_spread - distanza_sl
-                        tp_prezzo = entry_with_spread + (distanza_sl * 1.5)
-                        side_iq = "buy"
-                    else:
-                        entry_with_spread = curr_v - current_spread
-                        distanza_sl = entry_with_spread * 0.002
-                        sl_prezzo = entry_with_spread + distanza_sl
-                        tp_prezzo = entry_with_spread - (distanza_sl * 1.5)
-                        side_iq = "sell"
+                    instrument_type = "crypto" if "BTC" in label or "ETH" in label else "forex"
                     
-                    costo_spread_apertura = inv_effettivo_calcolato * (current_spread / entry_with_spread)
+                    # 2. Calcolo Spread e Prezzo Ingresso
+                    spread_val, spread_pct = get_real_spread_info(api_conn, iq_ticker) if api_conn else (SIMULATED_SPREAD, 0.05)
+                    entry_with_spread = curr_v + (spread_val / 2) if s_action == "COMPRA" else curr_v - (spread_val / 2)
+                    
+                    # 3. Risk Management
+                    rischio_euro = current_balance * (current_risk / 100)
+                    distanza_sl = entry_with_spread * 0.002 # 0.2%
+                    inv_effettivo_calcolato = rischio_euro / (distanza_sl / entry_with_spread)
+                    
+                    # 4. TP/SL
+                    sl_prezzo = entry_with_spread - distanza_sl if s_action == "COMPRA" else entry_with_spread + distanza_sl
+                    tp_prezzo = entry_with_spread + (distanza_sl * 1.5) if s_action == "COMPRA" else entry_with_spread - (distanza_sl * 1.5)
 
-                    percentuale_distanza_sl = (distanza_sl / entry_with_spread)
-                    inv_effettivo_calcolato = rischio_euro / percentuale_distanza_sl
-                    costo_spread_apertura = inv_effettivo_calcolato * SIMULATED_SPREAD
-
+                    # 5. Esecuzione Broker
+                    iq_order_id = "SIMULATED"
+                    stato_iniziale = "In Corso"
                     mercato_aperto = is_market_open(label)
 
-                    if check:
-                        iq_order_id = str(order_id) # Salva l'ID reale ricevuto dal broker
-                        debug_list.append(f"✅ Ordine IQ Eseguito: {iq_order_id}")
-                    else:
-                        iq_order_id = "ERROR" # Evita che resti "DEMO-ID"
-                        stato_iniziale = '❌ ERRORE API'
-
                     if not mercato_aperto:
-                        stato_iniziale = '⛔ CHIUSO'
-                        inv_effettivo = "0.00"
-                        res_effettivo = "0.00"
-                        prot_status = 'Non Attiva'
-                        icona_stato = "⛔"
-                        txt_validita = "NON OPERARE (Market Closed)"
-                    else:
-                        stato_iniziale = 'In Corso'
-                        inv_effettivo = f"{inv_effettivo_calcolato:.2f}"
-                        res_effettivo = "0.00"
-                        prot_status = 'Iniziale'
-                        icona_stato = "✅"
-                        txt_validita = "SEGNALE VALIDO & ESEGUITO"
-
-                        # --- ESECUZIONE REALE SU IQ OPTION ---
-                        if api_conn:
-                            try:
-                                # Parametri ordine
-                                # Nota: "leverage" dipende dall'asset e dall'account. 
-                                # Usiamo un valore standard o quello massimo disponibile
-                                # --- PARAMETRI DINAMICI ---
-                            if s_action:
-                                # --- CONTROLLO FILTRI REALI ---
-                                instrument_type = "crypto" if "BTC" in label or "ETH" in label else "forex"
-                                leverage_effettiva = 1
-                                spread_val, spread_pct = SIMULATED_SPREAD, 0.05
-                                
-                                if api_conn:
-                                    leverage_effettiva = get_dynamic_leverage(api_conn, iq_ticker, instrument_type)
-                                    spread_val, spread_pct = get_real_spread_info(api_conn, iq_ticker)
-                                
-                                # SOGLIA DI BLOCCO: Se lo spread è > 0.1% del prezzo, il segnale è pericoloso
-                                MAX_SPREAD_ALLOWED_PCT = 0.12 
-                                
-                                if spread_pct > MAX_SPREAD_ALLOWED_PCT:
-                                    debug_list.append(f"⚠️ {label} Saltato: Spread troppo alto ({spread_pct:.3f}%)")
-                                    s_action = None # Annulla l'operazione
-                                
-                                if s_action:
-                                    # Procedi con il calcolo dei prezzi usando spread_val reale
-                                    if s_action == "COMPRA":
-                                        entry_with_spread = curr_v + (spread_val / 2)
-                                        # ... resto dei calcoli ...
-                            
-                                # --- ESECUZIONE REALE ---
-                                if api_conn:
-                                    check, order_id = api_conn.buy_order(
-                                        instrument_type=instrument_type, 
-                                        instrument_id=iq_ticker.lower(),
-                                        side=side_iq,
-                                        amount=inv_effettivo_calcolato,
-                                        leverage=leverage_effettiva, # Ora è dinamica!
-                                        type="market",
-                                        stop_loss_price=sl_prezzo,
-                                        take_profit_price=tp_prezzo
-                                    )
-                                
-                                if check:
-                                    iq_order_id = str(order_id)
-                                    debug_list.append(f"✅ Ordine IQ Eseguito: {iq_order_id}")
-                                else:
-                                    debug_list.append(f"❌ Errore Ordine IQ: {order_id}")
-                                    stato_iniziale = '❌ ERRORE API'
-                            except Exception as e:
-                                debug_list.append(f"❌ Eccezione API: {e}")
+                        stato_iniziale = "⛔ CHIUSO"
+                    elif api_conn and api_conn.check_connect():
+                        side_iq = "buy" if s_action == "COMPRA" else "sell"
+                        leverage_eff = get_dynamic_leverage(api_conn, iq_ticker, instrument_type)
+                        
+                        check, order_id = api_conn.buy_order(
+                            instrument_type=instrument_type, 
+                            instrument_id=iq_ticker.upper(), # Spesso IQ vuole maiuscolo
+                            side=side_iq,
+                            amount=inv_effettivo_calcolato,
+                            leverage=leverage_eff,
+                            type="market",
+                            stop_loss_price=sl_prezzo,
+                            take_profit_price=tp_prezzo
+                        )
+                        if check:
+                            iq_order_id = str(order_id)
                         else:
-                            txt_validita = "SIMULAZIONE (API NON CONNESSA)"
+                            stato_iniziale = f"❌ ERR: {order_id}"
 
+                    # 6. Registrazione segnale
                     new_sig = {
                         'DataOra': get_now_rome().strftime("%H:%M:%S"),
                         'Asset': label, 
@@ -588,14 +547,16 @@ def run_sentinel(api_conn):
                         'TP': p_fmt.format(tp_prezzo), 
                         'SL': p_fmt.format(sl_prezzo), 
                         'Stato': stato_iniziale,
-                        'Protezione': 'Trailing Step',
                         'Investimento €': f"{inv_effettivo_calcolato:.2f}",
                         'Risultato €': res_effettivo,
                         'Costo Spread €': f"{costo_spread_apertura:.3f}",
                         'Stato_Prot': prot_status,
                         'IQ_ID': iq_order_id
                     }
-                    
+
+                    st.session_state['signal_history'] = pd.concat([pd.DataFrame([new_sig]), hist], ignore_index=True)
+                    save_history_permanently()
+
                     st.session_state['signal_history'] = pd.concat([pd.DataFrame([new_sig]), hist], ignore_index=True)
                     st.session_state['last_alert'] = new_sig
                     save_history_permanently()
@@ -660,10 +621,14 @@ if 'iq_api' not in st.session_state:
 if 'iq_status' not in st.session_state:
     st.session_state['iq_status'] = "Disconnesso"
 
-# --- SIDEBAR: LOGIN E STATO ---
 st.sidebar.header("🔑 Connessione IQ Option")
-email = st.sidebar.text_input("Email", key="login_email")
-password = st.sidebar.text_input("Password", type="password", key="login_pass")
+
+# Pre-carica i valori dai secrets se disponibili, altrimenti usa stringa vuota
+default_email = st.secrets["iq_option"]["email"] if "iq_option" in st.secrets else ""
+default_pass = st.secrets["iq_option"]["password"] if "iq_option" in st.secrets else ""
+
+email = st.sidebar.text_input("Email", value=default_email, key="login_email")
+password = st.sidebar.text_input("Password", type="password", value=default_pass, key="login_pass")
 tipo_conto = st.sidebar.selectbox("Tipo Conto", ["PRACTICE", "REAL"])
 
 if st.sidebar.button("Connetti"):
@@ -886,19 +851,25 @@ with st.sidebar.popover("🗑️ **Reset Cronologia**"):
 
 st.sidebar.markdown("---")
 
-# --- 5. MOTORE DI ESECUZIONE ---
+# --- 5. MOTORE DI ESECUZIONE (POSIZIONATO IN FONDO AL FILE) ---
+# --- CORREZIONE CHIRURGICA D: Gestione Sessione ---
 if st.session_state.get('iq_api'):
-    # 1. Monitoraggio posizioni aperte (Trailing Stop)
-    # Lo facciamo prima per assicurarci di chiudere o proteggere trade esistenti
-    update_signal_outcomes(st.session_state['iq_api'])
+    api = st.session_state['iq_api']
     
-    # 2. Ricerca nuovi segnali (Sentinel)
-    run_sentinel(st.session_state['iq_api'])
+    # Se la connessione è caduta, prova a riconnettere
+    if not api.check_connect():
+        api.connect()
     
-    # Visualizzazione log di debug in sidebar
-    with st.sidebar.expander("🛠 Sentinel Engine Logs", expanded=False):
-        for log in st.session_state.get('sentinel_logs', []):
-            st.caption(log)
+    # Procedi con i check
+    update_signal_outcomes(api)
+    run_sentinel(api)
+    
+    # Visualizziamo i log aggiornati nella sidebar
+    st.sidebar.subheader("🛡️ Log Motore AI")
+    for log in st.session_state.get('sentinel_logs', []):
+        st.sidebar.caption(log)
+else:
+    st.sidebar.info("🔌 Connetti IQ Option per attivare l'esecuzione automatica.")
 
 # --- 6. POPUP ALERT ---
 if st.session_state.get('last_alert'):
@@ -963,23 +934,29 @@ if api and api.check_connect():
                 # Pulizia nome asset per API
                 iq_asset = asset.replace("=", "").upper()
                 
-                check, order_id = api.buy_order(
-                    instrument_type="cfd", # Usiamo CFD come richiesto
-                    instrument_id=iq_asset.lower(),
-                    side=direzione,
-                    amount=investimento,
-                    leverage=leva,
-                    type="market",
-                    stop_lose_kind="percent",
-                    stop_lose_value=stop_loss,
-                    take_profit_kind="percent",
-                    take_profit_value=take_profit
-                )
+                # --- CORREZIONE CHIRURGICA B: Esecuzione Broker ---
+                iq_order_id = "SIMULATED"
+                stato_iniziale = "In Corso"
                 
-                if check:
-                    st.success(f"✅ Ordine eseguito! ID: {order_id}")
-                else:
-                    st.error(f"❌ Errore API: {order_id}")
+                if api_conn and mercato_aperto:
+                    # Recupera parametri dinamici prima dell'invio
+                    leverage_eff = get_dynamic_leverage(api_conn, iq_ticker, instrument_type)
+                    
+                    check, order_id = api_conn.buy_order(
+                        instrument_type=instrument_type, 
+                        instrument_id=iq_ticker.lower(),
+                        side=side_iq,
+                        amount=inv_effettivo_calcolato,
+                        leverage=leverage_eff,
+                        type="market",
+                        stop_loss_price=sl_prezzo,
+                        take_profit_price=tp_prezzo
+                    )
+                    
+                    if check:
+                        iq_order_id = str(order_id)
+                    else:
+                        stato_iniziale = f"❌ ERR: {order_id}"
 
     with tab2:
         st.subheader("Posizioni Aperte")
