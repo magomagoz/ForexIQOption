@@ -1,41 +1,4 @@
 import streamlit as st
-import pandas as pd
-import yfinance as yf
-from iqoptionapi.stable_api import IQ_Option
-
-st.set_page_config(page_title="Trading Bot iPad", layout="wide")
-
-st.title("📈 Bot Trading IQ Option")
-
-# Sidebar per il Login
-st.sidebar.header("Credenziali")
-email = st.sidebar.text_input("Email IQ Option")
-password = st.sidebar.text_input("Password IQ Option", type="password")
-scelta_conto = st.sidebar.selectbox("Tipo Conto", ["PRACTICE", "REAL"])
-
-if st.sidebar.button("Connetti a IQ Option"):
-    if email and password:
-        Iq = IQ_Option(email, password)
-        check, reason = Iq.connect()
-        
-        if check:
-            st.sidebar.success("Connesso con successo!")
-            Iq.change_balance(scelta_conto)
-            st.write(f"Saldo attuale: {Iq.get_balance()} {Iq.get_currency()}")
-        else:
-            st.sidebar.error(f"Errore: {reason}")
-    else:
-        st.sidebar.warning("Inserisci email e password")
-
-# Spazio per la tua strategia
-st.subheader("Analisi Mercato")
-asset = st.selectbox("Seleziona Asset", ["EURUSD", "GBPUSD", "BTCUSD"])
-data = yf.download(asset, period="1d", interval="1m")
-st.line_chart(data['Close'])
-
-
-
-import streamlit as st
 import yfinance as yf
 import pandas as pd
 import pandas_ta as ta
@@ -618,18 +581,26 @@ if 'iq_api' not in st.session_state:
 if 'iq_status' not in st.session_state:
     st.session_state['iq_status'] = "Disconnesso"
 
-# --- SIDEBAR LOGIN IQ OPTION ---
-st.sidebar.header("🔑 IQ Option Login")
-iq_email = st.sidebar.text_input("Email", key="iq_email")
-iq_pass = st.sidebar.text_input("Password", type="password", key="iq_pass")
 
-if st.sidebar.button("Connetti a IQ (Practice)"):
-    if iq_email and iq_pass:
-        api, status = init_iq_session(iq_email, iq_pass)
-        st.session_state['iq_api'] = api
-        st.session_state['iq_status'] = status
+# Sidebar per il Login
+st.sidebar.header("Credenziali")
+email = st.sidebar.text_input("Email IQ Option")
+password = st.sidebar.text_input("Password IQ Option", type="password")
+scelta_conto = st.sidebar.selectbox("Tipo Conto", ["PRACTICE", "REAL"])
+
+if st.sidebar.button("🔑 IQ Option Login"):
+    if email and password:
+        Iq = IQ_Option(email, password)
+        check, reason = Iq.connect()
+        
+        if check:
+            st.sidebar.success("Connesso con successo!")
+            Iq.change_balance(scelta_conto)
+            st.write(f"Saldo attuale: {Iq.get_balance()} {Iq.get_currency()}")
+        else:
+            st.sidebar.error(f"Errore: {reason}")
     else:
-        st.sidebar.error("Inserisci credenziali")
+        st.sidebar.warning("Inserisci email e password")
 
 status_color = "green" if st.session_state['iq_status'] == "Connesso" else "red"
 st.sidebar.markdown(f"Status: **:{status_color}[{st.session_state['iq_status']}]**")
