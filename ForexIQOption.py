@@ -180,6 +180,35 @@ def get_session_status():
     }
     return {name: start <= now_time <= end for name, (start, end) in sessions.items()}
 
+def get_instruments_data(api, asset_type):
+    # Recupera i dettagli tecnici (leva, spread, step) dal broker
+    try:
+        return api.get_instruments(asset_type)
+    except:
+        return []
+
+def get_dynamic_leverage(api, iq_ticker, instrument_type):
+    try:
+        instruments = api.get_instruments(instrument_type)
+        for i in instruments:
+            if i['id'] == iq_ticker:
+                # Prende la leva massima disponibile (es. 50, 100, 10)
+                return i['leverage_max']
+        return 1 # Fallback prudenziale
+    except:
+        return 1
+
+def get_real_spread(api, iq_ticker):
+    try:
+        # Recupera il book degli ordini per calcolare lo spread istantaneo
+        # tra il miglior prezzo di acquisto e vendita
+        orderbook = api.get_orderbook(iq_ticker)
+        ask = orderbook['asks'][0][0]
+        bid = orderbook['bids'][0][0]
+        return ask - bid
+    except:
+        return SIMULATED_SPREAD
+
 @st.cache_data(ttl=60)
 def get_realtime_data(ticker):
     try:
@@ -500,21 +529,36 @@ def run_sentinel(api_conn):
                                 # Parametri ordine
                                 # Nota: "leverage" dipende dall'asset e dall'account. 
                                 # Usiamo un valore standard o quello massimo disponibile
+                                # --- PARAMETRI DINAMICI ---
                                 instrument_type = "crypto" if "BTC" in label or "ETH" in label else "forex"
                                 
-                                # Tentativo di acquisto
-                                #check, order_id = api_conn.buy(inv_effettivo_calcolato, iq_ticker, side_iq, 1) # Sintassi semplificata per binaria
-                                # Sintassi per FOREX/CFD (richiede buy_order)
-                                check, order_id = api_conn.buy_order(
-                                    instrument_type=instrument_type, 
-                                    instrument_id=iq_ticker,
-                                    side=side_iq,
-                                    amount=inv_effettivo_calcolato,
-                                    leverage=50, # Leva fissa, modificare se necessario
-                                    type="market",
-                                    stop_loss_price=sl_prezzo,
-                                    take_profit_price=tp_prezzo
-                                )
+                                if api_conn:
+                                    leverage_effettiva = get_dynamic_leverage(api_conn, iq_ticker, instrument_type)
+                                    current_spread = get_real_spread(api_conn, iq_ticker)
+                                else:
+                                    leverage_effettiva = 50
+                                    current_spread = SIMULATED_SPREAD
+            
+                                # Ricalcolo prezzi con spread reale
+                                if s_action == "COMPRA":
+                                    entry_with_spread = curr_v + current_spread
+                                    # ... resto dei calcoli TP/SL ...
+                                else:
+                                    entry_with_spread = curr_v - current_spread
+                                    # ... resto dei calcoli TP/SL ...
+            
+                                # --- ESECUZIONE REALE ---
+                                if api_conn:
+                                    check, order_id = api_conn.buy_order(
+                                        instrument_type=instrument_type, 
+                                        instrument_id=iq_ticker.lower(),
+                                        side=side_iq,
+                                        amount=inv_effettivo_calcolato,
+                                        leverage=leverage_effettiva, # Ora è dinamica!
+                                        type="market",
+                                        stop_loss_price=sl_prezzo,
+                                        take_profit_price=tp_prezzo
+                                    )
                                 
                                 if check:
                                     iq_order_id = str(order_id)
@@ -833,18 +877,19 @@ with st.sidebar.popover("🗑️ **Reset Cronologia**"):
 
 st.sidebar.markdown("---")
 
-# --- 5. ESECUZIONE MOTORE ---
+# --- 5. MOTORE DI ESECUZIONE ---
 if st.session_state.get('iq_api'):
-    # Prima controlliamo lo stato dei trade esistenti (Trailing Stop)
+    # 1. Monitoraggio posizioni aperte (Trailing Stop)
+    # Lo facciamo prima per assicurarci di chiudere o proteggere trade esistenti
     update_signal_outcomes(st.session_state['iq_api'])
     
-    # Poi cerchiamo nuovi segnali
+    # 2. Ricerca nuovi segnali (Sentinel)
     run_sentinel(st.session_state['iq_api'])
     
-    # Se è stato appena aperto un trade, facciamo un secondo check veloce
-    # per inizializzare subito il monitoraggio senza aspettare 60 secondi
-    if st.session_state.get('last_alert'):
-        update_signal_outcomes(st.session_state['iq_api'])
+    # Visualizzazione log di debug in sidebar
+    with st.sidebar.expander("🛠 Sentinel Engine Logs", expanded=False):
+        for log in st.session_state.get('sentinel_logs', []):
+            st.caption(log)
 
 # --- 6. POPUP ALERT ---
 if st.session_state.get('last_alert'):
