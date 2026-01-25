@@ -391,89 +391,6 @@ def update_signal_outcomes(api_conn):
         save_history_permanently()
 
 def run_sentinel(api_conn):
-    if not st.session_state['signal_history'].empty:
-        if len(st.session_state['signal_history']) > 50:
-            st.session_state['signal_history'] = st.session_state['signal_history'].head(50)
-            save_history_permanently()
-
-    st.session_state['last_alert'] = None
-    if 'alert_notified' in st.session_state: 
-        del st.session_state['alert_notified']
-    
-    current_balance = st.session_state.get('balance_val', 1000)
-    current_risk = st.session_state.get('risk_val', 2.0)
-    
-    # Se connesso a IQ, prova a leggere il saldo reale
-    if api_conn:
-        try:
-            current_balance = api_conn.get_balance()
-            st.session_state['balance_val'] = current_balance
-        except: pass
-
-    debug_list = []    
-    assets = list(asset_map.items())
-    
-    for label, tickers in assets:
-        yf_ticker = tickers['yf']
-        iq_ticker = tickers['iq']
-        
-        try:
-            df_rt_s = yf.download(yf_ticker, period="2d", interval="1m", progress=False)
-            df_d_s = yf.download(yf_ticker, period="1y", interval="1d", progress=False)
-            
-            if df_rt_s.empty or df_d_s.empty: 
-                debug_list.append(f"🔴 {label}: No Data")
-                continue
-            
-            if isinstance(df_rt_s.columns, pd.MultiIndex): df_rt_s.columns = df_rt_s.columns.get_level_values(0)
-            if isinstance(df_d_s.columns, pd.MultiIndex): df_d_s.columns = df_d_s.columns.get_level_values(0)
-            
-            df_rt_s.columns = [c.lower() for c in df_rt_s.columns]
-            df_d_s.columns = [c.lower() for c in df_d_s.columns]
-
-            bb_s = ta.bbands(df_rt_s['close'], length=20, std=2)
-            if bb_s is None: continue
-
-            c_low = [c for c in bb_s.columns if "BBL" in c.upper()][0]
-            c_up = [c for c in bb_s.columns if "BBU" in c.upper()][0]
-            
-            curr_v = float(df_rt_s['close'].iloc[-1])
-            low_bb = float(bb_s[c_low].iloc[-1])
-            up_bb = float(bb_s[c_up].iloc[-1])
-            
-            rsi_d = ta.rsi(df_d_s['close'], length=14).iloc[-1]
-            rsi_fast = ta.rsi(df_rt_s['close'], length=5).iloc[-1]
-            avg_volume = df_rt_s['volume'].rolling(window=20).mean().iloc[-1]
-            curr_volume = df_rt_s['volume'].iloc[-1]
-            
-            adx_df = ta.adx(df_rt_s['high'], df_rt_s['low'], df_rt_s['close'], length=14)
-            curr_adx = adx_df['ADX_14'].iloc[-1] if adx_df is not None else 0
-
-            s_action = None
-            
-            if curr_v < low_bb:
-                if rsi_d < 60 and rsi_fast < 25 and curr_volume > (avg_volume * 0.8):
-                    if curr_adx < 30: 
-                        s_action = "COMPRA"
-            
-            elif curr_v > up_bb:
-                if rsi_d > 40 and rsi_fast > 75 and curr_volume > (avg_volume * 0.8):
-                    if curr_adx < 30:
-                        s_action = "VENDI"
-
-            if s_action:
-                hist = st.session_state['signal_history']
-                is_running = not hist.empty and ((hist['Asset'] == label) & (hist['Stato'] == 'In Corso')).any()
-                
-                recent_signals = False
-                if not hist.empty:
-                    asset_hist = hist[hist['Asset'] == label]
-                    if not asset_hist.empty:
-                        last_sig = asset_hist.iloc[0]['DataOra']
-                        if last_sig > (get_now_rome().replace(minute=get_now_rome().minute - 30)).strftime("%H:%M:%S"):
-                           recent_signals = True
-              
-def run_sentinel(api_conn):
     
     for label, tickers in assets:
         yf_ticker = tickers['yf']
@@ -548,9 +465,9 @@ def run_sentinel(api_conn):
                         'SL': p_fmt.format(sl_prezzo), 
                         'Stato': stato_iniziale,
                         'Investimento €': f"{inv_effettivo_calcolato:.2f}",
-                        'Risultato €': res_effettivo,
-                        'Costo Spread €': f"{costo_spread_apertura:.3f}",
-                        'Stato_Prot': prot_status,
+                        'Risultato €': "0.00",
+                        'Costo Spread €': f"{spread_val:.5f}",
+                        'Stato_Prot': "Iniziale",
                         'IQ_ID': iq_order_id
                     }
 
@@ -561,14 +478,13 @@ def run_sentinel(api_conn):
                     st.session_state['last_alert'] = new_sig
                     save_history_permanently()
   
+                    icona_stato = "🟢" if s_action == "COMPRA" else "🔴"
                     telegram_text = (
                         f"{icona_stato} *{s_action}* {label}\n"
                         f"Entry: {new_sig['Prezzo']}\n"
                         f"TP: {new_sig['TP']}\n"
                         f"SL: {new_sig['SL']}\n"
-                        f"Investimento: € {new_sig['Investimento €']}\n"
-                        f"------------------\n"
-                        f"ℹ️ *{txt_validita}*"
+                        f"Investimento: € {new_sig['Investimento €']}"
                     )
                     
                     send_telegram_msg(telegram_text)
@@ -1003,9 +919,15 @@ if df_rt is not None and not df_rt.empty and df_d is not None and not df_d.empty
     df_d['rsi'] = ta.rsi(df_d['close'], length=14)
     df_d['atr'] = ta.atr(df_d['high'], df_d['low'], df_d['close'], length=14)
           
-    c_up = [c for c in df_rt.columns if "BBU" in c.upper()][0]
-    c_mid = [c for c in df_rt.columns if "BBM" in c.upper()][0]
-    c_low = [c for c in df_rt.columns if "BBL" in c.upper()][0]
+    #c_up = [c for c in df_rt.columns if "BBU" in c.upper()][0]
+    #c_mid = [c for c in df_rt.columns if "BBM" in c.upper()][0]
+    #c_low = [c for c in df_rt.columns if "BBL" in c.upper()][0]
+
+    # Invece di c_low = [c for c in bb_s.columns if "BBL" in ...][0]
+    low_bb = bb_s.iloc[-1, 0] # La prima colonna è sempre la Lower Band
+    mid_bb = bb_s.iloc[0, 1]
+    up_bb = bb_s.iloc[-1, 2]  # La terza colonna è sempre la Upper Band
+
     
     curr_p = float(df_rt['close'].iloc[-1])
     curr_rsi = float(df_rt['rsi'].iloc[-1])
