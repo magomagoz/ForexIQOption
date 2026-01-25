@@ -189,25 +189,28 @@ def get_instruments_data(api, asset_type):
 
 def get_dynamic_leverage(api, iq_ticker, instrument_type):
     try:
+        # Recupera la leva massima per l'asset specifico
         instruments = api.get_instruments(instrument_type)
         for i in instruments:
-            if i['id'] == iq_ticker:
-                # Prende la leva massima disponibile (es. 50, 100, 10)
+            if i['id'].lower() == iq_ticker.lower():
                 return i['leverage_max']
-        return 1 # Fallback prudenziale
+        return 1
     except:
         return 1
 
-def get_real_spread(api, iq_ticker):
+def get_real_spread_info(api, iq_ticker):
     try:
-        # Recupera il book degli ordini per calcolare lo spread istantaneo
-        # tra il miglior prezzo di acquisto e vendita
+        # Calcola lo spread reale in pips/valore assoluto
         orderbook = api.get_orderbook(iq_ticker)
-        ask = orderbook['asks'][0][0]
-        bid = orderbook['bids'][0][0]
-        return ask - bid
+        ask = float(orderbook['asks'][0][0])
+        bid = float(orderbook['bids'][0][0])
+        spread_reale = ask - bid
+        prezzo_medio = (ask + bid) / 2
+        # Spread in percentuale rispetto al prezzo
+        spread_pct = (spread_reale / prezzo_medio) * 100
+        return spread_reale, spread_pct
     except:
-        return SIMULATED_SPREAD
+        return SIMULATED_SPREAD, 0.05
 
 @st.cache_data(ttl=60)
 def get_realtime_data(ticker):
@@ -530,23 +533,29 @@ def run_sentinel(api_conn):
                                 # Nota: "leverage" dipende dall'asset e dall'account. 
                                 # Usiamo un valore standard o quello massimo disponibile
                                 # --- PARAMETRI DINAMICI ---
+                            if s_action:
+                                # --- CONTROLLO FILTRI REALI ---
                                 instrument_type = "crypto" if "BTC" in label or "ETH" in label else "forex"
+                                leverage_effettiva = 1
+                                spread_val, spread_pct = SIMULATED_SPREAD, 0.05
                                 
                                 if api_conn:
                                     leverage_effettiva = get_dynamic_leverage(api_conn, iq_ticker, instrument_type)
-                                    current_spread = get_real_spread(api_conn, iq_ticker)
-                                else:
-                                    leverage_effettiva = 50
-                                    current_spread = SIMULATED_SPREAD
-            
-                                # Ricalcolo prezzi con spread reale
-                                if s_action == "COMPRA":
-                                    entry_with_spread = curr_v + current_spread
-                                    # ... resto dei calcoli TP/SL ...
-                                else:
-                                    entry_with_spread = curr_v - current_spread
-                                    # ... resto dei calcoli TP/SL ...
-            
+                                    spread_val, spread_pct = get_real_spread_info(api_conn, iq_ticker)
+                                
+                                # SOGLIA DI BLOCCO: Se lo spread è > 0.1% del prezzo, il segnale è pericoloso
+                                MAX_SPREAD_ALLOWED_PCT = 0.12 
+                                
+                                if spread_pct > MAX_SPREAD_ALLOWED_PCT:
+                                    debug_list.append(f"⚠️ {label} Saltato: Spread troppo alto ({spread_pct:.3f}%)")
+                                    s_action = None # Annulla l'operazione
+                                
+                                if s_action:
+                                    # Procedi con il calcolo dei prezzi usando spread_val reale
+                                    if s_action == "COMPRA":
+                                        entry_with_spread = curr_v + (spread_val / 2)
+                                        # ... resto dei calcoli ...
+                            
                                 # --- ESECUZIONE REALE ---
                                 if api_conn:
                                     check, order_id = api_conn.buy_order(
