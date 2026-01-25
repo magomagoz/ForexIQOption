@@ -391,45 +391,71 @@ def update_signal_outcomes(api_conn):
         save_history_permanently()
 
 def run_sentinel(api_conn):
-    
-    for label, tickers in assets:
+    """
+    Motore Sentinel: Monitora il mercato, genera segnali basati su BB/RSI/ADX,
+    calcola il risk management ed esegue l'ordine su IQ Option.
+    """
+    debug_list = []
+    # Recupero bilancio reale o simulato
+    current_balance = api_conn.get_balance() if api_conn else st.session_state.get('balance_val', 1000)
+    current_risk = st.session_state.get('risk_val', 2.0)
+
+    # Iterazione corretta su asset_map
+    for label, tickers in asset_map.items():
         yf_ticker = tickers['yf']
         iq_ticker = tickers['iq']
         
         try:
-            # Recupero dati
+            # 1. Recupero dati real-time (1m)
             df_rt_s = yf.download(yf_ticker, period="2d", interval="1m", progress=False)
-            if df_rt_s.empty: continue
+            if df_rt_s.empty:
+                continue
+
+            # Pulizia colonne per evitare errori case-sensitive
+            df_rt_s.columns = [c.lower() for c in df_rt_s.columns]
             
+            # 2. CALCOLO INDICATORI
+            bb_s = ta.bbands(df_rt_s['close'], length=20, std=2)
+            rsi_s = ta.rsi(df_rt_s['close'], length=14)
+            adx_s = ta.adx(df_rt_s['high'], df_rt_s['low'], df_rt_s['close'])
+            
+            curr_v = float(df_rt_s['close'].iloc[-1])
+            low_bb = bb_s.iloc[-1, 0]  # BBL
+            up_bb = bb_s.iloc[-1, 2]   # BBU
+            rsi_val = rsi_s.iloc[-1]
+            curr_adx = adx_s.iloc[-1, 0] # ADX_14
+
+            # 3. LOGICA SEGNALE (Incrocio BB + RSI + ADX)
             s_action = None
-            if curr_v < low_bb and rsi_d < 60 and rsi_fast < 25 and curr_adx < 30:
+            if curr_v < low_bb and rsi_val < 25 and curr_adx < 30:
                 s_action = "COMPRA"
-            elif curr_v > up_bb and rsi_d > 40 and rsi_fast > 75 and curr_adx < 30:
+            elif curr_v > up_bb and rsi_val > 75 and curr_adx < 30:
                 s_action = "VENDI"
 
             if s_action:
-                # 1. Controllo se c'è già una posizione aperta per questo asset
+                # 4. CONTROLLO POSIZIONI ESISTENTI
                 hist = st.session_state['signal_history']
                 is_running = not hist.empty and ((hist['Asset'] == label) & (hist['Stato'] == 'In Corso')).any()
                 
                 if not is_running:
+                    # Parametri specifici asset (pips, decimali)
                     p_unit, p_fmt, p_mult, a_type = get_asset_params(label)
                     instrument_type = "crypto" if "BTC" in label or "ETH" in label else "forex"
                     
-                    # 2. Calcolo Spread e Prezzo Ingresso
-                    spread_val, spread_pct = get_real_spread_info(api_conn, iq_ticker) if api_conn else (SIMULATED_SPREAD, 0.05)
+                    # 5. SPREAD & ENTRY PRICE
+                    spread_val, _ = get_real_spread_info(api_conn, iq_ticker) if api_conn else (SIMULATED_SPREAD, 0.05)
                     entry_with_spread = curr_v + (spread_val / 2) if s_action == "COMPRA" else curr_v - (spread_val / 2)
                     
-                    # 3. Risk Management
+                    # 6. RISK MANAGEMENT (Calcolo Size Dinamica)
                     rischio_euro = current_balance * (current_risk / 100)
-                    distanza_sl = entry_with_spread * 0.002 # 0.2%
+                    distanza_sl = entry_with_spread * 0.002 # Stop Loss allo 0.2%
                     inv_effettivo_calcolato = rischio_euro / (distanza_sl / entry_with_spread)
                     
-                    # 4. TP/SL
+                    # 7. DEFINIZIONE TP/SL
                     sl_prezzo = entry_with_spread - distanza_sl if s_action == "COMPRA" else entry_with_spread + distanza_sl
                     tp_prezzo = entry_with_spread + (distanza_sl * 1.5) if s_action == "COMPRA" else entry_with_spread - (distanza_sl * 1.5)
 
-                    # 5. Esecuzione Broker
+                    # 8. ESECUZIONE BROKER (IQ OPTION)
                     iq_order_id = "SIMULATED"
                     stato_iniziale = "In Corso"
                     mercato_aperto = is_market_open(label)
@@ -440,9 +466,10 @@ def run_sentinel(api_conn):
                         side_iq = "buy" if s_action == "COMPRA" else "sell"
                         leverage_eff = get_dynamic_leverage(api_conn, iq_ticker, instrument_type)
                         
+                        # Chiamata API Reale
                         check, order_id = api_conn.buy_order(
                             instrument_type=instrument_type, 
-                            instrument_id=iq_ticker.upper(), # Spesso IQ vuole maiuscolo
+                            instrument_id=iq_ticker.upper(),
                             side=side_iq,
                             amount=inv_effettivo_calcolato,
                             leverage=leverage_eff,
@@ -455,7 +482,7 @@ def run_sentinel(api_conn):
                         else:
                             stato_iniziale = f"❌ ERR: {order_id}"
 
-                    # 6. Registrazione segnale
+                    # 9. REGISTRAZIONE & NOTIFICA
                     new_sig = {
                         'DataOra': get_now_rome().strftime("%H:%M:%S"),
                         'Asset': label, 
@@ -471,22 +498,19 @@ def run_sentinel(api_conn):
                         'IQ_ID': iq_order_id
                     }
 
-                    st.session_state['signal_history'] = pd.concat([pd.DataFrame([new_sig]), hist], ignore_index=True)
-                    save_history_permanently()
-
+                    # Aggiornamento sessione e persistenza
                     st.session_state['signal_history'] = pd.concat([pd.DataFrame([new_sig]), hist], ignore_index=True)
                     st.session_state['last_alert'] = new_sig
                     save_history_permanently()
   
-                    icona_stato = "🟢" if s_action == "COMPRA" else "🔴"
+                    # Notifica Telegram
+                    icona = "🟢" if s_action == "COMPRA" else "🔴"
                     telegram_text = (
-                        f"{icona_stato} *{s_action}* {label}\n"
+                        f"{icona} *{s_action}* {label}\n"
                         f"Entry: {new_sig['Prezzo']}\n"
-                        f"TP: {new_sig['TP']}\n"
-                        f"SL: {new_sig['SL']}\n"
-                        f"Investimento: € {new_sig['Investimento €']}"
+                        f"TP: {new_sig['TP']} | SL: {new_sig['SL']}\n"
+                        f"Size: € {new_sig['Investimento €']}"
                     )
-                    
                     send_telegram_msg(telegram_text)
 
             st.session_state['last_scan_status'] = f"✅ Scan OK: {get_now_rome().strftime('%H:%M:%S')}"
@@ -919,9 +943,9 @@ if df_rt is not None and not df_rt.empty and df_d is not None and not df_d.empty
     df_d['rsi'] = ta.rsi(df_d['close'], length=14)
     df_d['atr'] = ta.atr(df_d['high'], df_d['low'], df_d['close'], length=14)
           
-    #c_up = [c for c in df_rt.columns if "BBU" in c.upper()][0]
-    #c_mid = [c for c in df_rt.columns if "BBM" in c.upper()][0]
-    #c_low = [c for c in df_rt.columns if "BBL" in c.upper()][0]
+    c_up = [c for c in df_rt.columns if "BBU" in c.upper()][0]
+    c_mid = [c for c in df_rt.columns if "BBM" in c.upper()][0]
+    c_low = [c for c in df_rt.columns if "BBL" in c.upper()][0]
 
     # Invece di c_low = [c for c in bb_s.columns if "BBL" in ...][0]
     low_bb = bb_s.iloc[-1, 0] # La prima colonna è sempre la Lower Band
