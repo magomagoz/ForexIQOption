@@ -949,12 +949,16 @@ if df_rt is not None and not df_rt.empty and df_d is not None and not df_d.empty
     c_up = [c for c in df_rt.columns if "BBU" in c.upper()][0]
     c_mid = [c for c in df_rt.columns if "BBM" in c.upper()][0]
     c_low = [c for c in df_rt.columns if "BBL" in c.upper()][0]
-
-    # Invece di c_low = [c for c in bb_s.columns if "BBL" in ...][0]
-    low_bb = bb_s.iloc[-1, 0] # La prima colonna è sempre la Lower Band
-    mid_bb = bb_s.iloc[0, 1]
-    up_bb = bb_s.iloc[-1, 2]  # La terza colonna è sempre la Upper Band
-
+    # Sostituisci la parte del calcolo BB nel corpo principale con questa:
+    bb = ta.bbands(df_rt['close'], length=20, std=2)
+    # Assicuriamoci che bb non sia None prima di procedere
+    if bb is not None:
+        # Definisci esplicitamente i valori per le metriche
+        low_bb = bb.iloc[-1, 0]  # BBL (Lower)
+        mid_bb = bb.iloc[-1, 1]  # BBM (Middle)
+        up_bb = bb.iloc[-1, 2]   # BBU (Upper)
+        
+        # Ora puoi usare low_bb, mid_bb e up_bb senza errori
     
     curr_p = float(df_rt['close'].iloc[-1])
     curr_rsi = float(df_rt['rsi'].iloc[-1])
