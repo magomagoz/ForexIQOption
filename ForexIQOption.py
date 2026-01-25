@@ -567,6 +567,20 @@ def display_performance_stats():
         wr = (vittorie / len(conclusi)) * 100
         st.sidebar.write(f"📊 **Win Rate**: {wr:.1f}% ({vittorie}/{len(conclusi)})")
 
+def puo_aprire_posizione(api, costo_operazione):
+    saldo_attuale = api.get_balance()
+    limite_prudenziale = saldo_attuale * 0.15 # Alzato al 15% per flessibilità
+    if saldo_attuale < costo_operazione:
+        st.error("⚠️ Saldo insufficiente sul conto!")
+        return False
+    if costo_operazione > limite_prudenziale:
+        st.warning(f"⚠️ Esposizione alta: superi il 15% del capitale ({limite_prudenziale:.2f}$)")
+    return True
+
+# --- GESTIONE SESSIONE API ---
+if 'iq_api' not in st.session_state:
+    st.session_state['iq_api'] = None
+
 # --- 3. INIZIALIZZAZIONE STATO ---
 if 'signal_history' not in st.session_state: 
     st.session_state['signal_history'] = load_history_from_csv()
@@ -581,6 +595,28 @@ if 'iq_api' not in st.session_state:
 if 'iq_status' not in st.session_state:
     st.session_state['iq_status'] = "Disconnesso"
 
+# --- SIDEBAR: LOGIN E STATO ---
+st.sidebar.header("🔑 Connessione IQ Option")
+email = st.sidebar.text_input("Email", key="login_email")
+password = st.sidebar.text_input("Password", type="password", key="login_pass")
+tipo_conto = st.sidebar.selectbox("Tipo Conto", ["PRACTICE", "REAL"])
+
+if st.sidebar.button("Connetti"):
+    api = IQ_Option(email, password)
+    check, reason = api.connect()
+    if check:
+        api.change_balance(tipo_conto)
+        st.session_state['iq_api'] = api
+        st.sidebar.success(f"✅ Connesso ({tipo_conto})")
+    else:
+        st.sidebar.error(f"❌ Errore: {reason}")
+
+# Controllo stato connessione persistente
+api = st.session_state.get('iq_api')
+if api and api.check_connect():
+    st.sidebar.metric("Saldo attuale", f"{api.get_balance():.2f} {api.get_currency()}")
+else:
+    st.sidebar.warning("🔴 Disconnesso")
 
 # Sidebar per il Login
 st.sidebar.header("Credenziali")
@@ -852,6 +888,77 @@ else:
 
 st.info(f"🛰️ **Sentinel AI Attiva**: Monitoraggio in corso su {len(asset_map)} asset (7 Forex e 2 Crypto) in tempo reale (1m).")
 st.caption(f"Ultimo aggiornamento globale: {get_now_rome().strftime('%d/%m/%Y %H:%M:%S')}")
+
+st.title("📈 Trading Panel CFD & Forex")
+
+if api and api.check_connect():
+    tab1, tab2 = st.tabs(["🚀 Apri Posizione", "📊 Monitoraggio Attivo"])
+
+    with tab1:
+        st.subheader("Configurazione Nuovo Ordine")
+        c1, c2, c3 = st.columns(3)
+        
+        with c1:
+            asset = st.selectbox("Asset", ["EURUSD", "GBPUSD", "BTCUSD", "ETHUSD"])
+            direzione = st.radio("Direzione", ["buy", "sell"])
+        
+        with c2:
+            investimento = st.number_input("Investimento ($)", min_value=1.0, value=10.0)
+            leva = st.slider("Leva", 1, 500, 50)
+            
+        with c3:
+            stop_loss = st.number_input("Stop Loss (%)", value=10)
+            take_profit = st.number_input("Take Profit (%)", value=20)
+
+        if st.button("ESEGUI ORDINE CFD", use_container_width=True):
+            if puo_aprire_posizione(api, investimento):
+                # Pulizia nome asset per API
+                iq_asset = asset.replace("=", "").upper()
+                
+                check, order_id = api.buy_order_train_data(
+                    instrument_type="cfd", # Usiamo CFD come richiesto
+                    instrument_id=iq_asset.lower(),
+                    side=direzione,
+                    amount=investimento,
+                    leverage=leva,
+                    type="market",
+                    stop_lose_kind="percent",
+                    stop_lose_value=stop_loss,
+                    take_profit_kind="percent",
+                    take_profit_value=take_profit
+                )
+                
+                if check:
+                    st.success(f"✅ Ordine eseguito! ID: {order_id}")
+                else:
+                    st.error(f"❌ Errore API: {order_id}")
+
+    with tab2:
+        st.subheader("Posizioni Aperte")
+        posizioni = api.get_positions("cfd")
+        
+        if posizioni:
+            # Creazione tabella per visualizzazione pulita
+            data_list = []
+            for pos_id, p in posizioni.items():
+                data_list.append({
+                    "ID": pos_id,
+                    "Asset": p['item_id'],
+                    "Direzione": p['side'],
+                    "Profitto ($)": p['win_amount']
+                })
+            st.table(data_list)
+
+            if st.button("🚨 CHIUDI TUTTE LE POSIZIONI", color="red", use_container_width=True):
+                for pos_id in posizioni.keys():
+                    api.close_order(pos_id)
+                st.success("Comando di chiusura inviato a tutte le posizioni.")
+                st.rerun()
+        else:
+            st.info("Nessuna posizione attiva.")
+
+else:
+    st.info("💡 Effettua il login dalla sidebar per iniziare a fare trading.")
 
 st.markdown("---")
 st.subheader(f"📈 Grafico {selected_label} (1m) con BB e RSI")
