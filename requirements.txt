@@ -1,0 +1,10 @@
+streamlit
+yfinance
+pandas
+pandas_ta
+numpy
+pytz
+streamlit-autorefresh
+plotly
+requests
+iqoptionapi @ git+https://github.com/Lu-Yi-Hsun/iqoptionapi.git
