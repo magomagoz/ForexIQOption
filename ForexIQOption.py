@@ -863,8 +863,6 @@ else:
     st.sidebar.subheader("🛡️ Log Motore AI")
     for log in st.session_state.get('sentinel_logs', []):
         st.sidebar.caption(log)
-else:
-    st.sidebar.info("🔌 Connetti IQ Option per attivare l'esecuzione automatica.")
 
 # --- POPUP ALERT ---
 if st.session_state.get('last_alert'):
@@ -904,6 +902,8 @@ st.info(f"🛰️ **Sentinel AI Attiva**: Monitoraggio in corso su {len(asset_ma
 st.caption(f"Ultimo aggiornamento globale: {get_now_rome().strftime('%d/%m/%Y %H:%M:%S')}")
 
 # --- 7. BODY PRINCIPALE ---
+st.sidebar.info("🔌 Connetti IQ Option per attivare l'esecuzione automatica.")
+
 st.title("📈 Trading Panel CFD & Forex")
 
 if api and api.check_connect():
