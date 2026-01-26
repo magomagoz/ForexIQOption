@@ -919,13 +919,13 @@ if posizioni:
             })
     st.table(data_list)
 
-        if st.button("🚨 CHIUDI TUTTE LE POSIZIONI", color="red", use_container_width=True):
-            for pos_id in posizioni.keys():
-                api.close_order(pos_id)
-            st.success("Comando di chiusura inviato a tutte le posizioni.")
-            st.rerun()
-        else:
-            st.info("Nessuna posizione attiva.")
+    if st.button("🚨 CHIUDI TUTTE LE POSIZIONI", color="red", use_container_width=True):
+        for pos_id in posizioni.keys():
+            api.close_order(pos_id)
+        st.success("Comando di chiusura inviato a tutte le posizioni.")
+        st.rerun()
+    else:
+        st.info("Nessuna posizione attiva.")
 
 else:
     st.info("💡 Effettua il login dalla sidebar per iniziare a fare trading.")
