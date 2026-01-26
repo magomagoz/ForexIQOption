@@ -55,9 +55,6 @@ asset_map = {
     "USDCAD": {"yf": "USDCAD=X", "iq": "USDCAD"},
     "USDCHF": {"yf": "USDCHF=X", "iq": "USDCHF"},
     "NZDUSD": {"yf": "NZDUSD=X", "iq": "NZDUSD"},
-    # Crypto su IQ Option spesso hanno nomi diversi o sono CFD
-    "BTC-USD": {"yf": "BTC-USD", "iq": "BITCOIN"},
-    "ETH-USD": {"yf": "ETH-USD", "iq": "ETHEREUM"}
 }
 
 # Refresh automatico ogni 60 secondi
@@ -102,11 +99,11 @@ def get_now_rome():
     return datetime.now(rome_tz)
 
 def is_market_open(asset_name):
-    """
-    Restituisce True se il mercato è aperto.
-    """
-    if "BTC" in asset_name or "ETH" in asset_name:
-        return True
+    #"""
+    #Restituisce True se il mercato è aperto.
+    #"""
+    #if "BTC" in asset_name or "ETH" in asset_name:
+        #return True
     
     today = get_now_rome().weekday()
     # Se è Sabato (5) o Domenica (6), il Forex è chiuso
@@ -173,14 +170,11 @@ def get_session_status():
     if is_weekend:
         return {"Tokyo 🇯🇵": False, "Londra 🇬🇧": False, "New York 🇺🇸": False}
 
-    # Correzione: usa direttamente 'time' (importato da datetime) 
-    # invece di 'datetime.time'
     sessions = {
         "Tokyo 🇯🇵": (time(0, 0), time(9, 0)), 
         "Londra 🇬🇧": (time(9, 0), time(18, 0)), 
         "New York 🇺🇸": (time(14, 0), time(23, 0))
-    }
-    
+    }    
     return {name: start <= now_time <= end for name, (start, end) in sessions.items()}
 
 def get_instruments_data(api, asset_type):
@@ -233,13 +227,10 @@ def get_currency_strength():
             "EURUSD=X", "GBPUSD=X", "USDJPY=X", "AUDUSD=X", "USDCAD=X", "USDCHF=X", 
             "NZDUSD=X", "EURCHF=X", "EURJPY=X", "GBPJPY=X", "GBPCHF=X", "EURGBP=X"
         ]
-        crypto = ["BTC-USD", "ETH-USD"]
+        #crypto = ["BTC-USD", "ETH-USD"]
         
-        # Uniamo tutto in un'unica lista per il download
-        all_tickers = forex + crypto
+        all_tickers = forex #+ crypto
         
-        # 2. Download di TUTTI i ticker in una volta sola
-        # Nota: usiamo 'all_tickers' invece di 'ticker' (che non era definito)
         data = yf.download(all_tickers, period="1d", interval="1m", progress=False)
 
         # 3. Controllo Dati Vuoti
@@ -247,8 +238,6 @@ def get_currency_strength():
             return pd.Series(dtype=float)
 
         # 4. Estrazione Prezzi di Chiusura
-        # YFinance restituisce un MultiIndex. data['Close'] ci dà direttamente 
-        # un DataFrame con i Ticker come colonne.
         if isinstance(data.columns, pd.MultiIndex):
             close_data = data['Close']
         else:
@@ -305,8 +294,8 @@ def get_currency_strength():
             
             "AUD 🇦🇺": returns.get("AUDUSD=X", 0),
             "CAD 🇨🇦": -returns.get("USDCAD=X", 0),
-            "BTC ₿": returns.get("BTC-USD", 0),
-            "ETH 💎": returns.get("ETH-USD", 0)
+            #"BTC ₿": returns.get("BTC-USD", 0),
+            #"ETH 💎": returns.get("ETH-USD", 0)
         }
         
         return pd.Series(strength).sort_values(ascending=False)
@@ -316,9 +305,9 @@ def get_currency_strength():
         return pd.Series(dtype=float)
 
 def get_asset_params(pair):
-    if "BTC" in pair or "ETH" in pair:
-        return 1.0, "{:.2f}", 1, "CRYPTO"
-    elif "JPY" in pair:
+    #if "BTC" in pair or "ETH" in pair:
+        #return 1.0, "{:.2f}", 1, "CRYPTO"
+    if "JPY" in pair:
         return 0.01, "{:.3f}", 100, "FOREX_JPY"
     else:
         return 0.0001, "{:.5f}", 10000, "FOREX_STD"
@@ -334,10 +323,6 @@ def detect_divergence(df):
     return "Neutrale"
     
 def update_signal_outcomes(api_conn):
-    """
-    Controlla lo stato delle posizioni direttamente tramite API IQ Option
-    e gestisce il Trailing Stop Locale.
-    """
     if st.session_state['signal_history'].empty: return
     df = st.session_state['signal_history']
     updates_made = False
@@ -406,11 +391,7 @@ def update_signal_outcomes(api_conn):
                 play_safe_sound()
 
             # --- VERIFICA CHIUSURA ---
-            # Se siamo connessi, controlliamo se l'ID esiste ancora tra le posizioni aperte
-            # Se non esiste più, significa che IQ Option l'ha chiusa (TP o SL toccati)
             trade_closed_remote = False
-            # Qui andrebbe la logica precisa di controllo ID su IQOption,
-            # Simuliamo la chiusura basandoci sui prezzi YF per semplicità dello script
             
             tp_v = float(str(row['TP']).replace(',', '.'))
             target_hit = (direzione == 'COMPRA' and current_price >= tp_v) or (direzione == 'VENDI' and current_price <= tp_v)
@@ -454,8 +435,7 @@ def update_signal_outcomes(api_conn):
 
 def run_sentinel(api_conn):
     """
-    Motore Sentinel: Monitora il mercato, genera segnali basati su BB/RSI/ADX,
-    calcola il risk management ed esegue l'ordine su IQ Option.
+    Motore Sentinel: Monitora il mercato, genera segnali basati su BB/RSI/ADX.
     """
     debug_list = []
     # Recupero bilancio reale o simulato
@@ -469,7 +449,6 @@ def run_sentinel(api_conn):
         
         try:
             # 1. Recupero dati real-time (1m)
-                        # 1. Recupero dati
             df = yf.download(yf_ticker, period="1d", interval="1m", progress=False) # Usa yf_ticker
             if df.empty: continue
 
@@ -487,15 +466,15 @@ def run_sentinel(api_conn):
             rsi_val = float(rsi_s.iloc[-1])
             curr_adx = float(adx_s.iloc[-1, 0])
 
-            # ORA puoi aggiungere al log
-            debug_list.append(f"🔍 {label}: RSI {rsi_val:.1f} | ADX {curr_adx:.1f}")
-
             curr_v = float(df_rt_s['close'].iloc[-1])
             low_bb = bb_s.iloc[-1, 0]  # BBL
             up_bb = bb_s.iloc[-1, 2]   # BBU
             rsi_val = rsi_s.iloc[-1]
             curr_adx = adx_s.iloc[-1, 0] # ADX_14
 
+            # ORA puoi aggiungere al log
+            debug_list.append(f"🔍 {label}: RSI {rsi_val:.1f} | ADX {curr_adx:.1f}")
+            
             # 3. LOGICA SEGNALE (Incrocio BB + RSI + ADX)
             s_action = None
             if curr_v < low_bb and rsi_val < 25 and curr_adx < 30:
@@ -606,6 +585,26 @@ def display_performance_stats():
         wr = (vittorie / len(conclusi)) * 100
         st.sidebar.write(f"📊 **Win Rate**: {wr:.1f}% ({vittorie}/{len(conclusi)})")
 
+def get_equity_data():
+    initial_balance = st.session_state.get('balance_val', 1000)
+    equity_curve = [initial_balance]
+    
+    if st.session_state['signal_history'].empty:
+        return pd.Series(equity_curve)
+    
+    df_conclusi = st.session_state['signal_history'][st.session_state['signal_history']['Stato'].str.contains('TARGET|STOP|DINAMICO', na=False)]
+    df_sorted = df_conclusi.iloc[::-1]
+    
+    current_bal = initial_balance
+    for _, row in df_sorted.iterrows():
+        try:
+            net_profit = float(str(row['Risultato €']).replace(',', '.'))
+            current_bal += net_profit
+            equity_curve.append(current_bal)
+        except:
+            continue            
+    return pd.Series(equity_curve)
+
 def puo_aprire_posizione(api, costo_operazione):
     saldo_attuale = api.get_balance()
     limite_prudenziale = saldo_attuale * 0.15 # Alzato al 15% per flessibilità
@@ -615,10 +614,6 @@ def puo_aprire_posizione(api, costo_operazione):
     if costo_operazione > limite_prudenziale:
         st.warning(f"⚠️ Esposizione alta: superi il 15% del capitale ({limite_prudenziale:.2f}$)")
     return True
-
-# --- GESTIONE SESSIONE API ---
-if 'iq_api' not in st.session_state:
-    st.session_state['iq_api'] = None
 
 # --- 3. INIZIALIZZAZIONE STATO ---
 if 'signal_history' not in st.session_state: 
@@ -634,7 +629,8 @@ if 'iq_api' not in st.session_state:
 if 'iq_status' not in st.session_state:
     st.session_state['iq_status'] = "Disconnesso"
 
-st.sidebar.header("🔑 Connessione IQ Option")
+# --- SIDEBAR LOGIN ---
+st.sidebar.header("🔑 IQ Option Login")
 
 # Pre-carica i valori dai secrets se disponibili, altrimenti usa stringa vuota
 default_email = st.secrets["iq_option"]["email"] if "iq_option" in st.secrets else ""
@@ -653,6 +649,8 @@ if st.sidebar.button("Connetti"):
         st.sidebar.success(f"✅ Connesso ({tipo_conto})")
     else:
         st.sidebar.error(f"❌ Errore: {reason}")
+else:
+    st.sidebar.error(f"Libreria API non disponibile")
 
 # Controllo stato connessione persistente
 api = st.session_state.get('iq_api')
@@ -661,28 +659,7 @@ if api and api.check_connect():
 else:
     st.sidebar.warning("🔴 Disconnesso")
 
-def get_equity_data():
-    initial_balance = st.session_state.get('balance_val', 1000)
-    equity_curve = [initial_balance]
-    
-    if st.session_state['signal_history'].empty:
-        return pd.Series(equity_curve)
-    
-    df_conclusi = st.session_state['signal_history'][st.session_state['signal_history']['Stato'].str.contains('TARGET|STOP|DINAMICO', na=False)]
-    df_sorted = df_conclusi.iloc[::-1]
-    
-    current_bal = initial_balance
-    for _, row in df_sorted.iterrows():
-        try:
-            net_profit = float(str(row['Risultato €']).replace(',', '.'))
-            current_bal += net_profit
-            equity_curve.append(current_bal)
-        except:
-            continue
-            
-    return pd.Series(equity_curve)
-
-# --- 5. SIDEBAR ---
+# --- SIDEBAR SETTINGS ---
 st.sidebar.header("🛠 Trading Desk (1m)")
 
 st.sidebar.subheader("⏳ **Prossimo Scan**")
@@ -869,7 +846,6 @@ with st.sidebar.popover("🗑️ **Reset Cronologia**"):
 st.sidebar.markdown("---")
 
 # --- 5. MOTORE DI ESECUZIONE (POSIZIONATO IN FONDO AL FILE) ---
-# --- CORREZIONE CHIRURGICA D: Gestione Sessione ---
 if st.session_state.get('iq_api'):
     api = st.session_state['iq_api']
     
@@ -880,6 +856,8 @@ if st.session_state.get('iq_api'):
     # Procedi con i check
     update_signal_outcomes(api)
     run_sentinel(api)
+else:
+    st.sidebar.warning("⚠️ Sentinel in pausa (API disconnessa)")
     
     # Visualizziamo i log aggiornati nella sidebar
     st.sidebar.subheader("🛡️ Log Motore AI")
@@ -888,7 +866,7 @@ if st.session_state.get('iq_api'):
 else:
     st.sidebar.info("🔌 Connetti IQ Option per attivare l'esecuzione automatica.")
 
-# --- 6. POPUP ALERT ---
+# --- POPUP ALERT ---
 if st.session_state.get('last_alert'):
     if 'alert_notified' not in st.session_state:
         play_notification_sound()
@@ -1061,7 +1039,6 @@ else:
     else:
         st.warning("Dati di mercato non disponibili al momento.")
 
-    
     st.markdown("---")
     st.subheader("🕵️ Sentinel Analysis Summary")
     col_a, col_b = st.columns(2)
