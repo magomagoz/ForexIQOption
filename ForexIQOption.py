@@ -529,9 +529,11 @@ def run_sentinel(api_conn):
         except Exception as e:
             debug_list.append(f"❌ {label} Err: {str(e)}")
             continue
-    
+
+    # FONDAMENTALE: Salva la lista aggiornata nello stato della sessione
     st.session_state['sentinel_logs'] = debug_list
-                    
+    st.session_state['last_scan_status'] = f"✅ Scan OK: {get_now_rome().strftime('%H:%M:%S')}"
+                  
 def display_performance_stats():
     if st.session_state['signal_history'].empty:
         return
