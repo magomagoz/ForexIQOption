@@ -233,8 +233,8 @@ def get_currency_strength():
         df = yf.download(ticker, period="1d", interval="1m", progress=False)
         if not df.empty:
         # Questa riga risolve l'errore 'tuple' appiattendo le colonne
-        if isinstance(df.columns, pd.MultiIndex): df.columns = df.columns.get_level_values(0)
-            df.columns = [str(c).lower() for c in df.columns]
+            if isinstance(df.columns, pd.MultiIndex): df.columns = df.columns.get_level_values(0)
+                df.columns = [str(c).lower() for c in df.columns]
 
         if data is None or data.empty: 
             return pd.Series(dtype=float)
