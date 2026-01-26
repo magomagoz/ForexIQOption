@@ -429,6 +429,9 @@ def run_sentinel(api_conn):
             bb_s = ta.bbands(df_rt_s['close'], length=20, std=2)
             rsi_s = ta.rsi(df_rt_s['close'], length=14)
             adx_s = ta.adx(df_rt_s['high'], df_rt_s['low'], df_rt_s['close'])
+
+            # Aggiungi un log per ogni valuta analizzata
+            debug_list.append(f"🔍 {label}: RSI {rsi_val:.1f} | ADX {curr_adx:.1f}")
             
             curr_v = float(df_rt_s['close'].iloc[-1])
             low_bb = bb_s.iloc[-1, 0]  # BBL
