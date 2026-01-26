@@ -906,8 +906,8 @@ if api and api.check_connect():
                             "Profitto": p.get('win_amount', 0)
                         })
                     st.table(data_list)
-            else:
-                st.info("Nessuna posizione aperta rilevata.")
+                else:
+                    st.info("Nessuna posizione aperta rilevata.")
         except Exception as e:
             st.error(f"Errore nel recupero posizioni: {e}")
     else:
