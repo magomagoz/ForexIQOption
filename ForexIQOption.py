@@ -228,40 +228,91 @@ def get_realtime_data(ticker):
 
 def get_currency_strength():
     try:
-        forex = ["EURUSD=X", "GBPUSD=X", "USDJPY=X", "AUDUSD=X", "USDCAD=X", "USDCHF=X", "NZDUSD=X", "EURCHF=X","EURJPY=X", "GBPJPY=X", "GBPCHF=X","EURGBP=X"]
+        # 1. Definizione Liste Complete
+        forex = [
+            "EURUSD=X", "GBPUSD=X", "USDJPY=X", "AUDUSD=X", "USDCAD=X", "USDCHF=X", 
+            "NZDUSD=X", "EURCHF=X", "EURJPY=X", "GBPJPY=X", "GBPCHF=X", "EURGBP=X"
+        ]
         crypto = ["BTC-USD", "ETH-USD"]
-        df = yf.download(ticker, period="1d", interval="1m", progress=False)
-        if not df.empty:
-        # Questa riga risolve l'errore 'tuple' appiattendo le colonne
-            if isinstance(df.columns, pd.MultiIndex): df.columns = df.columns.get_level_values(0)
-        df.columns = [str(c).lower() for c in df.columns]
+        
+        # Uniamo tutto in un'unica lista per il download
+        all_tickers = forex + crypto
+        
+        # 2. Download di TUTTI i ticker in una volta sola
+        # Nota: usiamo 'all_tickers' invece di 'ticker' (che non era definito)
+        data = yf.download(all_tickers, period="1d", interval="1m", progress=False)
 
+        # 3. Controllo Dati Vuoti
         if data is None or data.empty: 
             return pd.Series(dtype=float)
 
+        # 4. Estrazione Prezzi di Chiusura
+        # YFinance restituisce un MultiIndex. data['Close'] ci dà direttamente 
+        # un DataFrame con i Ticker come colonne.
         if isinstance(data.columns, pd.MultiIndex):
-            close_data = data['Close'] if 'Close' in data else data
+            close_data = data['Close']
         else:
+            # Fallback per versioni vecchie o casi strani
             close_data = data['Close'] if 'Close' in data else data
 
+        # Pulizia: Rimuove righe con NaN e prende l'ultima variazione percentuale
         close_data = close_data.ffill().dropna()
-        if len(close_data) < 2: return pd.Series(dtype=float)
+        
+        if len(close_data) < 2: 
+            return pd.Series(dtype=float)
 
+        # Calcolo % Returns dell'ultima candela (moltiplicato per 100 per leggibilità)
         returns = close_data.pct_change().iloc[-1] * 100
         
+        # 5. Calcolo Algoritmo Strength (TUTTE le formule incluse)
+        # Nota: Usiamo .get(Ticker, 0) per evitare crash se un singolo ticker fallisce il download
         strength = {
-            "USD 🇺🇸": (-returns.get("EURUSD=X",0) - returns.get("GBPUSD=X",0) + returns.get("USDJPY=X",0) - returns.get("AUDUSD=X",0) + returns.get("USDCAD=X",0) + returns.get("USDCHF=X",0) - returns.get("NZDUSD=X",0)) / 7,
-            "EUR 🇪🇺": (returns.get("EURUSD=X",0) + returns.get("EURJPY=X",0) + returns.get("EURGBP=X",0) + returns.get("EURCHF=X", 0)) / 4,
-            "GBP 🇬🇧": (returns.get("GBPUSD=X",0) + returns.get("GBPJPY=X",0) - returns.get("EURGBP=X",0) + returns.get("GBPCHF=X", 0)) / 4,
-            "JPY 🇯🇵": (-returns.get("USDJPY=X",0) - returns.get("EURJPY=X",0) - returns.get("GBPJPY=X",0)) / 3,
-            "CHF 🇨🇭": (-returns.get("USDCHF=X",0) - returns.get("EURCHF=X",0) - returns.get("GBPCHF=X",0)) / 3,
+            "USD 🇺🇸": (
+                -returns.get("EURUSD=X", 0) 
+                - returns.get("GBPUSD=X", 0) 
+                + returns.get("USDJPY=X", 0) 
+                - returns.get("AUDUSD=X", 0) 
+                + returns.get("USDCAD=X", 0) 
+                + returns.get("USDCHF=X", 0) 
+                - returns.get("NZDUSD=X", 0)
+            ) / 7,
+            
+            "EUR 🇪🇺": (
+                returns.get("EURUSD=X", 0) 
+                + returns.get("EURJPY=X", 0) 
+                + returns.get("EURGBP=X", 0) 
+                + returns.get("EURCHF=X", 0)
+            ) / 4,
+            
+            "GBP 🇬🇧": (
+                returns.get("GBPUSD=X", 0) 
+                + returns.get("GBPJPY=X", 0) 
+                - returns.get("EURGBP=X", 0) 
+                + returns.get("GBPCHF=X", 0)
+            ) / 4,
+            
+            "JPY 🇯🇵": (
+                -returns.get("USDJPY=X", 0) 
+                - returns.get("EURJPY=X", 0) 
+                - returns.get("GBPJPY=X", 0)
+            ) / 3,
+            
+            "CHF 🇨🇭": (
+                -returns.get("USDCHF=X", 0) 
+                - returns.get("EURCHF=X", 0) 
+                - returns.get("GBPCHF=X", 0)
+            ) / 3,
+            
             "AUD 🇦🇺": returns.get("AUDUSD=X", 0),
             "CAD 🇨🇦": -returns.get("USDCAD=X", 0),
             "BTC ₿": returns.get("BTC-USD", 0),
             "ETH 💎": returns.get("ETH-USD", 0)
         }
+        
         return pd.Series(strength).sort_values(ascending=False)
-    except Exception:
+        
+    except Exception as e:
+        # Debug opzionale: print(f"Errore currency strength: {e}")
         return pd.Series(dtype=float)
 
 def get_asset_params(pair):
