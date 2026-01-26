@@ -879,7 +879,12 @@ if api and api.check_connect():
 
     with tab2:
         st.subheader("Posizioni Aperte")
-        posizioni = api.get_positions("cfd")
+        # Sostituisci la riga 907 con:
+        if api is not None and api.check_connect():
+            posizioni = api.get_positions("cfd")
+        else:
+            posizioni = {} # Evita il crash nelle righe successive
+            
         if posizioni:
             data_list = []
             if isinstance(posizioni, list):
@@ -900,48 +905,59 @@ if api and api.check_connect():
 
 # --- SEZIONE GRAFICO E ANALISI ---
 st.markdown("---")
+# --- SEZIONE GRAFICO 3 ORE ---
 st.subheader(f"📈 Analisi Storica {selected_label} (Ultime 3 Ore)")
 
-# Download dati per il grafico (1m)
 df_graph = yf.download(pair, period="1d", interval="1m", progress=False)
 
-if not df_graph.empty:
-    df_graph.columns = [c.lower() for c in df_graph.columns]
+if df_graph is not None and not df_graph.empty:
+    # Pulizia colonne
+    if isinstance(df_graph.columns, pd.MultiIndex):
+        df_graph.columns = df_graph.columns.get_level_values(0)
+    df_graph.columns = [str(c).lower() for c in df_graph.columns]
     
-    # Calcolo indicatori necessari
-    bb_df = ta.bbands(df_graph['close'], length=20, std=2)
-    df_graph['rsi'] = ta.rsi(df_graph['close'], length=14)
-    adx_df = ta.adx(df_graph['high'], df_graph['low'], df_graph['close'], length=14)
+    # Prendi le ultime 180 candele (3 ore)
+    p_df = df_graph.tail(180).copy()
     
-    # VARIABILI PER METRICHE
-    curr_p = df_graph['close'].iloc[-1]
-    curr_rsi = df_graph['rsi'].iloc[-1]
-    curr_adx_val = adx_df['ADX_14'].iloc[-1]
+    # Calcolo indicatori su p_df
+    bb = ta.bbands(p_df['close'], length=20, std=2)
+    p_df['rsi'] = ta.rsi(p_df['close'], length=14)
     
-    # FILTRO 3 ORE (180 MINUTI)
-    p_df = df_graph.tail(180) 
-    bb_p = bb_df.tail(180)
+    # Verifica che le Bande di Bollinger siano state calcolate
+    if bb is not None:
+        p_df = pd.concat([p_df, bb], axis=1)
+        # Identifica correttamente le colonne BB (i nomi variano in pandas_ta)
+        col_lower = bb.columns[0]
+        col_upper = bb.columns[2]
 
-    # Creazione Plotly
-    fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.05, row_heights=[0.7, 0.3])
+        fig = make_subplots(rows=2, cols=1, shared_xaxes=True, 
+                            vertical_spacing=0.05, row_heights=[0.7, 0.3])
 
-    # Candele
-    fig.add_trace(go.Candlestick(
-        x=p_df.index, open=p_df['open'], high=p_df['high'],
-        low=p_df['low'], close=p_df['close'], name="Prezzo"
-    ), row=1, col=1)
+        # Candele
+        fig.add_trace(go.Candlestick(
+            x=p_df.index, open=p_df['open'], high=p_df['high'],
+            low=p_df['low'], close=p_df['close'], name="Prezzo"
+        ), row=1, col=1)
 
-    # Bande di Bollinger
-    fig.add_trace(go.Scatter(x=p_df.index, y=bb_p.iloc[:, 2], line=dict(color='rgba(173, 216, 230, 0.4)', width=1), name="Upper BB"), row=1, col=1)
-    fig.add_trace(go.Scatter(x=p_df.index, y=bb_p.iloc[:, 0], line=dict(color='rgba(173, 216, 230, 0.4)', width=1), name="Lower BB"), row=1, col=1)
+        # Bande di Bollinger
+        fig.add_trace(go.Scatter(x=p_df.index, y=p_df[col_upper], line=dict(color='rgba(173, 216, 230, 0.4)'), name="Upper BB"), row=1, col=1)
+        fig.add_trace(go.Scatter(x=p_df.index, y=p_df[col_lower], line=dict(color='rgba(173, 216, 230, 0.4)'), name="Lower BB"), row=1, col=1)
 
-    # RSI
-    fig.add_trace(go.Scatter(x=p_df.index, y=p_df['rsi'], line=dict(color='#FFD700'), name="RSI"), row=2, col=1)
-    fig.add_hline(y=70, line_dash="dot", line_color="red", row=2, col=1)
-    fig.add_hline(y=30, line_dash="dot", line_color="green", row=2, col=1)
+        # RSI
+        fig.add_trace(go.Scatter(x=p_df.index, y=p_df['rsi'], line=dict(color='yellow'), name="RSI"), row=2, col=1)
+        fig.add_hline(y=70, line_dash="dot", line_color="red", row=2, col=1)
+        fig.add_hline(y=30, line_dash="dot", line_color="green", row=2, col=1)
+
+        fig.update_layout(height=600, template="plotly_dark", xaxis_rangeslider_visible=False)
+        st.plotly_chart(fig, use_container_width=True)
     
-    fig.update_layout(height=600, template="plotly_dark", xaxis_rangeslider_visible=False)
-    st.plotly_chart(fig, use_container_width=True)
+    # Metriche di riepilogo per evitare il NameError (bb_s)
+    c1, c2 = st.columns(2)
+    c1.metric("Prezzo Attuale", f"{p_df['close'].iloc[-1]:.5f}")
+    c2.metric("RSI (1m)", f"{p_df['rsi'].iloc[-1]:.1f}")
+
+else:
+    st.info("In attesa di dati dal mercato...")
 
     # METRICHE SOTTO IL GRAFICO
     m1, m2, m3 = st.columns(3)
@@ -958,6 +974,10 @@ if not df_graph.empty:
     if curr_p < bb_p.iloc[-1, 0]: score += 15
     if curr_p > bb_p.iloc[-1, 2]: score -= 15
 
+else:
+    st.warning("Dati di mercato non disponibili al momento.")
+
+    
     st.markdown("---")
     st.subheader("🕵️ Sentinel Analysis Summary")
     col_a, col_b = st.columns(2)
