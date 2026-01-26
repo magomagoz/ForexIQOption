@@ -966,51 +966,67 @@ else:
 # --- SEZIONE GRAFICO E ANALISI ---
 st.markdown("---")
 
-# --- SEZIONE GRAFICO 3 ORE ---
-st.subheader(f"📈 Analisi Storica {selected_label} (Ultime 3 Ore)")
+st.markdown("---")
+#st.subheader("📈 Grafico in tempo reale")
+st.subheader(f"📈 Grafico {selected_label} (1m) con BB e RSI")
 
-df_graph = yf.download(pair, period="1d", interval="1m", progress=False)
+p_unit, price_fmt, p_mult, a_type = get_asset_params(pair)
+df_rt = get_realtime_data(pair) 
+df_d = yf.download(pair, period="1y", interval="1d", progress=False)
 
-if df_graph is not None and not df_graph.empty:
-    # Pulizia colonne
-    if isinstance(df_graph.columns, pd.MultiIndex):
-        df_graph.columns = df_graph.columns.get_level_values(0)
-    df_graph.columns = [str(c).lower() for c in df_graph.columns]
+if df_rt is not None and not df_rt.empty and df_d is not None and not df_d.empty:
     
-    # Prendi le ultime 180 candele (3 ore)
-    p_df = df_graph.tail(180).copy()
+    # Pulizia dati
+    if isinstance(df_d.columns, pd.MultiIndex): df_d.columns = df_d.columns.get_level_values(0)
+    df_d.columns = [c.lower() for c in df_d.columns]
     
-    # Calcolo indicatori su p_df
-    bb = ta.bbands(p_df['close'], length=20, std=2)
-    p_df['rsi'] = ta.rsi(p_df['close'], length=14)
+    # Calcolo indicatori
+    bb = ta.bbands(df_rt['close'], length=20, std=2)
+    df_rt = pd.concat([df_rt, bb], axis=1)
+    df_rt['rsi'] = ta.rsi(df_rt['close'], length=14)
+    df_d['rsi'] = ta.rsi(df_d['close'], length=14)
+    df_d['atr'] = ta.atr(df_d['high'], df_d['low'], df_d['close'], length=14)
+          
+    c_up = [c for c in df_rt.columns if "BBU" in c.upper()][0]
+    c_mid = [c for c in df_rt.columns if "BBM" in c.upper()][0]
+    c_low = [c for c in df_rt.columns if "BBL" in c.upper()][0]
     
-    # Verifica che le Bande di Bollinger siano state calcolate
-    if bb is not None:
-        p_df = pd.concat([p_df, bb], axis=1)
-        # Identifica correttamente le colonne BB (i nomi variano in pandas_ta)
-        col_lower = bb.columns[0]
-        col_upper = bb.columns[2]
+    curr_p = float(df_rt['close'].iloc[-1])
+    curr_rsi = float(df_rt['rsi'].iloc[-1])
+    rsi_val = float(df_d['rsi'].iloc[-1]) 
+    last_atr = float(df_d['atr'].iloc[-1])
+    
+    score = 50 + (20 if curr_p < df_rt[c_low].iloc[-1] else -20 if curr_p > df_rt[c_up].iloc[-1] else 0)
 
-        fig = make_subplots(rows=2, cols=1, shared_xaxes=True, 
-                            vertical_spacing=0.05, row_heights=[0.7, 0.3])
+    # --- COSTRUZIONE GRAFICO ---
+    p_df = df_rt.tail(60)
+    fig = make_subplots(rows=2, cols=1, shared_xaxes=True, 
+                        vertical_spacing=0.05, row_heights=[0.75, 0.25])
+    
+    # Candele
+    fig.add_trace(go.Candlestick(
+        x=p_df.index, open=p_df['open'], high=p_df['high'], 
+        low=p_df['low'], close=p_df['close'], name='Prezzo'
+    ), row=1, col=1)
+    
+    # Bande Bollinger
+    fig.add_trace(go.Scatter(x=p_df.index, y=p_df[c_up], line=dict(color='rgba(0, 191, 255, 0.6)', width=1), name='Upper BB'), row=1, col=1)
+    fig.add_trace(go.Scatter(x=p_df.index, y=p_df[c_mid], line=dict(color='rgba(0, 0, 0, 0.3)', width=1), name='BBM'), row=1, col=1)
+    fig.add_trace(go.Scatter(x=p_df.index, y=p_df[c_low], line=dict(color='rgba(0, 191, 255, 0.6)', width=1), fill='tonexty', fillcolor='rgba(0, 191, 255, 0.15)', name='Lower BB'), row=1, col=1)
 
-        # Candele
-        fig.add_trace(go.Candlestick(
-            x=p_df.index, open=p_df['open'], high=p_df['high'],
-            low=p_df['low'], close=p_df['close'], name="Prezzo"
-        ), row=1, col=1)
+    # RSI
+    fig.add_trace(go.Scatter(x=p_df.index, y=p_df['rsi'], line=dict(color='#ffcc00', width=2), name='RSI'), row=2, col=1)
+    fig.add_hline(y=70, line_dash="dot", line_color="red", row=2, col=1)
+    fig.add_hline(y=30, line_dash="dot", line_color="#00ff00", row=2, col=1)
 
-        # Bande di Bollinger
-        fig.add_trace(go.Scatter(x=p_df.index, y=p_df[col_upper], line=dict(color='rgba(173, 216, 230, 0.4)'), name="Upper BB"), row=1, col=1)
-        fig.add_trace(go.Scatter(x=p_df.index, y=p_df[col_lower], line=dict(color='rgba(173, 216, 230, 0.4)'), name="Lower BB"), row=1, col=1)
+    # --- AGGIUNTA GRIGLIA VERTICALE (OGNI 10 MINUTI) ---
+    for t in p_df.index:
+        if t.minute % 10 == 0:
+            fig.add_vline(x=t, line_width=0.5, line_dash="solid", line_color="rgba(0, 0, 0, 0.3)", layer="below")
 
-        # RSI
-        fig.add_trace(go.Scatter(x=p_df.index, y=p_df['rsi'], line=dict(color='yellow'), name="RSI"), row=2, col=1)
-        fig.add_hline(y=70, line_dash="dot", line_color="red", row=2, col=1)
-        fig.add_hline(y=30, line_dash="dot", line_color="green", row=2, col=1)
-
-        fig.update_layout(height=600, template="plotly_dark", xaxis_rangeslider_visible=False)
-        st.plotly_chart(fig, use_container_width=True)
+    # Layout Grafico
+    fig.update_layout(height=600, template="plotly_dark", xaxis_rangeslider_visible=False, margin=dict(l=0,r=0,t=30,b=0), legend=dict(orientation="h", y=1.02))
+    st.plotly_chart(fig, use_container_width=True)
     
     # Metriche di riepilogo per evitare il NameError (bb_s)
     c1, c2 = st.columns(2)
