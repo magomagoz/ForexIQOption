@@ -646,11 +646,15 @@ st.sidebar.markdown("""
 """, unsafe_allow_html=True)
 
 with st.sidebar.expander("🔍 Live Sentinel Data", expanded=True):
-    if 'sentinel_logs' in st.session_state and st.session_state['sentinel_logs']:
-        for log in st.session_state['sentinel_logs']:
+    logs = st.session_state.get('sentinel_logs', [])
+    if logs:
+        for log in logs:
             st.caption(log)
     else:
-        st.caption("In attesa del primo scan...")
+        st.caption("⏳ Analisi asset in corso...")
+        # Piccola info di debug se non ci sono log
+        if not st.session_state.get('iq_api'):
+            st.warning("⚠️ Bot in pausa: API non connessa")
 
 st.sidebar.subheader("📡 Sentinel Status")
 status = st.session_state.get('last_scan_status', 'In attesa...')
