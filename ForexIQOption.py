@@ -903,18 +903,29 @@ if api and api.check_connect():
 
     with tab2:
         st.subheader("Posizioni Aperte")
+        # Sostituisci il blocco sotto "with tab2:"
         posizioni = api.get_positions("cfd")
         
         if posizioni:
-            # Creazione tabella per visualizzazione pulita
             data_list = []
-            for pos_id, p in posizioni.items():
-                data_list.append({
-                    "ID": pos_id,
-                    "Asset": p['item_id'],
-                    "Direzione": p['side'],
-                    "Profitto ($)": p['win_amount']
-                })
+            # Se posizioni è una lista:
+            if isinstance(posizioni, list):
+                for p in posizioni:
+                    data_list.append({
+                        "ID": p.get('position_id', 'N/A'),
+                        "Asset": p.get('instrument_id', 'N/A'),
+                        "Direzione": p.get('side', 'N/A'),
+                        "Profitto ($)": p.get('win_amount', 0)
+                    })
+            # Se posizioni è un dizionario (come previsto originariamente):
+            elif isinstance(posizioni, dict):
+                for pos_id, p in posizioni.items():
+                    data_list.append({
+                        "ID": pos_id,
+                        "Asset": p.get('item_id', 'N/A'),
+                        "Direzione": p.get('side', 'N/A'),
+                        "Profitto ($)": p.get('win_amount', 0)
+                    })
             st.table(data_list)
 
             if st.button("🚨 CHIUDI TUTTE LE POSIZIONI", color="red", use_container_width=True):
