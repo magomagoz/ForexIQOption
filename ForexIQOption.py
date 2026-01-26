@@ -908,8 +908,8 @@ if api and api.check_connect():
                     st.table(data_list)
                 else:
                     st.info("Nessuna posizione aperta rilevata.")
-        except Exception as e:
-            st.error(f"Errore nel recupero posizioni: {e}")
+            except Exception as e:
+                st.error(f"Errore nel recupero posizioni: {e}")
     else:
         st.warning("Connetti IQ Option dalla sidebar per vedere le posizioni.")
            
