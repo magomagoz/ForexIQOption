@@ -230,8 +230,12 @@ def get_currency_strength():
     try:
         forex = ["EURUSD=X", "GBPUSD=X", "USDJPY=X", "AUDUSD=X", "USDCAD=X", "USDCHF=X", "NZDUSD=X", "EURCHF=X","EURJPY=X", "GBPJPY=X", "GBPCHF=X","EURGBP=X"]
         crypto = ["BTC-USD", "ETH-USD"]
-        data = yf.download(forex + crypto, period="5d", interval="1d", progress=False, timeout=15)
-        
+        df = yf.download(ticker, period="1d", interval="1m", progress=False)
+        if not df.empty:
+        # Questa riga risolve l'errore 'tuple' appiattendo le colonne
+        if isinstance(df.columns, pd.MultiIndex): df.columns = df.columns.get_level_values(0)
+            df.columns = [str(c).lower() for c in df.columns]
+
         if data is None or data.empty: 
             return pd.Series(dtype=float)
 
@@ -307,13 +311,12 @@ def update_signal_outcomes(api_conn):
             # Usiamo YF per il prezzo corrente per coerenza coi grafici, 
             # ma idealmente si dovrebbe usare api_conn.get_candles per il prezzo preciso del broker
             ticker_yf = asset_map[row['Asset']]['yf']
-            data = yf.download(ticker_yf, period="1d", interval="1m", progress=False)
-            if data.empty: continue
-            
-            if isinstance(data.columns, pd.MultiIndex): 
-                data.columns = data.columns.get_level_values(0)
-            data.columns = [c.lower() for c in data.columns]
-            
+            df = yf.download(ticker, period="1d", interval="1m", progress=False)
+            if not df.empty:
+            # Questa riga risolve l'errore 'tuple' appiattendo le colonne
+            if isinstance(df.columns, pd.MultiIndex): df.columns = df.columns.get_level_values(0)
+            df.columns = [str(c).lower() for c in df.columns]
+
             current_price = float(data['close'].iloc[-1])
             entry_v = float(str(row['Prezzo']).replace(',', '.'))
             current_sl = float(str(row['SL']).replace(',', '.'))
@@ -413,9 +416,11 @@ def run_sentinel(api_conn):
         
         try:
             # 1. Recupero dati real-time (1m)
-            df_rt_s = yf.download(yf_ticker, period="2d", interval="1m", progress=False)
-            if df_rt_s.empty:
-                continue
+            df = yf.download(ticker, period="1d", interval="1m", progress=False)
+            if not df.empty:
+                # Questa riga risolve l'errore 'tuple' appiattendo le colonne
+            if isinstance(df.columns, pd.MultiIndex): df.columns = df.columns.get_level_values(0)
+            df.columns = [str(c).lower() for c in df.columns]
 
             # Pulizia colonne per evitare errori case-sensitive
             df_rt_s.columns = [c.lower() for c in df_rt_s.columns]
@@ -877,27 +882,38 @@ if api and api.check_connect():
             # Logica di invio ordine tramite api.buy_order...
             st.success("Ordine inviato al broker!")
 
+    # --- SEZIONE MONITORAGGIO ATTIVO ---
     with tab2:
         st.subheader("Posizioni Aperte")
-        # Sostituisci la riga 907 con:
-        if api is not None and api.check_connect():
-            posizioni = api.get_positions("cfd")
-        else:
-            posizioni = {} # Evita il crash nelle righe successive
-            
-        if posizioni:
-            data_list = []
-            if isinstance(posizioni, list):
-                for p in posizioni:
-                    data_list.append({
-                        "ID": p.get('id', 'N/A'),
-                        "Asset": p.get('instrument_id', 'N/A'),
-                        "Direzione": p.get('side', 'N/A'),
-                        "Profitto": p.get('win_amount', 0)
-                    })
-                st.table(data_list)
-            
-            if st.button("🚨 CHIUDI TUTTE LE POSIZIONI", color="red"):
+        # Verifica se l'API esiste ed è connessa
+        if st.session_state.get('iq_api') and st.session_state['iq_api'].check_connect():
+            try:
+                posizioni = st.session_state['iq_api'].get_positions("cfd")
+                
+                if posizioni and isinstance(posizioni, (list, dict)):
+                    data_list = []
+                    # Se è un dizionario (vecchio formato API)
+                    if isinstance(posizioni, dict):
+                        items = posizioni.items()
+                    else: # Se è una lista
+                        items = enumerate(posizioni)
+    
+                    for idx, p in items:
+                        data_list.append({
+                            "ID": p.get('id', 'N/A'),
+                            "Asset": p.get('instrument_id', 'N/A'),
+                            "Direzione": p.get('side', 'N/A'),
+                            "Profitto": p.get('win_amount', 0)
+                        })
+                    st.table(data_list)
+            else:
+                st.info("Nessuna posizione aperta rilevata.")
+        except Exception as e:
+            st.error(f"Errore nel recupero posizioni: {e}")
+    else:
+        st.warning("Connetti IQ Option dalla sidebar per vedere le posizioni.")
+           
+            if st.button("🚨 CHIUDI TUTTE LE POSIZIONI", use_container_width=True, type="primary"):
                 # api.close_all_positions()
                 st.rerun()
         else:
