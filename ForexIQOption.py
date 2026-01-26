@@ -664,7 +664,7 @@ selected_label = st.sidebar.selectbox("**Asset**", list(asset_map.keys()))
 pair = asset_map[selected_label]['yf']
 
 # Recupero Balance Reale se connesso
-bal_display = st.session_state.get('balance_val', 1000)
+bal_display = st.session_state.get('balance_val', 10000)
 balance = st.sidebar.number_input("**Conto (€)**", value=float(bal_display), key="balance_val")
 risk_pc = st.sidebar.slider("**Investimento %**", 0.5, 5.0, 2.0, step=0.5, key="risk_val")
 
