@@ -904,29 +904,20 @@ if api and api.check_connect():
     with tab2:
         st.subheader("Posizioni Aperte")
         # Sostituisci il blocco sotto "with tab2:"
-        posizioni = api.get_positions("cfd")
-        
-        if posizioni:
-            data_list = []
-            # Se posizioni è una lista:
-            if isinstance(posizioni, list):
-                for p in posizioni:
-                    data_list.append({
-                        "ID": p.get('position_id', 'N/A'),
-                        "Asset": p.get('instrument_id', 'N/A'),
-                        "Direzione": p.get('side', 'N/A'),
-                        "Profitto ($)": p.get('win_amount', 0)
-                    })
-            # Se posizioni è un dizionario (come previsto originariamente):
-            elif isinstance(posizioni, dict):
-                for pos_id, p in posizioni.items():
-                    data_list.append({
-                        "ID": pos_id,
-                        "Asset": p.get('item_id', 'N/A'),
-                        "Direzione": p.get('side', 'N/A'),
-                        "Profitto ($)": p.get('win_amount', 0)
-                    })
-            st.table(data_list)
+posizioni = api.get_positions("cfd")
+
+if posizioni:
+    data_list = []
+    # Verifica se è una lista (comune nelle nuove versioni della libreria)
+    if isinstance(posizioni, list):
+        for p in posizioni:
+            data_list.append({
+                "ID": p.get('id', 'N/A'),
+                "Asset": p.get('instrument_id', 'N/A'),
+                "Direzione": p.get('side', 'N/A'),
+                "Profitto": p.get('win_amount', 0)
+            })
+    st.table(data_list)
 
             if st.button("🚨 CHIUDI TUTTE LE POSIZIONI", color="red", use_container_width=True):
                 for pos_id in posizioni.keys():
@@ -943,63 +934,41 @@ st.markdown("---")
 st.subheader(f"📈 Grafico {selected_label} (1m) con BB e RSI")
 
 p_unit, price_fmt, p_mult, a_type = get_asset_params(pair)
-df_rt = get_realtime_data(pair) 
-df_d = yf.download(pair, period="1y", interval="1d", progress=False)
+# --- LOGICA GRAFICO 3 ORE PASSATE ---
+# Scarichiamo almeno 1 giorno per avere dati sufficienti per gli indicatori
+df_rt = yf.download(pair, period="1d", interval="1m", progress=False)
 
-if df_rt is not None and not df_rt.empty and df_d is not None and not df_d.empty:
+if df_rt is not None and not df_rt.empty:
+    df_rt.columns = [c.lower() for c in df_rt.columns]
     
-    if isinstance(df_d.columns, pd.MultiIndex): df_d.columns = df_d.columns.get_level_values(0)
-    df_d.columns = [c.lower() for c in df_d.columns]
-    
+    # Calcolo indicatori su tutto il dataframe per precisione
     bb = ta.bbands(df_rt['close'], length=20, std=2)
     df_rt = pd.concat([df_rt, bb], axis=1)
     df_rt['rsi'] = ta.rsi(df_rt['close'], length=14)
-    df_d['rsi'] = ta.rsi(df_d['close'], length=14)
-    df_d['atr'] = ta.atr(df_d['high'], df_d['low'], df_d['close'], length=14)
-          
-    c_up = [c for c in df_rt.columns if "BBU" in c.upper()][0]
-    c_mid = [c for c in df_rt.columns if "BBM" in c.upper()][0]
-    c_low = [c for c in df_rt.columns if "BBL" in c.upper()][0]
-    # Sostituisci la parte del calcolo BB nel corpo principale con questa:
-    bb = ta.bbands(df_rt['close'], length=20, std=2)
-    # Assicuriamoci che bb non sia None prima di procedere
-    if bb is not None:
-        # Definisci esplicitamente i valori per le metriche
-        low_bb = bb.iloc[-1, 0]  # BBL (Lower)
-        mid_bb = bb.iloc[-1, 1]  # BBM (Middle)
-        up_bb = bb.iloc[-1, 2]   # BBU (Upper)
-        
-        # Ora puoi usare low_bb, mid_bb e up_bb senza errori
     
-    curr_p = float(df_rt['close'].iloc[-1])
-    curr_rsi = float(df_rt['rsi'].iloc[-1])
-    rsi_val = float(df_d['rsi'].iloc[-1]) 
-    last_atr = float(df_d['atr'].iloc[-1])
+    # PRENDIAMO LE ULTIME 180 CANDELE (3 ORE)
+    p_df = df_rt.tail(180) 
     
-    score = 50 + (20 if curr_p < df_rt[c_low].iloc[-1] else -20 if curr_p > df_rt[c_up].iloc[-1] else 0)
-
-    p_df = df_rt.tail(60)
     fig = make_subplots(rows=2, cols=1, shared_xaxes=True, 
                         vertical_spacing=0.05, row_heights=[0.75, 0.25])
     
+    # Candele
     fig.add_trace(go.Candlestick(
         x=p_df.index, open=p_df['open'], high=p_df['high'], 
         low=p_df['low'], close=p_df['close'], name='Prezzo'
     ), row=1, col=1)
     
-    fig.add_trace(go.Scatter(x=p_df.index, y=p_df[c_up], line=dict(color='rgba(0, 191, 255, 0.6)', width=1), name='Upper BB'), row=1, col=1)
-    fig.add_trace(go.Scatter(x=p_df.index, y=p_df[c_mid], line=dict(color='rgba(0, 0, 0, 0.3)', width=1), name='BBM'), row=1, col=1)
-    fig.add_trace(go.Scatter(x=p_df.index, y=p_df[c_low], line=dict(color='rgba(0, 191, 255, 0.6)', width=1), fill='tonexty', fillcolor='rgba(0, 191, 255, 0.15)', name='Lower BB'), row=1, col=1)
+    # Bande di Bollinger (usando i nomi corretti generati da pandas_ta)
+    c_low, c_mid, c_up = bb.columns[0], bb.columns[1], bb.columns[2]
+    fig.add_trace(go.Scatter(x=p_df.index, y=p_df[c_up], line=dict(color='rgba(0, 191, 255, 0.3)'), name='Upper BB'), row=1, col=1)
+    fig.add_trace(go.Scatter(x=p_df.index, y=p_df[c_low], line=dict(color='rgba(0, 191, 255, 0.3)'), fill='tonexty', name='Lower BB'), row=1, col=1)
 
-    fig.add_trace(go.Scatter(x=p_df.index, y=p_df['rsi'], line=dict(color='#ffcc00', width=2), name='RSI'), row=2, col=1)
+    # RSI
+    fig.add_trace(go.Scatter(x=p_df.index, y=p_df['rsi'], line=dict(color='#ffcc00'), name='RSI'), row=2, col=1)
     fig.add_hline(y=70, line_dash="dot", line_color="red", row=2, col=1)
     fig.add_hline(y=30, line_dash="dot", line_color="#00ff00", row=2, col=1)
 
-    for t in p_df.index:
-        if t.minute % 10 == 0:
-            fig.add_vline(x=t, line_width=0.5, line_dash="solid", line_color="rgba(0, 0, 0, 0.3)", layer="below")
-
-    fig.update_layout(height=600, template="plotly_dark", xaxis_rangeslider_visible=False, margin=dict(l=0,r=0,t=30,b=0), legend=dict(orientation="h", y=1.02))
+    fig.update_layout(height=600, template="plotly_dark", xaxis_rangeslider_visible=False)
     st.plotly_chart(fig, use_container_width=True)
 
     c_met1, c_met2 = st.columns(2)
