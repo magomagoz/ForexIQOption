@@ -974,8 +974,8 @@ else:
     if curr_p < bb_p.iloc[-1, 0]: score += 15
     if curr_p > bb_p.iloc[-1, 2]: score -= 15
 
-else:
-    st.warning("Dati di mercato non disponibili al momento.")
+    else:
+        st.warning("Dati di mercato non disponibili al momento.")
 
     
     st.markdown("---")
