@@ -921,6 +921,7 @@ if api and api.check_connect():
 
 # --- SEZIONE GRAFICO E ANALISI ---
 st.markdown("---")
+
 # --- SEZIONE GRAFICO 3 ORE ---
 st.subheader(f"📈 Analisi Storica {selected_label} (Ultime 3 Ore)")
 
