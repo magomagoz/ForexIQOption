@@ -234,7 +234,7 @@ def get_currency_strength():
         if not df.empty:
         # Questa riga risolve l'errore 'tuple' appiattendo le colonne
             if isinstance(df.columns, pd.MultiIndex): df.columns = df.columns.get_level_values(0)
-                df.columns = [str(c).lower() for c in df.columns]
+        df.columns = [str(c).lower() for c in df.columns]
 
         if data is None or data.empty: 
             return pd.Series(dtype=float)
@@ -314,7 +314,7 @@ def update_signal_outcomes(api_conn):
             df = yf.download(ticker, period="1d", interval="1m", progress=False)
             if not df.empty:
             # Questa riga risolve l'errore 'tuple' appiattendo le colonne
-            if isinstance(df.columns, pd.MultiIndex): df.columns = df.columns.get_level_values(0)
+                if isinstance(df.columns, pd.MultiIndex): df.columns = df.columns.get_level_values(0)
             df.columns = [str(c).lower() for c in df.columns]
 
             current_price = float(data['close'].iloc[-1])
@@ -419,7 +419,7 @@ def run_sentinel(api_conn):
             df = yf.download(ticker, period="1d", interval="1m", progress=False)
             if not df.empty:
                 # Questa riga risolve l'errore 'tuple' appiattendo le colonne
-            if isinstance(df.columns, pd.MultiIndex): df.columns = df.columns.get_level_values(0)
+                if isinstance(df.columns, pd.MultiIndex): df.columns = df.columns.get_level_values(0)
             df.columns = [str(c).lower() for c in df.columns]
 
             # Pulizia colonne per evitare errori case-sensitive
