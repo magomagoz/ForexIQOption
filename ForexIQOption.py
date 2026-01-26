@@ -910,9 +910,9 @@ if api and api.check_connect():
                     st.info("Nessuna posizione aperta rilevata.")
             except Exception as e:
                 st.error(f"Errore nel recupero posizioni: {e}")
-    else:
-        st.warning("Connetti IQ Option dalla sidebar per vedere le posizioni.")
-           
+        else:
+            st.warning("Connetti IQ Option dalla sidebar per vedere le posizioni.")
+               
             if st.button("🚨 CHIUDI TUTTE LE POSIZIONI", use_container_width=True, type="primary"):
                 # api.close_all_positions()
                 st.rerun()
