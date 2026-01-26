@@ -289,15 +289,18 @@ def update_signal_outcomes(api_conn):
 
     # Recupera posizioni aperte da IQ Option (Forex/Crypto)
     open_positions = {}
-    if api_conn:
+    if api_conn and api_conn.check_connect():
         try:
-            # Nota: questa chiamata potrebbe variare in base alla versione della lib iqoptionapi
-            # Cerchiamo di ottenere le posizioni aperte
-            orders = api_conn.get_positions("forex") 
-            # Mappa orders per ID per accesso veloce
-            # open_positions = {str(o['id']): o for o in orders} # Semplificazione
-        except:
-            pass
+            posizioni = api_conn.get_positions("cfd")
+            if isinstance(posizioni, list): # Se l'API restituisce una lista (molto comune)
+                for p in posizioni:
+                    # Usa .get() per evitare crash se mancano chiavi
+                    st.write(f"Asset: {p.get('instrument_id')} | Profit: {p.get('win_amount')}")
+            elif isinstance(posizioni, dict):
+                for pos_id, p in posizioni.items():
+                    st.write(f"ID: {pos_id} | Profit: {p.get('win_amount')}")
+        except Exception as e:
+            st.warning("Impossibile recuperare le posizioni attive.")
 
     for idx, row in df[df['Stato'] == 'In Corso'].iterrows():
         try:
@@ -936,39 +939,37 @@ st.subheader(f"📈 Grafico {selected_label} (1m) con BB e RSI")
 p_unit, price_fmt, p_mult, a_type = get_asset_params(pair)
 # --- LOGICA GRAFICO 3 ORE PASSATE ---
 # Scarichiamo almeno 1 giorno per avere dati sufficienti per gli indicatori
+# --- SEZIONE GRAFICO ---
+# Scarica dati sufficienti (es. 1 giorno) per calcolare bene gli indicatori
 df_rt = yf.download(pair, period="1d", interval="1m", progress=False)
 
-if df_rt is not None and not df_rt.empty:
+if not df_rt.empty:
     df_rt.columns = [c.lower() for c in df_rt.columns]
     
-    # Calcolo indicatori su tutto il dataframe per precisione
-    bb = ta.bbands(df_rt['close'], length=20, std=2)
-    df_rt = pd.concat([df_rt, bb], axis=1)
+    # Calcolo indicatori (BB, RSI)
+    bb_df = ta.bbands(df_rt['close'], length=20, std=2)
     df_rt['rsi'] = ta.rsi(df_rt['close'], length=14)
     
-    # PRENDIAMO LE ULTIME 180 CANDELE (3 ORE)
+    # FILTRO: Prendi solo le ultime 180 candele (3 ore)
     p_df = df_rt.tail(180) 
-    
-    fig = make_subplots(rows=2, cols=1, shared_xaxes=True, 
-                        vertical_spacing=0.05, row_heights=[0.75, 0.25])
-    
+    bb_p = bb_df.tail(180)
+
+    fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.05, row_heights=[0.7, 0.3])
+
     # Candele
     fig.add_trace(go.Candlestick(
-        x=p_df.index, open=p_df['open'], high=p_df['high'], 
-        low=p_df['low'], close=p_df['close'], name='Prezzo'
+        x=p_df.index, open=p_df['open'], high=p_df['high'],
+        low=p_df['low'], close=p_df['close'], name="Prezzo"
     ), row=1, col=1)
+
+    # Bande di Bollinger (Upper e Lower)
+    fig.add_trace(go.Scatter(x=p_df.index, y=bb_p.iloc[:, 2], line=dict(color='gray', width=1), name="Upper BB"), row=1, col=1)
+    fig.add_trace(go.Scatter(x=p_df.index, y=bb_p.iloc[:, 0], line=dict(color='gray', width=1), name="Lower BB"), row=1, col=1)
+
+    # RSI (Sotto)
+    fig.add_trace(go.Scatter(x=p_df.index, y=p_df['rsi'], line=dict(color='yellow'), name="RSI"), row=2, col=1)
     
-    # Bande di Bollinger (usando i nomi corretti generati da pandas_ta)
-    c_low, c_mid, c_up = bb.columns[0], bb.columns[1], bb.columns[2]
-    fig.add_trace(go.Scatter(x=p_df.index, y=p_df[c_up], line=dict(color='rgba(0, 191, 255, 0.3)'), name='Upper BB'), row=1, col=1)
-    fig.add_trace(go.Scatter(x=p_df.index, y=p_df[c_low], line=dict(color='rgba(0, 191, 255, 0.3)'), fill='tonexty', name='Lower BB'), row=1, col=1)
-
-    # RSI
-    fig.add_trace(go.Scatter(x=p_df.index, y=p_df['rsi'], line=dict(color='#ffcc00'), name='RSI'), row=2, col=1)
-    fig.add_hline(y=70, line_dash="dot", line_color="red", row=2, col=1)
-    fig.add_hline(y=30, line_dash="dot", line_color="#00ff00", row=2, col=1)
-
-    fig.update_layout(height=600, template="plotly_dark", xaxis_rangeslider_visible=False)
+    fig.update_layout(height=500, template="plotly_dark", xaxis_rangeslider_visible=False)
     st.plotly_chart(fig, use_container_width=True)
 
     c_met1, c_met2 = st.columns(2)
