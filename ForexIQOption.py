@@ -916,8 +916,8 @@ if api and api.check_connect():
             if st.button("🚨 CHIUDI TUTTE LE POSIZIONI", use_container_width=True, type="primary"):
                 # api.close_all_positions()
                 st.rerun()
-        else:
-            st.info("Nessuna posizione attiva su IQ Option.")
+else:
+    st.info("Nessuna posizione attiva su IQ Option.")
 
 # --- SEZIONE GRAFICO E ANALISI ---
 st.markdown("---")
