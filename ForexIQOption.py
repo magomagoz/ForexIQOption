@@ -361,14 +361,16 @@ def update_signal_outcomes(api_conn):
         try:
             # Usiamo YF per il prezzo corrente per coerenza coi grafici, 
             # ma idealmente si dovrebbe usare api_conn.get_candles per il prezzo preciso del broker
+            # Sostituisci le righe 243-249 con:
             ticker_yf = asset_map[row['Asset']]['yf']
-            df = yf.download(ticker, period="1d", interval="1m", progress=False)
-            if not df.empty:
-            # Questa riga risolve l'errore 'tuple' appiattendo le colonne
-                if isinstance(df.columns, pd.MultiIndex): df.columns = df.columns.get_level_values(0)
-            df.columns = [str(c).lower() for c in df.columns]
+            df_temp = yf.download(ticker_yf, period="1d", interval="1m", progress=False)
+            if df_temp.empty: continue
+            
+            if isinstance(df_temp.columns, pd.MultiIndex):
+                df_temp.columns = df_temp.columns.get_level_values(0)
+            df_temp.columns = [str(c).lower() for c in df_temp.columns]
 
-            current_price = float(data['close'].iloc[-1])
+            current_price = float(df_temp['close'].iloc[-1])
             entry_v = float(str(row['Prezzo']).replace(',', '.'))
             current_sl = float(str(row['SL']).replace(',', '.'))
             investimento = float(str(row['Investimento €']).replace(',', '.'))
@@ -467,23 +469,27 @@ def run_sentinel(api_conn):
         
         try:
             # 1. Recupero dati real-time (1m)
-            df = yf.download(ticker, period="1d", interval="1m", progress=False)
-            if not df.empty:
-                # Questa riga risolve l'errore 'tuple' appiattendo le colonne
-                if isinstance(df.columns, pd.MultiIndex): df.columns = df.columns.get_level_values(0)
-            df.columns = [str(c).lower() for c in df.columns]
+                        # 1. Recupero dati
+            df = yf.download(yf_ticker, period="1d", interval="1m", progress=False) # Usa yf_ticker
+            if df.empty: continue
 
-            # Pulizia colonne per evitare errori case-sensitive
-            df_rt_s.columns = [c.lower() for c in df_rt_s.columns]
+            if isinstance(df.columns, pd.MultiIndex):
+                df.columns = df.columns.get_level_values(0)
+            df.columns = [str(c).lower() for c in df.columns]
             
             # 2. CALCOLO INDICATORI
-            bb_s = ta.bbands(df_rt_s['close'], length=20, std=2)
-            rsi_s = ta.rsi(df_rt_s['close'], length=14)
-            adx_s = ta.adx(df_rt_s['high'], df_rt_s['low'], df_rt_s['close'])
-
-            # Aggiungi un log per ogni valuta analizzata
-            debug_list.append(f"🔍 {label}: RSI {rsi_val:.1f} | ADX {curr_adx:.1f}")
+            bb_s = ta.bbands(df['close'], length=20, std=2)
+            rsi_s = ta.rsi(df['close'], length=14)
+            adx_s = ta.adx(df['high'], df['low'], df['close'])
             
+            # Calcola i valori PRIMA di aggiungerli al log
+            curr_v = float(df['close'].iloc[-1])
+            rsi_val = float(rsi_s.iloc[-1])
+            curr_adx = float(adx_s.iloc[-1, 0])
+
+            # ORA puoi aggiungere al log
+            debug_list.append(f"🔍 {label}: RSI {rsi_val:.1f} | ADX {curr_adx:.1f}")
+
             curr_v = float(df_rt_s['close'].iloc[-1])
             low_bb = bb_s.iloc[-1, 0]  # BBL
             up_bb = bb_s.iloc[-1, 2]   # BBU
@@ -1036,13 +1042,14 @@ if df_graph is not None and not df_graph.empty:
 else:
     st.info("In attesa di dati dal mercato...")
 
-    # METRICHE SOTTO IL GRAFICO
-    m1, m2, m3 = st.columns(3)
-    p_unit, price_fmt, _, _ = get_asset_params(selected_label)
-    
-    m1.metric("Prezzo Attuale", price_fmt.format(curr_p))
-    m2.metric("RSI (1m)", f"{curr_rsi:.1f}", delta="Ipercomprato" if curr_rsi > 70 else "Ipervenduto" if curr_rsi < 30 else "Neutro")
-    m3.metric("Trend (ADX)", f"{curr_adx_val:.1f}", "Forte" if curr_adx_val > 25 else "Laterale")
+    # Sostituisci m1, m2, m3 con:
+    curr_p_val = p_df['close'].iloc[-1]
+    curr_rsi_val = p_df['rsi'].iloc[-1]
+    curr_adx_val = ta.adx(p_df['high'], p_df['low'], p_df['close']).iloc[-1, 0]
+
+    m1.metric("Prezzo Attuale", price_fmt.format(curr_p_val))
+    m2.metric("RSI (1m)", f"{curr_rsi_val:.1f}")
+    m3.metric("Trend (ADX)", f"{curr_adx_val:.1f}")
 
     # LOGICA SCORE SENTINEL (Semplificata)
     score = 50
