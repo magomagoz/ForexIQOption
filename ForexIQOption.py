@@ -55,7 +55,7 @@ def get_advanced_stats():
 
     # Pulizia dati monetari
     df['Risultato €'] = df['Risultato €'].str.replace('€', '').astype(float)
-    df['DataOra_dt'] = pd.to_datetime(df['DataOra'], format='%H:%M:%S') # Nota: aggiungi la data reale se disponibile
+    df['DataOra_dt'] = pd.to_datetime(df['DataOra'], format='%Y-%m-%d %H:%M:%S') # Nota: aggiungi la data reale se disponibile
     
     stats = {}
     # 1. Profitto Totale e Settimanale (Simulato sulla cronologia attuale)
@@ -300,7 +300,7 @@ def sincronizza_posizioni_aperte():
             if iq_id not in df_hist['IQ_ID'].values:
                 # Creiamo un record di "recupero"
                 new_sig = {
-                    'DataOra': get_now_rome().strftime("%H:%M:%S"),
+                    'DataOra': get_now_rome().strftime("%Y-%m-%d %H:%M:%S"),
                     'Asset': pos['active_id'], # Va convertito in nome stringa se necessario
                     'Direzione': 'COMPRA' if pos['side'] == 'buy' else 'VENDI',
                     'Prezzo': pos['open_quote'],
@@ -491,90 +491,79 @@ def update_signal_outcomes():
         st.session_state['signal_history'] = df
         save_history_permanently()
 
+def esegui_ordine_reale(label, direzione, prezzo, tp, sl, inv):
+    bot = st.session_state['iq_bot']
+    # Esegue l'ordine tramite il modulo IQHandler
+    id_ordine = bot.apri_posizione(label, inv, direzione.lower(), tp, sl)
+    
+    if id_ordine:
+        nuovo_trade = {
+            'DataOra': datetime.now(rome_tz).strftime("%H:%M:%S"),
+            'Asset': label,
+            'Direzione': direzione,
+            'Prezzo': prezzo,
+            'SL': sl,
+            'TP': tp,
+            'Stato': 'In Corso',
+            'IQ_ID': id_ordine,
+            'Investimento €': f"{inv:.2f}",
+            'Risultato €': "0.00",
+            'Protezione': 'Standard'
+        }
+        st.session_state['signal_history'] = pd.concat([pd.DataFrame([nuovo_trade]), st.session_state['signal_history']], ignore_index=True)
+        save_history_permanently()
+        invia_telegram(f"🚀 **ORDINE ESEGUITO**\nAsset: {label}\nTipo: {direzione}\nInvestimento: €{inv}")
+
 def run_sentinel_optimized():
-    """Versione migliorata: Analisi e Trading sincronizzati su IQ Option"""
     if not st.session_state.get('trading_attivo', True):
         return
 
     bot = st.session_state.get('iq_bot')
     if not bot or not bot.connected:
-        st.sidebar.error("🔌 IQ Option Disconnesso")
         return
 
-    # Usiamo direttamente l'API di IQ Option per l'analisi
     api = bot.api
     debug_list = []
+    balance_real = api.get_balance()
 
     for label, asset_iq in asset_map.items():
         try:
-            # 1. Recupero candele (60 secondi, 100 candele)
             candles = api.get_candles(asset_iq, 60, 100, time_lib.time())
-            if not candles:
-                continue
+            if not candles: continue
             
             df = pd.DataFrame(candles)
-            
-            # 2. Calcolo indicatori su dati REALI del broker
-            # Bollinger Bands
             bb = ta.bbands(df['close'], length=20, std=2)
-            df = pd.concat([df, bb], axis=1)
-            
-            # RSI & ADX
             df['rsi'] = ta.rsi(df['close'], length=14)
-            adx_df = ta.adx(df['high'], df['low'], df['close'], length=14)
+            adx = ta.adx(df['high'], df['low'], df['close'], length=14)
             
             curr_p = df['close'].iloc[-1]
             curr_rsi = df['rsi'].iloc[-1]
-            curr_adx = adx_df['ADX_14'].iloc[-1]
-            upper_bb = df['BBU_20_2.0'].iloc[-1]
-            lower_bb = df['BBL_20_2.0'].iloc[-1]
+            curr_adx = adx['ADX_14'].iloc[-1]
+            upper_bb = bb['BBU_20_2.0'].iloc[-1]
+            lower_bb = bb['BBL_20_2.0'].iloc[-1]
 
-            # 3. Logica di Ingresso: Mean Reversion con Filtro Volatilità
-            # [attachment_0](attachment)
             decision = None
             if curr_p <= lower_bb and curr_rsi < 35 and curr_adx < 30:
                 decision = "COMPRA"
             elif curr_p >= upper_bb and curr_rsi > 65 and curr_adx < 30:
                 decision = "VENDI"
 
-    
-            # --- PUNTO 4: ESECUZIONE ---
-            decision = None
-            if curr_p <= lower_bb and curr_rsi < 35 and curr_adx < 30:
-                decision = "COMPRA"
-            elif curr_p >= upper_bb and curr_rsi > 65 and curr_adx < 30:
-                decision = "VENDI"
-        
-# --- DENTRO run_sentinel_optimized() ---
-# Dopo aver calcolato decision (COMPRA/VENDI)
-
-if decision:
-    # 1. Recupero dati necessari
-    investimento = balance * (risk_pc / 100) # Prende i valori dai tuoi widget sidebar
-    
-    # 2. Controllo duplicati: non apriamo se esiste già un trade 'In Corso' per quell'asset
-    hist = st.session_state['signal_history']
-    gia_aperto = not hist[(hist['Asset'] == label) & (hist['Stato'] == 'In Corso')].empty
-    
-    if not gia_aperto:
-        # 3. Invio Ordine Reale (Funzione che si interfaccia con IQHandler)
-        # Qui calcoli TP e SL basandoti sulla tua strategia
-        tp_val = curr_p + (last_atr * 2) if decision == "COMPRA" else curr_p - (last_atr * 2)
-        sl_val = curr_p - last_atr if decision == "COMPRA" else curr_p + last_atr
-
-        # ESECUZIONE (Punto 4)
-        if st.session_state['iq_bot']:
-            # Supponendo che esegui_ordine_reale sia definita per comunicare con la classe IQHandler
-            esegui_ordine_reale(label, decision, curr_p, tp_val, sl_val, investimento)
-            
-            # Notifica immediata
-            st.toast(f"🚀 ORDINE {decision} INVIATO: {label}", icon="🔥")
+            if decision:
+                # Evita duplicati
+                hist = st.session_state['signal_history']
+                if hist[(hist['Asset'] == label) & (hist['Stato'] == 'In Corso')].empty:
+                    inv = balance_real * (st.session_state.get('risk_val', 2) / 100)
+                    # Calcolo semplificato TP/SL (puoi usare ATR se disponibile)
+                    dist = curr_p * 0.001 
+                    tp_val = curr_p + dist if decision == "COMPRA" else curr_p - dist
+                    sl_val = curr_p - dist if decision == "COMPRA" else curr_p + dist
                     
+                    esegui_ordine_reale(label, decision, curr_p, tp_val, sl_val, inv)
+            
             debug_list.append(f"🔍 {label}: {curr_p:.5f} | RSI: {curr_rsi:.1f}")
-
         except Exception as e:
-            debug_list.append(f"⚠️ {label} Error: {str(e)}")
-
+            debug_list.append(f"⚠️ {label}: Error")
+            
     st.session_state['sentinel_logs'] = debug_list
                     
 def get_win_rate():
@@ -913,7 +902,7 @@ if st.sidebar.button("🔊 TEST ALERT COMPLETO"):
     inv_test = current_bal * (current_r / 100)
     
     test_data = {
-        'DataOra': get_now_rome().strftime("%dd/%mm/%YYYY %H:%M:%S"),
+        'DataOra': get_now_rome().strftime("%Y-%m-%d %H:%M:%S"),
         'Asset': 'TEST/EUR', 
         'Direzione': 'VENDI', 
         'Prezzo': '1.0950', 
@@ -1005,7 +994,7 @@ if not st.session_state['trading_attivo']:
     st.warning("⚠️ **IL BOT È IN PAUSA**: Nessuna operazione verrà aperta o gestita finché non riattivi il sistema dalla sidebar.")
 
 st.info(f"🛰️ **Sentinel AI Attiva**: Monitoraggio in corso su {len(asset_map)} asset Forex in tempo reale (1m).")
-st.caption(f"Ultimo aggiornamento globale: {get_now_rome().strftime('%d/%m/%Y %H:%M:%S')}")
+st.caption(f"Ultimo aggiornamento globale: {get_now_rome().strftime('%Y-%m-%d %H:%M:%S')}")
 
 st.markdown("---")
 #st.subheader("📈 Grafico in tempo reale")
