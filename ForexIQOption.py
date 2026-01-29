@@ -97,6 +97,10 @@ if 'iq_bot' not in st.session_state:
 if 'trading_attivo' not in st.session_state:
     st.session_state['trading_attivo'] = True # Il bot parte attivo di default
 
+# Filtra solo i trade degli ultimi 7 giorni
+sette_giorni_fa = (datetime.now() - pd.Timedelta(days=7)).strftime("%Y-%m-%d")
+df = df[df['DataOra'] >= sette_giorni_fa]
+
 # --- 1. CONFIGURAZIONE & LAYOUT ---
 st.set_page_config(page_title="Forex Momentum Pro AI", layout="wide", page_icon="📈")
 
@@ -329,6 +333,29 @@ def get_realtime_data(ticker):
         df.columns = [c.lower() for c in df.columns]
         return df.dropna()
     except: return None
+
+def invia_report_settimanale():
+    """Genera e invia il riepilogo delle performance via Telegram"""
+    data = get_advanced_stats()
+    if not data:
+        invia_telegram("📊 **Report Settimanale**: Nessuna operazione conclusa questa settimana.")
+        return
+
+    stats, asset_perf, _ = data
+    
+    # Costruiamo il messaggio
+    msg = (
+        "📊 **SENTINEL: REPORT SETTIMANALE** 📈\n"
+        "----------------------------------\n"
+        f"💰 **Profitto Netto:** € {stats['total_pnl']:.2f}\n"
+        f"🏆 **Win Rate:** {stats['win_rate']:.1f}%\n"
+        f"🚀 **Miglior Asset:** {stats['best_asset']}\n"
+        f"⚠️ **Ora Critica:** {stats['worst_hour']}\n"
+        "----------------------------------\n"
+        "✅ Mercati in chiusura. Buon weekend!"
+    )
+    
+    invia_telegram(msg)
 
 def get_currency_strength():
     try:
@@ -616,6 +643,15 @@ if st.session_state.get('trading_attivo'):
     # Questo viene eseguito ogni volta che la pagina si aggiorna (ogni 60s)
     run_sentinel_optimized() 
     update_signal_outcomes() # Controlla se i trade aperti hanno toccato TP o SL
+
+    # --- CONTROLLO REPORT VENERDÌ (Friday Report) ---
+    now = get_now_rome()
+    # Controlliamo se è Venerdì (weekday 4), ore 22:00, e non l'abbiamo già inviato
+    if now.weekday() == 4 and now.hour == 22 and now.minute == 0:
+        if st.session_state.get('last_report_sent') != now.strftime("%Y-%m-%d"):
+            invia_report_settimanale()
+            st.session_state['last_report_sent'] = now.strftime("%Y-%m-%d")
+
 
 st.sidebar.markdown("---")
 st.sidebar.subheader("🛡️ Sicurezza Sistema")
