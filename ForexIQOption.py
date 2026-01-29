@@ -44,16 +44,38 @@ def invia_telegram(messaggio):
     except Exception as e:
         print(f"Errore Telegram: {e}")
 
-def bot_loop():
-    while True:
-        # Se il kill-switch è attivo, il thread "dorme" senza fare nulla
-        if st.session_state.get('trading_attivo', True):
-            try:
-                genera_segnali_iq()
-                update_signal_outcomes()
-            except Exception as e:
-                print(f"⚠️ Errore: {e}")
-        time.sleep(10)
+def get_advanced_stats():
+    df = st.session_state['signal_history'].copy()
+    
+    # Filtriamo solo i trade conclusi
+    df = df[df['Stato'].isin(['✅ TARGET', '❌ STOP LOSS', '🖐️ CHIUSO MAN.'])]
+    
+    if df.empty:
+        return None
+
+    # Pulizia dati monetari
+    df['Risultato €'] = df['Risultato €'].str.replace('€', '').astype(float)
+    df['DataOra_dt'] = pd.to_datetime(df['DataOra'], format='%H:%M:%S') # Nota: aggiungi la data reale se disponibile
+    
+    stats = {}
+    # 1. Profitto Totale e Settimanale (Simulato sulla cronologia attuale)
+    stats['total_pnl'] = df['Risultato €'].sum()
+    
+    # 2. Miglior e Peggior Asset
+    asset_perf = df.groupby('Asset')['Risultato €'].sum().sort_values(ascending=False)
+    stats['best_asset'] = asset_perf.index[0] if not asset_perf.empty else "N/A"
+    stats['worst_asset'] = asset_perf.index[-1] if not asset_perf.empty else "N/A"
+    
+    # 3. Analisi Oraria (Peggior orario per fare trading)
+    df['Ora'] = df['DataOra_dt'].dt.hour
+    hourly_perf = df.groupby('Ora')['Risultato €'].sum()
+    stats['worst_hour'] = f"{hourly_perf.idxmin()}:00" if not hourly_perf.empty else "N/A"
+    
+    # 4. Win Rate Effettivo
+    wins = len(df[df['Risultato €'] > 0])
+    stats['win_rate'] = (wins / len(df)) * 100
+    
+    return stats, asset_perf, hourly_perf
 
 # --- CONFIGURAZIONE CREDENZIALI (NON HARDCODARE LA PASSWORD SE PUOI) ---
 # Usa st.secrets o variabili d'ambiente per sicurezza
@@ -1042,6 +1064,41 @@ if df_rt is not None and not df_rt.empty and df_d is not None and not df_d.empty
 
     # Visualizziamo con unsafe_allow_html
     st.markdown(styled_adx_html, unsafe_allow_html=True)
+
+# Creiamo due Tab: uno per il trading e uno per le statistiche
+tab_trading, tab_stats = st.tabs(["📈 Terminale Operativo", "📊 Statistiche Avanzate"])
+
+with tab_trading:
+    # Qui sposti tutta la logica del grafico e della tabella che hai già
+    pass 
+
+with tab_stats:
+    st.header("🕵️ Analisi Performance Sentinel")
+    data = get_advanced_stats()
+    
+    if data:
+        stats, asset_perf, hourly_perf = data
+        
+        # Righe di metriche
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Profitto Netto", f"€ {stats['total_pnl']:.2f}")
+        c2.metric("Win Rate", f"{stats['win_rate']:.1f}%")
+        c3.metric("Miglior Asset", stats['best_asset'])
+        c4.metric("Ora Critica", stats['worst_hour'], delta="Peggior resa", delta_color="inverse")
+        
+        st.markdown("---")
+        
+        col_graph1, col_graph2 = st.columns(2)
+        
+        with col_graph1:
+            st.subheader("Performance per Asset")
+            st.bar_chart(asset_perf)
+            
+        with col_graph2:
+            st.subheader("Profitto per Fascia Oraria")
+            st.line_chart(hourly_perf)
+    else:
+        st.info("Dati insufficienti per generare statistiche. Chiudi almeno un trade!")
 
 # --- 8. CURRENCY STRENGTH ---
 st.markdown("---")
