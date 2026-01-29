@@ -33,19 +33,15 @@ def invia_telegram(messaggio):
         print(f"Errore Telegram: {e}")
 
 def bot_loop():
-    """Ciclo infinito di analisi e trading"""
-    print("🤖 Bot in esecuzione (Modalità PRACTICE)...")
-    
     while True:
-        try:
-            # 1. Recupera i segnali dai dati IQ Option
-            genera_segnali_iq() 
-            
-            # 2. Frequenza di scansione (es. ogni 10 secondi)
-            time.sleep(10) 
-        except Exception as e:
-            print(f"⚠️ Errore nel loop del bot: {e}")
-            time.sleep(30) # Pausa lunga in caso di errore
+        # Se il kill-switch è attivo, il thread "dorme" senza fare nulla
+        if st.session_state.get('trading_attivo', True):
+            try:
+                genera_segnali_iq()
+                update_signal_outcomes()
+            except Exception as e:
+                print(f"⚠️ Errore: {e}")
+        time.sleep(10)
 
         # Quando il bot apre un trade
         invia_telegram(f"🚀 *Operazione Aperta (DEMO)*\nAsset: {asset_iq}\nDirezione: {action}\nImporto: {inv_float}€")
@@ -55,16 +51,23 @@ def bot_loop():
 
 # --- CONFIGURAZIONE CREDENZIALI (NON HARDCODARE LA PASSWORD SE PUOI) ---
 # Usa st.secrets o variabili d'ambiente per sicurezza
-email = st.secrets["IQ_EMAIL"]
-password = st.secrets["IQ_PASS"]
+# Recupero dai Secrets
+IQ_EMAIL = st.secrets["IQ_EMAIL"]
+IQ_PASS = st.secrets["IQ_PASS"]
+TELE_TOKEN = st.secrets["TELEGRAM_TOKEN"]
+TELE_CHAT_ID = st.secrets["TELEGRAM_CHAT_ID"]
 
-# Inizializzazione in Session State per mantenere la connessione viva
+# Inizializzazione IQ Option
 if 'iq_bot' not in st.session_state:
-    bot = IQHandler(IQ_EMAIL, IQ_PASS)
+    # Passiamo le credenziali dei secrets alla classe
+    bot = IQHandler(IQ_EMAIL, IQ_PASS) 
     if bot.connetti():
         st.session_state['iq_bot'] = bot
     else:
         st.session_state['iq_bot'] = None
+
+if 'trading_attivo' not in st.session_state:
+    st.session_state['trading_attivo'] = True # Il bot parte attivo di default
 
 # --- 1. CONFIGURAZIONE & LAYOUT ---
 st.set_page_config(page_title="Forex Momentum Pro AI", layout="wide", page_icon="📈")
@@ -354,94 +357,64 @@ def detect_divergence(df):
 # ... (le altre funzioni save_history, send_telegram rimangono uguali, incolla da qui in giù) ...
 
 def update_signal_outcomes():
-    if st.session_state['signal_history'].empty: return
+    if st.session_state['signal_history'].empty: 
+        return
+        
     df = st.session_state['signal_history']
     updates_made = False
     
-    for idx, row in df[df['Stato'] == 'In Corso'].iterrows():
+    # Filtriamo solo i trade "In Corso"
+    active_rows = df[df['Stato'] == 'In Corso']
+    
+    for idx, row in active_rows.iterrows():
         try:
-            ticker = asset_map[row['Asset']]
-            data = yf.download(ticker, period="1d", interval="1m", progress=False)
-            if data.empty: continue
+            # 1. Recupero Prezzo Real-Time da IQ Option
+            curr_p = get_last_price_iq(row['Asset'])
             
-            curr_p = float(data['Close'].iloc[-1])
-            entry_v = float(str(row['Prezzo']).replace(',', '.'))
-            # Calcoliamo la distanza iniziale dello SL per calcolare i rapporti percentuali
-            dist_iniziale = abs(entry_v - float(str(row['SL']).replace(',', '.'))) if row['Stato_Prot'] == 'In Attesa' else abs(entry_v - float(str(row['SL']).replace(',', '.'))) # approssimazione
-            
-                # --- LOGICA 4-STEP "ONLY FORWARD" ---
-                # dist_10pct è la distanza di prezzo che rappresenta il tuo -10% iniziale
+            if curr_p is None:
+                continue
                 
-            # --- LOGICA 4-STEP FAST-TRACK ---
-            if row['Direzione'] in ['COMPRA', 'VENDI']:
-                # Calcoliamo il profitto in termini di unità (1 unità = dist_10pct)
-                # dist_10pct è lo scostamento di prezzo che rappresenta il 10% di ROI
-                if row['Direzione'] == 'COMPRA':
-                    profitto_prezzo = current_close - entry_v
-                else:
-                    profitto_prezzo = entry_v - current_close
+            entry_p = float(str(row['Prezzo']).replace(',', '.'))
+            sl_p = float(str(row['SL']).replace(',', '.'))
+            tp_p = float(str(row['TP']).replace(',', '.'))
+            inv = float(str(row['Investimento €']).replace(',', '.'))
+
+            # 2. Calcolo PNL e Controllo Glitch
+            perc, euro, is_glitch = calcola_pnl_protetto(entry_p, curr_p, row['Direzione'], inv)
             
-                # Determiniamo il miglior livello raggiungibile in questo istante
-                target_lvl = 0
-                nuovo_sl_val = None
-                prot_label = ""
-            
-                if profitto_prezzo >= (dist_10pct * 1.9): 
-                    target_lvl = 4
-                    nuovo_sl_val = entry_v + (dist_10pct * 1.5) if row['Direzione'] == 'COMPRA' else entry_v - (dist_10pct * 1.5)
-                    prot_label = "Blindato +15%"
-                elif profitto_prezzo >= (dist_10pct * 1.5): 
-                    target_lvl = 3
-                    nuovo_sl_val = entry_v + (dist_10pct * 1.0) if row['Direzione'] == 'COMPRA' else entry_v - (dist_10pct * 1.0)
-                    prot_label = "Blindato +10%"
-                elif profitto_prezzo >= (dist_10pct * 1.0): 
-                    target_lvl = 2
-                    nuovo_sl_val = entry_v + (dist_10pct * 0.5) if row['Direzione'] == 'COMPRA' else entry_v - (dist_10pct * 0.5)
-                    prot_label = "Blindato +5%"
-                elif profitto_prezzo >= (dist_10pct * 0.5): 
-                    target_lvl = 1
-                    nuovo_sl_val = entry_v
-                    prot_label = "Pareggio (0%)"
-            
-                # Estraiamo il livello attuale (es. da "LIVELLO_1" prendiamo 1)
-                current_lvl_num = int(row['Stato_Prot'].split('_')[1]) if 'LIVELLO' in row['Stato_Prot'] else 0
-            
-                # AGGIORNIAMO SOLO SE IL TARGET È SUPERIORE AL LIVELLO ATTUALE
-                if target_lvl > current_lvl_num:
-                    p_fmt = "{:.5f}" if "JPY" not in row['Asset'] else "{:.3f}"
-                    df.at[idx, 'SL'] = p_fmt.format(nuovo_sl_val)
-                    df.at[idx, 'Stato_Prot'] = f"LIVELLO_{target_lvl}"
-                    df.at[idx, 'Protezione'] = prot_label
-                    updates_made = True
-                    play_safe_sound()
-                    send_telegram_msg(f"🛡️ **Protezione Avanzata {row['Asset']}**\nNuovo SL: {df.at[idx, 'SL']} ({df.at[idx, 'Protezione']})")
-                    
-                # ... Dentro update_signal_outcomes, nel blocco di controllo uscita ...
+            if is_glitch:
+                continue # Salta il calcolo se il dato è sporco
+
+            # 3. Logica di Uscita (Target o Stop Loss)
+            new_status = None
+            if row['Direzione'] == 'COMPRA':
+                if curr_p >= tp_p: new_status = '✅ TARGET'
+                elif curr_p <= sl_p: new_status = '❌ STOP LOSS'
+            else: # VENDI
+                if curr_p <= tp_p: new_status = '✅ TARGET'
+                elif curr_p >= sl_p: new_status = '❌ STOP LOSS'
+
+            # 4. Chiusura Posizione su IQ Option
+            if new_status:
+                iq_id = row.get('IQ_ID')
+                chiusura_effettiva = False
                 
-                # Se stiamo per chiudere il trade (Target o Stop Loss o Trailing)
-                if new_status: # new_status è valorizzato (es. '✅ TARGET', '❌ STOP LOSS')
-                    
-                    # 1. Aggiorna il DataFrame locale (come facevi prima)
-                    df.at[idx, 'Stato'] = new_status
-                    df.at[idx, 'Risultato €'] = f"{risultato_finale:+.2f}"
-                    
-                    # 2. COMANDO CHIUSURA REALE SU IQ OPTION
-                    iq_id = row.get('IQ_ID') # Recuperiamo l'ID salvato
-                    
-                    if st.session_state['iq_bot'] and iq_id is not None:
-                        # Tentativo di chiusura anticipata
-                        success = st.session_state['iq_bot'].chiudi_posizione(iq_id)
-                        if success:
-                            print(f"🔒 Posizione {iq_id} chiusa su IQ per {new_status}")
-                        else:
-                            print(f"⚠️ Impossibile chiudere posizione {iq_id} (forse già scaduta?)")
-                            
-                    updates_made = True
-                    play_close_sound()
-                    msg = f"🔔 **CHIUSURA TRADE**\nAsset: {row['Asset']}\nEsito: {new_status}\nNetto: {risultato_finale:+.2f}€"
-                    send_telegram_msg(msg)
-                    
+                if st.session_state.get('iq_bot') and iq_id:
+                    # Inviamo il comando di chiusura al broker
+                    chiusura_effettiva = st.session_state['iq_bot'].chiudi_posizione(iq_id)
+                
+                # Aggiorniamo il database locale
+                df.at[idx, 'Stato'] = new_status
+                df.at[idx, 'Risultato €'] = f"{euro:+.2f}"
+                updates_made = True
+                
+                # Feedback Audio e Notifica
+                play_close_sound()
+                msg = f"🔔 **CHIUSURA {new_status}**\nAsset: {row['Asset']}\nNetto: {euro:+.2f}€"
+                send_telegram_msg(msg)
+
         except Exception as e:
+            print(f"Errore update {row['Asset']}: {e}")
             continue 
         
     if updates_made:
@@ -449,6 +422,10 @@ def update_signal_outcomes():
         save_history_permanently()
 
 def run_sentinel():
+    if not st.session_state.get('trading_attivo', True):
+        st.session_state['last_scan_status'] = "🛑 Sistema in Pausa"
+        return # Esce dalla funzione senza analizzare i grafici
+    
     current_balance = st.session_state.balance_val 
     current_risk = st.session_state.risk_val
     
@@ -651,6 +628,27 @@ def get_equity_data():
         equity_curve.append(current_bal)
         
     return pd.Series(equity_curve)
+
+st.sidebar.markdown("---")
+st.sidebar.subheader("🛡️ Sicurezza Sistema")
+
+# Tasto dinamico per attivare/disattivare
+if st.session_state['trading_attivo']:
+    if st.sidebar.button("🛑 STOP TOTALE BOT", use_container_width=True, type="primary"):
+        st.session_state['trading_attivo'] = False
+        send_telegram_msg("⚠️ **SISTEMA SOSPESO**: Kill-switch attivato manualmente.")
+        st.rerun()
+else:
+    if st.sidebar.button("🚀 RIATTIVA SISTEMA", use_container_width=True):
+        st.session_state['trading_attivo'] = True
+        send_telegram_msg("✅ **SISTEMA RIATTIVATO**: Il bot riprende l'analisi.")
+        st.rerun()
+
+# Stato visivo
+status_color = "green" if st.session_state['trading_attivo'] else "red"
+st.sidebar.markdown(f"<p style='text-align:center; color:{status_color}; font-weight:bold;'>Stato: {'OPERATIVO' if st.session_state['trading_attivo'] else 'SOSPESO'}</p>", unsafe_allow_html=True)
+
+st.sidebar.markdown("---")
 
 st.sidebar.header("🛠 Trading Desk (1m)")
 balance = st.sidebar.number_input("**Conto (€)**", value=1000, key="balance_val")
