@@ -1,59 +1,61 @@
-# file: iq_bot.py
 from iqoptionapi.stable_api import IQ_Option
-import time
+import logging
 
 class IQHandler:
-    def __init__(self, email, password):
+    def __init__(self, email, password, mode="PRACTICE"):
         self.api = IQ_Option(email, password)
+        self.mode = mode  # "PRACTICE" o "REAL"
         self.connected = False
+        # Mappa degli ID per gli asset principali (Forex)
+        self.asset_ids = {
+            "EURUSD": 1, "GBPUSD": 2, "EURJPY": 4, 
+            "USDJPY": 6, "AUDUSD": 99, "USDCAD": 100
+        }
 
     def connetti(self):
         check, reason = self.api.connect()
         if check:
-            print("✅ Connesso a IQ Option")
-            self.api.change_balance("PRACTICE") # O "REAL" (Rischioso!)
+            self.api.change_balance(self.mode)
             self.connected = True
+            print(f"✅ IQ Option Connesso ({self.mode})")
         else:
             print(f"❌ Errore Connessione: {reason}")
             self.connected = False
         return self.connected
 
-    def get_asset_iq(self, yfinance_ticker):
-        # Mappa i nomi di YFinance su quelli di IQ
-        # YF: EURUSD=X -> IQ: EURUSD
-        return yfinance_ticker.replace("=X", "").replace("-USD", "USD")
-
-    def apri_posizione(self, asset_yf, direzione, importo):
+    def apri_posizione(self, asset_name, direzione, importo, leva=30):
+        """Apre una posizione Forex con moltiplicatore"""
         if not self.connected: return None
-        
-        asset_iq = self.get_asset_iq(asset_yf)
-        action = "call" if direzione == "COMPRA" else "put"
-        
-        # Compra Opzione Digitale (Scadenza 5 o 15 minuti per dare tempo al trade)
-        # duration 1 = 1m, 5 = 5m. Qui usiamo 5 per avere respiro.
-        try:
-            check, id_ordine = self.api.buy_digital_spot(asset_iq, importo, action, 5)
-            if check:
-                return id_ordine
-            else:
-                print("Errore apertura:", id_ordine)
-                return None
-        except Exception as e:
-            print(f"Eccezione IQ: {e}")
+
+        # Pulizia nome asset per il mapping
+        asset_clean = asset_name.replace("=X", "").upper()
+        asset_id = self.asset_ids.get(asset_clean)
+
+        if not asset_id:
+            print(f"⚠️ Asset {asset_clean} non trovato nel mapping ID")
             return None
 
-    def chiudi_posizione(self, id_ordine):
-        if not self.connected: return False
+        side = "buy" if direzione in ["COMPRA", "BUY"] else "sell"
         
-        # Su IQ, "chiudere" significa vendere l'opzione prima della scadenza
-        try:
-            self.api.close_digital_option(id_ordine)
-            return True
-        except:
-            return False
+        # Esecuzione Ordine Forex
+        # Parametri: asset_id, amount, side, leverage, type, stop_loss, take_profit
+        check, order_id = self.api.buy_order(
+            instrument_type="forex",
+            instrument_id=asset_clean, # Alcune versioni API usano il nome, altre l'ID
+            side=side,
+            amount=importo,
+            leverage=leva,
+            type="market"
+        )
 
-    def get_profitto_netto(self, id_ordine):
-        # Ottiene il P&L attuale di un ordine aperto (per aggiornare la UI)
-        # Nota: Richiede chiamate complesse alle API posizioni, 
-        # per ora simuliamo o usiamo il calcolo teorico del tuo script.
-        pass
+        if check:
+            return order_id
+        else:
+            print(f"❌ Errore apertura ordine: {order_id}")
+            return None
+
+    def chiudi_posizione(self, order_id):
+        """Chiude una posizione aperta tramite l'ID ordine"""
+        if not self.connected: return False
+        check = self.api.close_order(order_id)
+        return check
