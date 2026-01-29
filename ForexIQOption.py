@@ -15,19 +15,21 @@ from iq_bot import IQHandler # Importa la classe che abbiamo creato
 import threading
 import time
 
-# Recupero dai Secrets
-TELE_TOKEN = st.secrets["TELEGRAM_TOKEN"]
-TELE_CHAT_ID = st.secrets["TELEGRAM_CHAT_ID"]
-
-# Nel blocco di inizializzazione all'inizio del file
+# --- INIZIALIZZAZIONE UNIFICATA ---
 if 'iq_bot' not in st.session_state:
+    st.session_state['iq_bot'] = None
+    st.session_state['trading_attivo'] = True
+    st.session_state['signal_history'] = load_history_from_csv()
+
+if st.session_state['iq_bot'] is None:
     bot = IQHandler(IQ_EMAIL, IQ_PASS)
     if bot.connetti():
         st.session_state['iq_bot'] = bot
-        # Esegui il recovery subito dopo la connessione
-        sincronizza_posizioni_aperte() 
-    else:
-        st.session_state['iq_bot'] = None
+        sincronizza_posizioni_aperte()
+
+# Recupero dai Secrets
+TELE_TOKEN = st.secrets["TELEGRAM_TOKEN"]
+TELE_CHAT_ID = st.secrets["TELEGRAM_CHAT_ID"]
 
 def invia_telegram(messaggio):
     """Funzione rapida per inviare notifiche"""
@@ -440,11 +442,6 @@ def update_signal_outcomes():
         st.session_state['signal_history'] = df
         save_history_permanently()
 
-import pandas as pd
-import pandas_ta as ta
-import time as time_lib
-import streamlit as st
-
 def run_sentinel_optimized():
     """Versione migliorata: Analisi e Trading sincronizzati su IQ Option"""
     if not st.session_state.get('trading_attivo', True):
@@ -491,13 +488,26 @@ def run_sentinel_optimized():
             elif curr_p >= upper_bb and curr_rsi > 65 and curr_adx < 30:
                 decision = "VENDI"
 
-            # 4. Esecuzione e Feedback
+    
+            # --- PUNTO 4: ESECUZIONE ---
+            decision = None
+            if curr_p <= lower_bb and curr_rsi < 35 and curr_adx < 30:
+                decision = "COMPRA"
+            elif curr_p >= upper_bb and curr_rsi > 65 and curr_adx < 30:
+                decision = "VENDI"
+        
             if decision:
-                # Evita di aprire due volte lo stesso asset
+                # 1. Controlliamo di non avere già un trade aperto su questo asset
                 hist = st.session_state['signal_history']
-                if not ((hist['Asset'] == label) & (hist['Stato'] == 'In Corso')).any():
-                    esegui_ordine_reale(label, decision, curr_p)
-            
+                asset_gia_aperto = not hist[(hist['Asset'] == label) & (hist['Stato'] == 'In Corso')].empty
+                
+                if not asset_gia_aperto:
+                    # 2. Chiamiamo la funzione di invio ordine al broker
+                    esegui_ordine_reale(label, decision, curr_p) 
+                    
+                    # 3. Notifica visiva immediata
+                    st.toast(f"🚀 Ordine {decision} inviato per {label}")
+                    
             debug_list.append(f"🔍 {label}: {curr_p:.5f} | RSI: {curr_rsi:.1f}")
 
         except Exception as e:
@@ -528,10 +538,6 @@ if 'last_alert' not in st.session_state:
     st.session_state['last_alert'] = None
 if 'last_scan_status' not in st.session_state:
     st.session_state['last_scan_status'] = "In attesa..."
-
-# --- 3. ESECUZIONE AGGIORNAMENTO DATI (PRIMA DELLA GUI) ---
-# Importante: Aggiorniamo i risultati TP/SL prima di disegnare la sidebar
-update_signal_outcomes()
 
 def get_equity_data():
     """Calcola l'andamento del saldo sommando i risultati reali registrati"""
@@ -570,6 +576,12 @@ def get_equity_data():
         
     return pd.Series(equity_curve)
 
+# --- LOGICA DI ESECUZIONE CICLICA ---
+if st.session_state.get('trading_attivo'):
+    # Questo viene eseguito ogni volta che la pagina si aggiorna (ogni 60s)
+    run_sentinel_optimized() 
+    update_signal_outcomes() # Controlla se i trade aperti hanno toccato TP o SL
+
 st.sidebar.markdown("---")
 st.sidebar.subheader("🛡️ Sicurezza Sistema")
 
@@ -594,11 +606,6 @@ st.sidebar.markdown("---")
 st.sidebar.header("🛠 Trading Desk (1m)")
 balance = st.sidebar.number_input("**Conto (€)**", value=1000, key="balance_val")
 risk_pc = st.sidebar.slider("**Investimento %**", 0.5, 5.0, 2.0, step=0.5, key="risk_val")
-
-# --- 4. ESECUZIONE SENTINEL ---
-# Assicuriamoci che lo scanner giri solo se lo stato è inizializzato
-if 'signal_history' in st.session_state:
-    run_sentinel()
 
 # --- 5. SIDEBAR ---
 
