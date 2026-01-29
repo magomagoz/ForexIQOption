@@ -12,10 +12,27 @@ from plotly.subplots import make_subplots
 import requests
 import os
 from iq_bot import IQHandler # Importa la classe che abbiamo creato
+import threading
+import time
+
+def bot_loop():
+    """Ciclo infinito di analisi e trading"""
+    print("🤖 Bot in esecuzione (Modalità PRACTICE)...")
+    
+    while True:
+        try:
+            # 1. Recupera i segnali dai dati IQ Option
+            genera_segnali_iq() 
+            
+            # 2. Frequenza di scansione (es. ogni 10 secondi)
+            time.sleep(10) 
+        except Exception as e:
+            print(f"⚠️ Errore nel loop del bot: {e}")
+            time.sleep(30) # Pausa lunga in caso di errore
 
 # --- CONFIGURAZIONE CREDENZIALI (NON HARDCODARE LA PASSWORD SE PUOI) ---
 # Usa st.secrets o variabili d'ambiente per sicurezza
-IQ_EMAIL = "tua_email@email.com"
+IQ_EMAIL = "tua_email@gmail.com"
 IQ_PASS = "tua_password"
 
 # Inizializzazione in Session State per mantenere la connessione viva
@@ -52,10 +69,31 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# 1. Recupero credenziali dai Secrets (vedremo dopo come impostarli)
+IQ_EMAIL = st.secrets["IQ_EMAIL"]
+IQ_PASS = st.secrets["IQ_PASS"]
+
+# 2. Inizializzazione IQ Option in Session State
+if 'iq_bot' not in st.session_state:
+    bot = IQHandler(IQ_EMAIL, IQ_PASS)
+    if bot.connetti():
+        st.session_state['iq_bot'] = bot
+    else:
+        st.session_state['iq_bot'] = None
+
+# Avvio del Thread di Background (Analisi Continua)
+if st.session_state.get('iq_bot') and 'bot_thread_started' not in st.session_state:
+    import threading
+    # Assicurati che bot_loop sia definito sopra o importato
+    thread = threading.Thread(target=bot_loop, daemon=True)
+    thread.start()
+    st.session_state['bot_thread_started'] = True
+    st.sidebar.success("🚀 Motore di Trading Demo Attivo")
+
 # Definizione Fuso Orario Roma
 rome_tz = pytz.timezone('Europe/Rome')
-asset_map = {"EURUSD": "EURUSD=X", "GBPUSD": "GBPUSD=X", "USDCHF": "USDCHF=X", "AUDUSD": "AUDUSD=X", "USDCAD": "USDCAD=X", "NZDUSD": "NZDUSD=X",
-            "EURGBP": "EURGBP=X", "GBPJPY": "GBPJPY=X", "EURJPY": "EURJPY=X"}
+asset_map = {"EURUSD": "EURUSD", "GBPUSD": "GBPUSD", "USDCHF": "USDCHF", "USDJPY": "USDJPY", "AUDUSD": "AUDUSD", "USDCAD": "USDCAD", "NZDUSD": "NZDUSD",
+            "EURGBP": "EURGBP", "GBPJPY": "GBPJPY", "EURJPY": "EURJPY"}
 
 # Refresh automatico ogni 60 secondi
 st_autorefresh(interval=60 * 1000, key="sentinel_refresh")
@@ -96,8 +134,31 @@ def send_telegram_msg(msg):
     except Exception as e:
         print(f"Errore: {e}")
 
+    def connetti(self):
+        check, reason = self.api.connect()
+        if check:
+            # FORZA IL CONTO DEMO (PRACTICE)
+            self.api.change_balance("PRACTICE") 
+            saldo = self.api.get_balance()
+            print(f"✅ Connesso! Saldo Demo attuale: {saldo}€")
+            self.connected = True
+        else:
+            self.connected = False
+        return self.connected
+
 def get_now_rome():
     return datetime.now(rome_tz)
+
+def get_last_price_iq(asset_name):
+    if st.session_state.get('iq_bot') and st.session_state['iq_bot'].connected:
+        api = st.session_state['iq_bot'].api
+        asset_iq = asset_name.replace("=X", "") # Pulisce il nome se necessario
+        
+        # Chiediamo l'ultima candela da 1 secondo per avere il prezzo real-time
+        candles = api.get_candles(asset_iq, 60, 1, time.time())
+        if candles:
+            return float(candles[-1]['close'])
+    return None
 
 def style_protection(val):
     # Se il capitale è blindato in profitto, usiamo un verde brillante
@@ -136,6 +197,32 @@ def style_status(val):
     if val == '❌ STOP LOSS': return 'background-color: rgba(255, 75, 75, 0.2); color: #ff4b4b;'
     if val == 'Garantito': return 'color: #FFA500; font-weight: bold;' # Arancione per protezione attiva
     return ''
+
+def genera_segnali_iq():
+    if not st.session_state.get('iq_bot') or not st.session_state['iq_bot'].connected:
+        return
+    
+    api = st.session_state['iq_bot'].api
+    
+    for label, asset_iq in asset_map.items():
+        # Recuperiamo le ultime 50 candele da 1 minuto (60 secondi)
+        # Il parametro 60 è la size, 50 è la quantità
+        candles = api.get_candles(asset_iq, 60, 50, time.time())
+        
+        if candles:
+            df_candles = pd.DataFrame(candles)
+            
+            # --- CALCOLO INDICATORI (Esempio Momentum) ---
+            # Calcoliamo la variazione percentuale degli ultimi 3 minuti
+            current_price = df_candles['close'].iloc[-1]
+            old_price = df_candles['close'].iloc[-3]
+            variazione = ((current_price - old_price) / old_price) * 100
+            
+            # Logica di ingresso (es. se variazione > 0.05% in 3 min)
+            if variazione > 0.05:
+                esegui_ordine_completo(label, "COMPRA", current_price)
+            elif variazione < -0.05:
+                esegui_ordine_completo(label, "VENDI", current_price)
 
 def calcola_pnl_protetto(prezzo_entrata, prezzo_attuale, direzione, investimento):
     # Calcolo base della variazione percentuale
@@ -176,7 +263,7 @@ def get_realtime_data(ticker):
 
 def get_currency_strength():
     try:
-        forex = ["EURUSD=X", "GBPUSD=X", "USDCHF=X", "AUDUSD=X", "NZDUSD=X", "EURCHF=X","EURJPY=X", "GBPJPY=X","EURGBP=X"]
+        forex = ["EURUSD", "GBPUSD", "USDCHF", "USDCHF", "AUDUSD", "NZDUSD", "EURCHF","EURJPY", "GBPJPY","EURGBP"]
         data = yf.download(forex, period="5d", interval="1d", progress=False, timeout=15)
         
         if data is None or data.empty: 
@@ -306,34 +393,26 @@ def update_signal_outcomes():
                     play_safe_sound()
                     send_telegram_msg(f"🛡️ **Protezione Avanzata {row['Asset']}**\nNuovo SL: {df.at[idx, 'SL']} ({df.at[idx, 'Protezione']})")
                     
-                # --- CHIUSURA (CORRETTA INDENTAZIONE) ---
-                if row['Direzione'] == 'COMPRA':
-                    if current_high >= tp_v: 
-                        new_status = '✅ TARGET'
-                        risultato_finale = (investimento * 2.0) - COMMISSIONE_APPROX
-                    elif current_low <= sl_v: 
-                        if row.get('Stato_Prot') == 'Garantito':
-                            new_status = '🛡️ SL DINAMICO'
-                            risultato_finale = (investimento * 0.40) - COMMISSIONE_APPROX
-                        else:
-                            new_status = '❌ STOP LOSS'
-                            risultato_finale = -investimento 
-                            
-                elif row['Direzione'] == 'VENDI':
-                    if current_low <= tp_v: 
-                        new_status = '✅ TARGET'
-                        risultato_finale = (investimento * 2.0) - COMMISSIONE_APPROX
-                    elif current_high >= sl_v: 
-                        if row.get('Stato_Prot') == 'Garantito':
-                            new_status = '🛡️ SL DINAMICO'
-                            risultato_finale = (investimento * 0.40) - COMMISSIONE_APPROX
-                        else:
-                            new_status = '❌ STOP LOSS'
-                            risultato_finale = -investimento
+                # ... Dentro update_signal_outcomes, nel blocco di controllo uscita ...
                 
-                if new_status:
+                # Se stiamo per chiudere il trade (Target o Stop Loss o Trailing)
+                if new_status: # new_status è valorizzato (es. '✅ TARGET', '❌ STOP LOSS')
+                    
+                    # 1. Aggiorna il DataFrame locale (come facevi prima)
                     df.at[idx, 'Stato'] = new_status
                     df.at[idx, 'Risultato €'] = f"{risultato_finale:+.2f}"
+                    
+                    # 2. COMANDO CHIUSURA REALE SU IQ OPTION
+                    iq_id = row.get('IQ_ID') # Recuperiamo l'ID salvato
+                    
+                    if st.session_state['iq_bot'] and iq_id is not None:
+                        # Tentativo di chiusura anticipata
+                        success = st.session_state['iq_bot'].chiudi_posizione(iq_id)
+                        if success:
+                            print(f"🔒 Posizione {iq_id} chiusa su IQ per {new_status}")
+                        else:
+                            print(f"⚠️ Impossibile chiudere posizione {iq_id} (forse già scaduta?)")
+                            
                     updates_made = True
                     play_close_sound()
                     msg = f"🔔 **CHIUSURA TRADE**\nAsset: {row['Asset']}\nEsito: {new_status}\nNetto: {risultato_finale:+.2f}€"
@@ -714,39 +793,27 @@ if active_trades.empty:
 else:
     for index, trade in active_trades.iterrows():
         try:
-            # Download dati fresco
-            t_ticker = asset_map.get(trade['Asset'], trade['Asset'])
-            t_data = yf.download(t_ticker, period="1d", interval="1m", progress=False, timeout=5)
+            # --- NUOVO FLUSSO DATI IQ OPTION ---
+            curr_p = get_last_price_iq(trade['Asset'])
+            
+            if curr_p is not None:
+                entry_p = float(str(trade['Prezzo']).replace(',', '.').strip())
+                inv = float(str(trade['Investimento €']).replace(',', '.').strip())
                 
-            if not t_data.empty:
-                # --- CORREZIONE VARIABILI ---
-                curr_p = float(t_data['Close'].iloc[-1])
-                # Pulizia stringhe € se presenti
-                entry_p = float(str(trade['Prezzo']).replace('€', '').replace(',', '.').strip())
-                inv = float(str(trade['Investimento €']).replace('€', '').replace(',', '.').strip())
-                    
-                # Moltiplicatore pips (Fondamentale per evitare numeri abnormi come +422514%)
-                pips_mult = get_asset_params(trade['Asset'])[2] 
-                    
-                # Calcolo differenza basato sulla direzione
-                if trade['Direzione'] == "BUY" or trade['Direzione'] == "COMPRA":
+                # Calcolo Profitto (La direzione determina il segno)
+                if trade['Direzione'] in ["BUY", "COMPRA"]:
                     diff_prezzo = curr_p - entry_p
                 else:
                     diff_prezzo = entry_p - curr_p
                 
-                # ... (codice precedente: calcolo latente_perc e latente_euro)
-                latente_perc = (diff_prezzo / entry_p) * 100 if trade['Direzione'] == "COMPRA" else -(diff_prezzo / entry_p) * 100
-                latente_euro = (inv * latente_perc) / 100 
-    
-                # --- INIZIO FILTRO ANTI-FOLLIA ---
-                # Se la variazione è superiore al 50% (impossibile nel Forex 1m senza glitch),
-                # resettiamo i valori a 0 per evitare di inquinare la dashboard.
+                latente_perc = (diff_prezzo / entry_p) * 100
+                latente_euro = (inv * latente_perc) / 100
+
+                # --- FILTRO SICUREZZA INTEGRATO ---
                 is_glitch = False
-                if abs(latente_perc) > 50:
-                    latente_perc = 0.0
-                    latente_euro = 0.0
+                if abs(latente_perc) > 50: # Se il Forex si muove del 50% in un minuto, è un errore
                     is_glitch = True
-                # --- FINE FILTRO ANTI-FOLLIA ---
+                    st.audio("https://www.soundjay.com/buttons/beep-01a.mp3")
 
                 color = "#006400" if latente_euro >= 0 else "#FF4B4B"
                 if is_glitch: color = "#FFA500" # Arancione per indicare "Dato Dubbio"
@@ -760,9 +827,7 @@ else:
                         </span>
                     </div>
                 """, unsafe_allow_html=True)
-                
-                # ... (resto del codice per il tasto chiudi)
-                
+
                 # TASTO CHIUDI (Opzionale)
                 if st.sidebar.button(f"✖ Chiudi {trade['Asset']}", key=f"close_{index}"):
                     st.session_state['signal_history'].at[index, 'Stato'] = 'CHIUSO MAN.'
@@ -772,6 +837,17 @@ else:
         except Exception as e:
             # Mostra l'errore tecnico reale solo per debug se vuoi, altrimenti lascia il messaggio di attesa
             st.sidebar.caption(f"⏳ Aggiornamento {trade['Asset']}...")
+
+                if st.sidebar.button(f"✖ Chiudi {trade['Asset']}", key=f"close_{index}"):
+                
+                # CHIUSURA IQ
+                iq_id = trade.get('IQ_ID')
+                if st.session_state['iq_bot'] and iq_id:
+                    st.session_state['iq_bot'].chiudi_posizione(iq_id)
+                    st.toast("Chiusura manuale inviata a IQ")
+                    
+                st.session_state['signal_history'].at[index, 'Stato'] = 'CHIUSO MAN.'
+                st.rerun()
 
 st.sidebar.markdown("---")
 # ... (restante codice sidebar: sessioni, win rate, reset)
