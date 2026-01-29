@@ -168,20 +168,20 @@ def load_history_from_csv():
             return pd.DataFrame(columns=['DataOra', 'Asset', 'Direzione', 'Prezzo', 'SL', 'TP', 'Stato', 'Investimento €', 'Risultato €', 'Stato_Prot', 'Protezione'])
     return pd.DataFrame(columns=['DataOra', 'Asset', 'Direzione', 'Prezzo', 'SL', 'TP', 'Stato', 'Investimento €', 'Risultato €', 'Stato_Prot', 'Protezione'])
 
-    def connetti(self):
-        check, reason = self.api.connect()
-        if check:
-            # FORZA IL CONTO DEMO (PRACTICE)
-            self.api.change_balance("PRACTICE") 
-            saldo = self.api.get_balance()
-            print(f"✅ Connesso! Saldo Demo attuale: {saldo}€")
-            self.connected = True
-        else:
-            self.connected = False
-        return self.connected
+def connetti(self):
+    check, reason = self.api.connect()
+    if check:
+        # FORZA IL CONTO DEMO (PRACTICE)
+        self.api.change_balance("PRACTICE") 
+        saldo = self.api.get_balance()
+        print(f"✅ Connesso! Saldo Demo attuale: {saldo}€")
+        self.connected = True
+    else:
+        self.connected = False
+    return self.connected
 
 def get_now_rome():
-    return datetime.now(rome_tz)
+    return datetime.now(rome_tz).strftime("%Y-%m-%d %H:%M:%S")
 
 def get_last_price_iq(asset_name):
     if st.session_state.get('iq_bot') and st.session_state['iq_bot'].connected:
@@ -518,17 +518,30 @@ def run_sentinel_optimized():
             elif curr_p >= upper_bb and curr_rsi > 65 and curr_adx < 30:
                 decision = "VENDI"
         
-            if decision:
-                # 1. Controlliamo di non avere già un trade aperto su questo asset
-                hist = st.session_state['signal_history']
-                asset_gia_aperto = not hist[(hist['Asset'] == label) & (hist['Stato'] == 'In Corso')].empty
-                
-                if not asset_gia_aperto:
-                    # 2. Chiamiamo la funzione di invio ordine al broker
-                    esegui_ordine_reale(label, decision, curr_p) 
-                    
-                    # 3. Notifica visiva immediata
-                    st.toast(f"🚀 Ordine {decision} inviato per {label}")
+# --- DENTRO run_sentinel_optimized() ---
+# Dopo aver calcolato decision (COMPRA/VENDI)
+
+if decision:
+    # 1. Recupero dati necessari
+    investimento = balance * (risk_pc / 100) # Prende i valori dai tuoi widget sidebar
+    
+    # 2. Controllo duplicati: non apriamo se esiste già un trade 'In Corso' per quell'asset
+    hist = st.session_state['signal_history']
+    gia_aperto = not hist[(hist['Asset'] == label) & (hist['Stato'] == 'In Corso')].empty
+    
+    if not gia_aperto:
+        # 3. Invio Ordine Reale (Funzione che si interfaccia con IQHandler)
+        # Qui calcoli TP e SL basandoti sulla tua strategia
+        tp_val = curr_p + (last_atr * 2) if decision == "COMPRA" else curr_p - (last_atr * 2)
+        sl_val = curr_p - last_atr if decision == "COMPRA" else curr_p + last_atr
+
+        # ESECUZIONE (Punto 4)
+        if st.session_state['iq_bot']:
+            # Supponendo che esegui_ordine_reale sia definita per comunicare con la classe IQHandler
+            esegui_ordine_reale(label, decision, curr_p, tp_val, sl_val, investimento)
+            
+            # Notifica immediata
+            st.toast(f"🚀 ORDINE {decision} INVIATO: {label}", icon="🔥")
                     
             debug_list.append(f"🔍 {label}: {curr_p:.5f} | RSI: {curr_rsi:.1f}")
 
@@ -1065,40 +1078,40 @@ if df_rt is not None and not df_rt.empty and df_d is not None and not df_d.empty
     # Visualizziamo con unsafe_allow_html
     st.markdown(styled_adx_html, unsafe_allow_html=True)
 
-# Creiamo due Tab: uno per il trading e uno per le statistiche
+# --- NEL CORPO PRINCIPALE (Sotto il grafico o le metriche ADX) ---
+
+st.markdown("---")
 tab_trading, tab_stats = st.tabs(["📈 Terminale Operativo", "📊 Statistiche Avanzate"])
 
 with tab_trading:
-    # Qui sposti tutta la logica del grafico e della tabella che hai già
-    pass 
+    # Sposta qui la visualizzazione della Cronologia Segnali (Punto 9)
+    # e le metriche real-time che avevi nel body.
+    pass
 
 with tab_stats:
-    st.header("🕵️ Analisi Performance Sentinel")
-    data = get_advanced_stats()
+    st.subheader("🕵️ Analisi Performance Sentinel")
+    performance_data = get_advanced_stats()
     
-    if data:
-        stats, asset_perf, hourly_perf = data
+    if performance_data:
+        stats, asset_perf, hourly_perf = performance_data
         
-        # Righe di metriche
+        # Righe di metriche KPI
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("Profitto Netto", f"€ {stats['total_pnl']:.2f}")
         c2.metric("Win Rate", f"{stats['win_rate']:.1f}%")
-        c3.metric("Miglior Asset", stats['best_asset'])
+        c3.metric("Top Asset", stats['best_asset'])
         c4.metric("Ora Critica", stats['worst_hour'], delta="Peggior resa", delta_color="inverse")
         
-        st.markdown("---")
-        
-        col_graph1, col_graph2 = st.columns(2)
-        
-        with col_graph1:
-            st.subheader("Performance per Asset")
-            st.bar_chart(asset_perf)
-            
-        with col_graph2:
-            st.subheader("Profitto per Fascia Oraria")
-            st.line_chart(hourly_perf)
+        # Visualizzazione Grafica
+        col_g1, col_g2 = st.columns(2)
+        with col_g1:
+            st.write("**Performance per Asset (€)**")
+            st.bar_chart(asset_perf) # Streamlit bar chart nativo
+        with col_g2:
+            st.write("**Profitto per Fascia Oraria**")
+            st.line_chart(hourly_perf) # Utile per vedere quando il bot "soffre"
     else:
-        st.info("Dati insufficienti per generare statistiche. Chiudi almeno un trade!")
+        st.info("📊 Dati insufficienti. Le statistiche appariranno dopo la chiusura del primo trade.")
 
 # --- 8. CURRENCY STRENGTH ---
 st.markdown("---")
@@ -1154,11 +1167,11 @@ if not st.session_state['signal_history'].empty:
     st.download_button(
         label="📥 Esporta Cronologia (CSV)",
         data=csv_data,
-        file_name=f"trading_history_{datetime.now().strftime('%Y%m%d')}.csv",
+        file_name=f"trading_history_{datetime.now(rome_tz).strftime("%Y-%m-%d %H:%M:%S")}.csv",
         mime="text/csv",
         use_container_width=True
     )
-
+    
 # 5. Se la cronologia è vuota (allineato all'IF iniziale)
 else:
     st.info("Nessun segnale registrato.")
