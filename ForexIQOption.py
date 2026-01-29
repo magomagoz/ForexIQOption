@@ -15,6 +15,23 @@ from iq_bot import IQHandler # Importa la classe che abbiamo creato
 import threading
 import time
 
+# Recupero dai Secrets
+TELE_TOKEN = st.secrets["TELEGRAM_TOKEN"]
+TELE_CHAT_ID = st.secrets["TELEGRAM_CHAT_ID"]
+
+def invia_telegram(messaggio):
+    """Funzione rapida per inviare notifiche"""
+    url = f"https://api.telegram.org/bot{TELE_TOKEN}/sendMessage"
+    payload = {
+        "chat_id": TELE_CHAT_ID,
+        "text": messaggio,
+        "parse_mode": "Markdown"
+    }
+    try:
+        requests.post(url, json=payload, timeout=5)
+    except Exception as e:
+        print(f"Errore Telegram: {e}")
+
 def bot_loop():
     """Ciclo infinito di analisi e trading"""
     print("🤖 Bot in esecuzione (Modalità PRACTICE)...")
@@ -29,6 +46,12 @@ def bot_loop():
         except Exception as e:
             print(f"⚠️ Errore nel loop del bot: {e}")
             time.sleep(30) # Pausa lunga in caso di errore
+
+        # Quando il bot apre un trade
+        invia_telegram(f"🚀 *Operazione Aperta (DEMO)*\nAsset: {asset_iq}\nDirezione: {action}\nImporto: {inv_float}€")
+            
+        # Quando scatta il Target o lo Stop
+        invia_telegram(f"💰 *Operazione Chiusa*\nRisultato: {risultato_finale:+.2f}€")
 
 # --- CONFIGURAZIONE CREDENZIALI (NON HARDCODARE LA PASSWORD SE PUOI) ---
 # Usa st.secrets o variabili d'ambiente per sicurezza
