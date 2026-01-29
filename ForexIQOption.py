@@ -32,8 +32,8 @@ def bot_loop():
 
 # --- CONFIGURAZIONE CREDENZIALI (NON HARDCODARE LA PASSWORD SE PUOI) ---
 # Usa st.secrets o variabili d'ambiente per sicurezza
-IQ_EMAIL = "tua_email@gmail.com"
-IQ_PASS = "tua_password"
+email = st.secrets["IQ_EMAIL"]
+password = st.secrets["IQ_PASS"]
 
 # Inizializzazione in Session State per mantenere la connessione viva
 if 'iq_bot' not in st.session_state:
