@@ -23,20 +23,6 @@ IQ_PASS = st.secrets["IQ_PASS"]
 TELE_TOKEN = st.secrets["TELEGRAM_TOKEN"]
 TELE_CHAT_ID = st.secrets["TELEGRAM_CHAT_ID"]
 
-if st.session_state['iq_bot'] is None:
-    bot = IQHandler(IQ_EMAIL, IQ_PASS)
-    if bot.connetti():
-        st.session_state['iq_bot'] = bot
-        sincronizza_posizioni_aperte()
-
-# Sostituisci il tuo blocco di avvio thread con questo:
-if st.session_state.get('iq_bot') and 'bot_thread_started' not in st.session_state:
-    # Usiamo un flag per assicurarci che esista UN SOLO thread
-    st.session_state['bot_thread_started'] = True
-    thread = threading.Thread(target=bot_loop, daemon=True)
-    thread.start()
-    st.sidebar.success("🚀 Motore Sentinel avviato in background")
-
 # --- 2. FUNZIONI TECNICHE ---
 def save_history_permanently():
     """Salva la cronologia attuale su un file fisico CSV"""
@@ -593,6 +579,20 @@ asset_map = {"EURUSD": "EURUSD", "GBPUSD": "GBPUSD", "USDCHF": "USDCHF", "USDJPY
 
 # Refresh automatico ogni 60 secondi
 st_autorefresh(interval=60 * 1000, key="sentinel_refresh")
+
+if st.session_state['iq_bot'] is None:
+    bot = IQHandler(IQ_EMAIL, IQ_PASS)
+    if bot.connetti():
+        st.session_state['iq_bot'] = bot
+        sincronizza_posizioni_aperte()
+
+# Sostituisci il tuo blocco di avvio thread con questo:
+if st.session_state.get('iq_bot') and 'bot_thread_started' not in st.session_state:
+    # Usiamo un flag per assicurarci che esista UN SOLO thread
+    st.session_state['bot_thread_started'] = True
+    thread = threading.Thread(target=bot_loop, daemon=True)
+    thread.start()
+    st.sidebar.success("🚀 Motore Sentinel avviato in background")
 
 
 # --- INIZIALIZZAZIONE STATO (Session State) ---
