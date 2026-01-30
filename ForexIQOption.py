@@ -43,124 +43,6 @@ if st.session_state.get('iq_bot') and 'bot_thread_started' not in st.session_sta
     thread.start()
     st.sidebar.success("🚀 Motore Sentinel avviato in background")
 
-def invia_telegram(messaggio):
-    """Funzione rapida per inviare notifiche"""
-    url = f"https://api.telegram.org/bot{TELE_TOKEN}/sendMessage"
-    payload = {
-        "chat_id": TELE_CHAT_ID,
-        "text": messaggio,
-        "parse_mode": "Markdown"
-    }
-    try:
-        requests.post(url, json=payload, timeout=5)
-    except Exception as e:
-        print(f"Errore Telegram: {e}")
-
-def bot_loop():
-    """Ciclo infinito di scansione mercato e gestione posizioni"""
-    while True:
-        try:
-            if st.session_state.get('trading_attivo'):
-                # 1. Esegui Scansione Strategia
-                run_sentinel_optimized()
-                
-                # 2. Aggiorna stati dei trade (TP/SL)
-                update_signal_outcomes()
-                
-                # 3. Sincronizza con il broker ogni tanto
-                if time_lib.time() % 300 == 0: # Ogni 5 minuti
-                    sincronizza_posizioni_aperte()
-            
-            # Pausa per non saturare la CPU e rispettare i limiti API
-            time_lib.sleep(10) 
-            
-        except Exception as e:
-            print(f"⚠️ Errore nel loop critico: {e}")
-            time_lib.sleep(30) # Pausa lunga in caso di errore di rete
-
-def get_advanced_stats():
-    df = st.session_state['signal_history'].copy()
-    
-    # Filtriamo solo i trade conclusi
-    df = df[df['Stato'].isin(['✅ TARGET', '❌ STOP LOSS', '🖐️ CHIUSO MAN.'])]
-    
-    if df.empty:
-        return None
-
-    # Pulizia dati monetari
-    df['Risultato €'] = df['Risultato €'].str.replace('€', '').astype(float)
-    df['DataOra_dt'] = pd.to_datetime(df['DataOra'], format='%Y-%m-%d %H:%M:%S') # Nota: aggiungi la data reale se disponibile
-    
-    stats = {}
-    # 1. Profitto Totale e Settimanale (Simulato sulla cronologia attuale)
-    stats['total_pnl'] = df['Risultato €'].sum()
-    
-    # 2. Miglior e Peggior Asset
-    asset_perf = df.groupby('Asset')['Risultato €'].sum().sort_values(ascending=False)
-    stats['best_asset'] = asset_perf.index[0] if not asset_perf.empty else "N/A"
-    stats['worst_asset'] = asset_perf.index[-1] if not asset_perf.empty else "N/A"
-    
-    # 3. Analisi Oraria (Peggior orario per fare trading)
-    df['Ora'] = df['DataOra_dt'].dt.hour
-    hourly_perf = df.groupby('Ora')['Risultato €'].sum()
-    stats['worst_hour'] = f"{hourly_perf.idxmin()}:00" if not hourly_perf.empty else "N/A"
-    
-    # 4. Win Rate Effettivo
-    wins = len(df[df['Risultato €'] > 0])
-    stats['win_rate'] = (wins / len(df)) * 100
-    
-    return stats, asset_perf, hourly_perf
-
-if 'trading_attivo' not in st.session_state:
-    st.session_state['trading_attivo'] = True # Il bot parte attivo di default
-
-# Filtra solo i trade degli ultimi 7 giorni
-sette_giorni_fa = (datetime.now() - pd.Timedelta(days=7)).strftime("%Y-%m-%d")
-df = df[df['DataOra'] >= sette_giorni_fa]
-
-# --- 1. CONFIGURAZIONE & LAYOUT ---
-st.set_page_config(page_title="Forex Momentum Pro AI", layout="wide", page_icon="📈")
-
-st.markdown("""
-    <style>
-        .block-container {padding-top: 1rem !important;}
-        [data-testid="stSidebar"] > div:first-child {padding-top: 0rem !important;}
-        
-        #MainMenu {visibility: hidden;}
-        footer {visibility: hidden;}
-        header {background-color: rgba(0,0,0,0) !important;} 
-        
-        /* Stile Tasti */
-        div.stButton > button {
-            border-radius: 8px !important;
-            font-weight: bold;
-            width: 100%;
-        }
-        
-        /* Colori Tabella */
-        [data-testid="stDataFrame"] {
-            border: 1px solid #333;
-        }
-    </style>
-""", unsafe_allow_html=True)
-
-# Avvio del Thread di Background (Analisi Continua)
-if st.session_state.get('iq_bot') and 'bot_thread_started' not in st.session_state:
-    import threading
-    # Assicurati che bot_loop sia definito sopra o importato
-    thread = threading.Thread(target=bot_loop, daemon=True)
-    thread.start()
-    st.session_state['bot_thread_started'] = True
-    st.sidebar.success("🚀 Motore di Trading Demo Attivo")
-
-# Definizione Fuso Orario Roma
-rome_tz = pytz.timezone('Europe/Rome')
-asset_map = {"EURUSD": "EURUSD", "GBPUSD": "GBPUSD", "USDCHF": "USDCHF", "USDJPY": "USDJPY", "AUDUSD": "AUDUSD", "USDCAD": "USDCAD", "NZDUSD": "NZDUSD",
-            "EURGBP": "EURGBP", "GBPJPY": "GBPJPY", "EURJPY": "EURJPY"}
-
-# Refresh automatico ogni 60 secondi
-st_autorefresh(interval=60 * 1000, key="sentinel_refresh")
-
 # --- 2. FUNZIONI TECNICHE ---
 def save_history_permanently():
     """Salva la cronologia attuale su un file fisico CSV"""
@@ -439,6 +321,79 @@ def detect_divergence(df):
 
 # ... (le altre funzioni save_history, send_telegram rimangono uguali, incolla da qui in giù) ...
 
+def esegui_ordine_reale(label, direzione, prezzo, tp, sl, inv):
+    bot = st.session_state['iq_bot']
+    # Esegue l'ordine tramite il modulo IQHandler
+    id_ordine = bot.apri_posizione(label, inv, direzione.lower(), tp, sl)
+    
+    if id_ordine:
+        nuovo_trade = {
+            'DataOra': datetime.now(rome_tz).strftime("%H:%M:%S"),
+            'Asset': label,
+            'Direzione': direzione,
+            'Prezzo': prezzo,
+            'SL': sl,
+            'TP': tp,
+            'Stato': 'In Corso',
+            'IQ_ID': id_ordine,
+            'Investimento €': f"{inv:.2f}",
+            'Risultato €': "0.00",
+            'Protezione': 'Standard'
+        }
+        st.session_state['signal_history'] = pd.concat([pd.DataFrame([nuovo_trade]), st.session_state['signal_history']], ignore_index=True)
+        save_history_permanently()
+        invia_telegram(f"🚀 **ORDINE ESEGUITO**\nAsset: {label}\nTipo: {direzione}\nInvestimento: €{inv}")
+                    
+def get_win_rate():
+    if st.session_state['signal_history'].empty:
+        return "Nessun dato"
+    df = st.session_state['signal_history']
+    # Consideriamo conclusi solo quelli che non sono "In Corso"
+    closed_trades = df[df['Stato'] != 'In Corso']
+    total = len(closed_trades)
+    
+    if total == 0: return "In attesa di chiusure..."
+    
+    wins = len(closed_trades[closed_trades['Stato'] == '✅ TARGET'])
+    wr = (wins / total) * 100
+    return f"Win Rate: {wr:.1f}% ({wins}/{total})"
+
+
+def invia_telegram(messaggio):
+    """Funzione rapida per inviare notifiche"""
+    url = f"https://api.telegram.org/bot{TELE_TOKEN}/sendMessage"
+    payload = {
+        "chat_id": TELE_CHAT_ID,
+        "text": messaggio,
+        "parse_mode": "Markdown"
+    }
+    try:
+        requests.post(url, json=payload, timeout=5)
+    except Exception as e:
+        print(f"Errore Telegram: {e}")
+
+def bot_loop():
+    """Ciclo infinito di scansione mercato e gestione posizioni"""
+    while True:
+        try:
+            if st.session_state.get('trading_attivo'):
+                # 1. Esegui Scansione Strategia
+                run_sentinel_optimized()
+                
+                # 2. Aggiorna stati dei trade (TP/SL)
+                update_signal_outcomes()
+                
+                # 3. Sincronizza con il broker ogni tanto
+                if time_lib.time() % 300 == 0: # Ogni 5 minuti
+                    sincronizza_posizioni_aperte()
+            
+            # Pausa per non saturare la CPU e rispettare i limiti API
+            time_lib.sleep(10) 
+            
+        except Exception as e:
+            print(f"⚠️ Errore nel loop critico: {e}")
+            time_lib.sleep(30) # Pausa lunga in caso di errore di rete
+
 def update_signal_outcomes():
     if st.session_state['signal_history'].empty: 
         return
@@ -504,29 +459,6 @@ def update_signal_outcomes():
         st.session_state['signal_history'] = df
         save_history_permanently()
 
-def esegui_ordine_reale(label, direzione, prezzo, tp, sl, inv):
-    bot = st.session_state['iq_bot']
-    # Esegue l'ordine tramite il modulo IQHandler
-    id_ordine = bot.apri_posizione(label, inv, direzione.lower(), tp, sl)
-    
-    if id_ordine:
-        nuovo_trade = {
-            'DataOra': datetime.now(rome_tz).strftime("%H:%M:%S"),
-            'Asset': label,
-            'Direzione': direzione,
-            'Prezzo': prezzo,
-            'SL': sl,
-            'TP': tp,
-            'Stato': 'In Corso',
-            'IQ_ID': id_ordine,
-            'Investimento €': f"{inv:.2f}",
-            'Risultato €': "0.00",
-            'Protezione': 'Standard'
-        }
-        st.session_state['signal_history'] = pd.concat([pd.DataFrame([nuovo_trade]), st.session_state['signal_history']], ignore_index=True)
-        save_history_permanently()
-        invia_telegram(f"🚀 **ORDINE ESEGUITO**\nAsset: {label}\nTipo: {direzione}\nInvestimento: €{inv}")
-
 def run_sentinel_optimized():
     if not st.session_state.get('trading_attivo', True):
         return
@@ -578,20 +510,90 @@ def run_sentinel_optimized():
             debug_list.append(f"⚠️ {label}: Error")
             
     st.session_state['sentinel_logs'] = debug_list
-                    
-def get_win_rate():
-    if st.session_state['signal_history'].empty:
-        return "Nessun dato"
-    df = st.session_state['signal_history']
-    # Consideriamo conclusi solo quelli che non sono "In Corso"
-    closed_trades = df[df['Stato'] != 'In Corso']
-    total = len(closed_trades)
+
+def get_advanced_stats():
+    df = st.session_state['signal_history'].copy()
     
-    if total == 0: return "In attesa di chiusure..."
+    # Filtriamo solo i trade conclusi
+    df = df[df['Stato'].isin(['✅ TARGET', '❌ STOP LOSS', '🖐️ CHIUSO MAN.'])]
     
-    wins = len(closed_trades[closed_trades['Stato'] == '✅ TARGET'])
-    wr = (wins / total) * 100
-    return f"Win Rate: {wr:.1f}% ({wins}/{total})"
+    if df.empty:
+        return None
+
+    # Pulizia dati monetari
+    df['Risultato €'] = df['Risultato €'].str.replace('€', '').astype(float)
+    df['DataOra_dt'] = pd.to_datetime(df['DataOra'], format='%Y-%m-%d %H:%M:%S') # Nota: aggiungi la data reale se disponibile
+    
+    stats = {}
+    # 1. Profitto Totale e Settimanale (Simulato sulla cronologia attuale)
+    stats['total_pnl'] = df['Risultato €'].sum()
+    
+    # 2. Miglior e Peggior Asset
+    asset_perf = df.groupby('Asset')['Risultato €'].sum().sort_values(ascending=False)
+    stats['best_asset'] = asset_perf.index[0] if not asset_perf.empty else "N/A"
+    stats['worst_asset'] = asset_perf.index[-1] if not asset_perf.empty else "N/A"
+    
+    # 3. Analisi Oraria (Peggior orario per fare trading)
+    df['Ora'] = df['DataOra_dt'].dt.hour
+    hourly_perf = df.groupby('Ora')['Risultato €'].sum()
+    stats['worst_hour'] = f"{hourly_perf.idxmin()}:00" if not hourly_perf.empty else "N/A"
+    
+    # 4. Win Rate Effettivo
+    wins = len(df[df['Risultato €'] > 0])
+    stats['win_rate'] = (wins / len(df)) * 100
+    
+    return stats, asset_perf, hourly_perf
+
+if 'trading_attivo' not in st.session_state:
+    st.session_state['trading_attivo'] = True # Il bot parte attivo di default
+
+if not st.session_state['signal_history'].empty:
+    sette_giorni_fa = (datetime.now() - pd.Timedelta(days=7)).strftime("%Y-%m-%d")
+    st.session_state['signal_history'] = st.session_state['signal_history'][st.session_state['signal_history']['DataOra'] >= sette_giorni_fa]
+
+# --- 1. CONFIGURAZIONE & LAYOUT ---
+st.set_page_config(page_title="Forex Momentum Pro AI", layout="wide", page_icon="📈")
+
+st.markdown("""
+    <style>
+        .block-container {padding-top: 1rem !important;}
+        [data-testid="stSidebar"] > div:first-child {padding-top: 0rem !important;}
+        
+        #MainMenu {visibility: hidden;}
+        footer {visibility: hidden;}
+        header {background-color: rgba(0,0,0,0) !important;} 
+        
+        /* Stile Tasti */
+        div.stButton > button {
+            border-radius: 8px !important;
+            font-weight: bold;
+            width: 100%;
+        }
+        
+        /* Colori Tabella */
+        [data-testid="stDataFrame"] {
+            border: 1px solid #333;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
+# Avvio del Thread di Background (Analisi Continua)
+if st.session_state.get('iq_bot') and 'bot_thread_started' not in st.session_state:
+    import threading
+    # Assicurati che bot_loop sia definito sopra o importato
+    thread = threading.Thread(target=bot_loop, daemon=True)
+    thread.start()
+    st.session_state['bot_thread_started'] = True
+    st.sidebar.success("🚀 Motore di Trading Demo Attivo")
+
+# Definizione Fuso Orario Roma
+rome_tz = pytz.timezone('Europe/Rome')
+asset_map = {"EURUSD": "EURUSD", "GBPUSD": "GBPUSD", "USDCHF": "USDCHF", "USDJPY": "USDJPY", "AUDUSD": "AUDUSD", "USDCAD": "USDCAD", "NZDUSD": "NZDUSD",
+            "EURGBP": "EURGBP", "GBPJPY": "GBPJPY", "EURJPY": "EURJPY"}
+
+# Refresh automatico ogni 60 secondi
+st_autorefresh(interval=60 * 1000, key="sentinel_refresh")
+
 
 # --- INIZIALIZZAZIONE STATO (Session State) ---
 if 'signal_history' not in st.session_state: 
