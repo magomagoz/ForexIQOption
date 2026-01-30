@@ -868,14 +868,14 @@ else:
 
             if st.sidebar.button(f"✖ Chiudi {trade['Asset']}", key=f"close_{index}"):
             
-            # CHIUSURA IQ
-            iq_id = trade.get('IQ_ID')
-            if st.session_state['iq_bot'] and iq_id:
-                st.session_state['iq_bot'].chiudi_posizione(iq_id)
-                st.toast("Chiusura manuale inviata a IQ")
+        # CHIUSURA IQ
+        iq_id = trade.get('IQ_ID')
+        if st.session_state['iq_bot'] and iq_id:
+            st.session_state['iq_bot'].chiudi_posizione(iq_id)
+            st.toast("Chiusura manuale inviata a IQ")
                     
-            st.session_state['signal_history'].at[index, 'Stato'] = 'CHIUSO MAN.'
-            st.rerun()
+        st.session_state['signal_history'].at[index, 'Stato'] = 'CHIUSO MAN.'
+        st.rerun()
 
 st.sidebar.markdown("---")
 # ... (restante codice sidebar: sessioni, win rate, reset)
