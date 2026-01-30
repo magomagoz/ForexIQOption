@@ -15,6 +15,14 @@ from iq_bot import IQHandler # Importa la classe che abbiamo creato
 import threading
 import time
 
+# --- CONFIGURAZIONE CREDENZIALI (NON HARDCODARE LA PASSWORD SE PUOI) ---
+# Usa st.secrets o variabili d'ambiente per sicurezza
+# Recupero dai Secrets
+IQ_EMAIL = st.secrets["IQ_EMAIL"]
+IQ_PASS = st.secrets["IQ_PASS"]
+TELE_TOKEN = st.secrets["TELEGRAM_TOKEN"]
+TELE_CHAT_ID = st.secrets["TELEGRAM_CHAT_ID"]
+
 # --- INIZIALIZZAZIONE UNIFICATA ---
 if 'iq_bot' not in st.session_state:
     st.session_state['iq_bot'] = None
@@ -27,9 +35,13 @@ if st.session_state['iq_bot'] is None:
         st.session_state['iq_bot'] = bot
         sincronizza_posizioni_aperte()
 
-# Recupero dai Secrets
-TELE_TOKEN = st.secrets["TELEGRAM_TOKEN"]
-TELE_CHAT_ID = st.secrets["TELEGRAM_CHAT_ID"]
+# Sostituisci il tuo blocco di avvio thread con questo:
+if st.session_state.get('iq_bot') and 'bot_thread_started' not in st.session_state:
+    # Usiamo un flag per assicurarci che esista UN SOLO thread
+    st.session_state['bot_thread_started'] = True
+    thread = threading.Thread(target=bot_loop, daemon=True)
+    thread.start()
+    st.sidebar.success("🚀 Motore Sentinel avviato in background")
 
 def invia_telegram(messaggio):
     """Funzione rapida per inviare notifiche"""
@@ -43,6 +55,28 @@ def invia_telegram(messaggio):
         requests.post(url, json=payload, timeout=5)
     except Exception as e:
         print(f"Errore Telegram: {e}")
+
+def bot_loop():
+    """Ciclo infinito di scansione mercato e gestione posizioni"""
+    while True:
+        try:
+            if st.session_state.get('trading_attivo'):
+                # 1. Esegui Scansione Strategia
+                run_sentinel_optimized()
+                
+                # 2. Aggiorna stati dei trade (TP/SL)
+                update_signal_outcomes()
+                
+                # 3. Sincronizza con il broker ogni tanto
+                if time_lib.time() % 300 == 0: # Ogni 5 minuti
+                    sincronizza_posizioni_aperte()
+            
+            # Pausa per non saturare la CPU e rispettare i limiti API
+            time_lib.sleep(10) 
+            
+        except Exception as e:
+            print(f"⚠️ Errore nel loop critico: {e}")
+            time_lib.sleep(30) # Pausa lunga in caso di errore di rete
 
 def get_advanced_stats():
     df = st.session_state['signal_history'].copy()
@@ -77,23 +111,6 @@ def get_advanced_stats():
     
     return stats, asset_perf, hourly_perf
 
-# --- CONFIGURAZIONE CREDENZIALI (NON HARDCODARE LA PASSWORD SE PUOI) ---
-# Usa st.secrets o variabili d'ambiente per sicurezza
-# Recupero dai Secrets
-IQ_EMAIL = st.secrets["IQ_EMAIL"]
-IQ_PASS = st.secrets["IQ_PASS"]
-TELE_TOKEN = st.secrets["TELEGRAM_TOKEN"]
-TELE_CHAT_ID = st.secrets["TELEGRAM_CHAT_ID"]
-
-# Inizializzazione IQ Option
-if 'iq_bot' not in st.session_state:
-    # Passiamo le credenziali dei secrets alla classe
-    bot = IQHandler(IQ_EMAIL, IQ_PASS) 
-    if bot.connetti():
-        st.session_state['iq_bot'] = bot
-    else:
-        st.session_state['iq_bot'] = None
-
 if 'trading_attivo' not in st.session_state:
     st.session_state['trading_attivo'] = True # Il bot parte attivo di default
 
@@ -126,10 +143,6 @@ st.markdown("""
         }
     </style>
 """, unsafe_allow_html=True)
-
-# 1. Recupero credenziali dai Secrets (vedremo dopo come impostarli)
-IQ_EMAIL = st.secrets["IQ_EMAIL"]
-IQ_PASS = st.secrets["IQ_PASS"]
 
 # Avvio del Thread di Background (Analisi Continua)
 if st.session_state.get('iq_bot') and 'bot_thread_started' not in st.session_state:
