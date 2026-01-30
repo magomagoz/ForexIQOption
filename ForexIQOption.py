@@ -23,12 +23,6 @@ IQ_PASS = st.secrets["IQ_PASS"]
 TELE_TOKEN = st.secrets["TELEGRAM_TOKEN"]
 TELE_CHAT_ID = st.secrets["TELEGRAM_CHAT_ID"]
 
-# --- INIZIALIZZAZIONE UNIFICATA ---
-if 'iq_bot' not in st.session_state:
-    st.session_state['iq_bot'] = None
-    st.session_state['trading_attivo'] = True
-    st.session_state['signal_history'] = load_history_from_csv()
-
 if st.session_state['iq_bot'] is None:
     bot = IQHandler(IQ_EMAIL, IQ_PASS)
     if bot.connetti():
@@ -66,6 +60,12 @@ def load_history_from_csv():
         except:
             return pd.DataFrame(columns=['DataOra', 'Asset', 'Direzione', 'Prezzo', 'SL', 'TP', 'Stato', 'Investimento €', 'Risultato €', 'Stato_Prot', 'Protezione'])
     return pd.DataFrame(columns=['DataOra', 'Asset', 'Direzione', 'Prezzo', 'SL', 'TP', 'Stato', 'Investimento €', 'Risultato €', 'Stato_Prot', 'Protezione'])
+
+# --- INIZIALIZZAZIONE UNIFICATA ---
+if 'iq_bot' not in st.session_state:
+    st.session_state['iq_bot'] = None
+    st.session_state['trading_attivo'] = True
+    st.session_state['signal_history'] = load_history_from_csv()
 
 def connetti(self):
     check, reason = self.api.connect()
