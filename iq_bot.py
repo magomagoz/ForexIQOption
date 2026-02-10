@@ -5,7 +5,6 @@ import time
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from iqoptionapi.stable_api import IQ_Option
-from datetime import datetime
 from PIL import Image
 import base64
 import requests
