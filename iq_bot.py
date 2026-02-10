@@ -333,9 +333,9 @@ if st.session_state.get('connected', False):
         # GRAFICO CANDELE ULTIMA ORA
         df_last_hour = df.tail(60).copy()
         fig = make_subplots(
-            rows=4, cols=1,
-            subplot_titles=(f'💹 {pair.upper()} CANDELE', 'RSI', 'MACD', 'PREZZO'),
-            row_heights=[0.5, 0.175, 0.175, 0.15],
+            rows=3, cols=1,
+            subplot_titles=(f'💹 PREZZO', 'RSI', 'MACD'),
+            row_heights=[0.5, 0.175, 0.175],
             vertical_spacing=0.05,
             shared_xaxes=True
         )
@@ -359,11 +359,7 @@ if st.session_state.get('connected', False):
         fig.add_trace(go.Scatter(x=df_last_hour.index, y=df_last_hour['MACD_signal'], 
                                line=dict(color='red', width=2)), row=3, col=1)
         fig.add_hline(y=0, line_dash="dot", line_color="gray", row=3, col=1)
-        
-        # PREZZO
-        fig.add_trace(go.Scatter(x=df_last_hour.index, y=df_last_hour['close'], 
-                               line=dict(color='#00ff88', width=2)), row=4, col=1)
-        
+                
         # RIGHE VERTICALI
         for i in range(0, len(df_last_hour), 5):  # Ogni 5min per non appesantire
             fig.add_vline(x=df_last_hour.index[i], line_dash="dot", line_color="gray", 
@@ -398,7 +394,7 @@ if st.session_state.get('connected', False):
                         entry_price = float(signal['price_entry'])
                         
                         # CALCOLA ESITO
-                        if signal['type'] == '🟢 BUY':
+                        if signal['type'] == '🟢 COMPRA':
                             outcome = "✅ WIN" if latest_price > entry_price else "❌ LOSS"
                         else:  # SELL
                             outcome = "✅ WIN" if latest_price < entry_price else "❌ LOSS"
@@ -408,9 +404,7 @@ if st.session_state.get('connected', False):
                         
                     except:
                         st.session_state['signal_history'][i]['outcome'] = '❓ ERRORE'
-
-
-    
+ 
     # **CRONOLOGIA SEGNALI IN FONDO**
     st.markdown("---")
     st.subheader("📋 CRONOLOGIA SEGNALI")
