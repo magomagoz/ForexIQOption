@@ -47,7 +47,7 @@ def send_telegram_signal(signal_type, pair, price, rsi, macd):
 st.set_page_config(page_title="IQ Signals PRO", page_icon="🚀", layout="wide")
 
 # Metti il tuo logo.png nella stessa cartella del file .py
-logo = Image.open("banner1.png")  # 400x100px ideale
+logo = Image.open("banner.png")  # 400x100px ideale
 st.image(logo, use_column_width=True, caption="IQ Signals PRO")
 
 # SIDEBAR
