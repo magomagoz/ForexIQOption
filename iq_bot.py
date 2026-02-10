@@ -142,7 +142,7 @@ if st.session_state.get('connected', False):
     Iq = st.session_state['iq']
 
     # **LIVE STATUS SOPRA GRAFICO - LARGHEZZA PIENA**
-    st.header("📈 LIVE STATUS")
+    st.subheader("📈 LIVE STATUS")
     if 'df' in st.session_state:
         df = st.session_state['df'].iloc[-1]
         
@@ -156,7 +156,9 @@ if st.session_state.get('connected', False):
         with col4:
             trend = "🟢 BULL" if df['MACD'] > df['MACD_signal'] else "🔴 BEAR"
             st.metric("⚡ TREND", trend, delta=None)
-    
+
+    st.markdown("---")
+
     # GRAFICO (sotto live status - larghezza piena)
     st.subheader("📊 GRAFICO REALTIME")
     try:
