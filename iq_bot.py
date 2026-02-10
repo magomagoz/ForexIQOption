@@ -162,13 +162,13 @@ if st.session_state.get('connected', False) and 'df' in st.session_state:
             # TELEGRAM
             send_telegram_signal("🔴 SELL", pair, latest_sell['close'], latest_sell['RSI'], latest_sell['MACD'])
 
-# **TASTI NASCOSTI per chiudere popup** (fuori dal controllo popup)
-if st.button("", key="close_buy_popup", help=""):
-    st.session_state['hide_popup'] = True
-    st.rerun()
-if st.button("", key="close_sell_popup", help=""):
-    st.session_state['hide_popup'] = True
-    st.rerun()
+    # **TASTI NASCOSTI per chiudere popup** (fuori dal controllo popup)
+    if st.button("", key="close_buy_popup", help=""):
+        st.session_state['hide_popup'] = True
+        st.rerun()
+    if st.button("", key="close_sell_popup", help=""):
+        st.session_state['hide_popup'] = True
+        st.rerun()
 
 # **SCANNER MULTI-VALUTE ogni 60s + GRAFICO SINGOLO separato**
 
