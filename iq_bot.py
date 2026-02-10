@@ -32,8 +32,17 @@ with col2:
 # SIDEBAR
 with st.sidebar:
     st.header("⚙️ Config")
-    email = st.text_input("Email Practice", type="password")
-    password = st.text_input("Password", type="password")
+    
+    # **EMAIL SALVATA AUTOMATICAMENTE**
+    email = st.text_input(
+        "Email Practice", 
+        value=st.session_state['saved_email'],  # ✅ SIEMPRE RIPORTA LA TUA MAIL
+        key="email_input",
+        help="La tua email viene salvata automaticamente"
+    )
+    
+    # SALVA EMAIL NEL SESSION STATE
+    st.session_state['saved_email'] = st.session_state['email_input']    password = st.text_input("Password", type="password")
     pair = st.selectbox("Coppia", ["EURUSD", "GBPUSD", "USDJPY"])
     rsi_buy = st.slider("RSI Buy Level", 20, 40, 30)
     rsi_sell = st.slider("RSI Sell Level", 60, 80, 70)
