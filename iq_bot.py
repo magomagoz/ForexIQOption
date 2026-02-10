@@ -13,9 +13,7 @@ st.set_page_config(page_title="IQ Signals PRO", page_icon="🚀", layout="wide")
 
 # Metti il tuo logo.png nella stessa cartella del file .py
 logo = Image.open("banner1.png")  # 400x100px ideale
-col1, col2 = st.columns([1,3])
-with col2:
-    st.image(logo, use_column_width=True, caption="IQ Signals PRO")
+#st.image(logo, use_column_width=True, caption="IQ Signals PRO")
 
 # SIDEBAR
 with st.sidebar:
