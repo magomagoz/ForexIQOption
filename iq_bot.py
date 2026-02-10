@@ -20,15 +20,15 @@ def send_telegram_signal(signal_type, pair, price, rsi, macd):
     timestamp = datetime.now().strftime("%H:%M:%S")
     
     message = f"""
-🚀 *IQ SIGNALS PRO* 🚀
+🚀 *SENTINEL AI* 🚀
 
-*{signal_type} - {pair}*
+*{signal_type} - `{pair}`*
 💰 *Prezzo Entrata:* `{price:.5f}`
 📊 *RSI:* `{rsi:.1f}`
 🔥 *MACD:* `{macd:.5f}`
 ⏰ *Ora:* {timestamp}
 
-{'🟢 HIGHER 1m ORA!' if signal_type == 'BUY' else '🔴 LOWER 1m ORA!'}
+{'🟢 HIGHER 1m!' if signal_type == 'BUY' else '🔴 LOWER 1m!'}
 """
     
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
@@ -55,7 +55,7 @@ with st.sidebar:
     st.header("⚙️ Config")
     email = st.text_input("Email Practice", value="mago_magoz@libero.it")
     password = st.text_input("Password", type="password")
-    pair = st.selectbox("Coppia", ["EURUSD", "GBPUSD", "USDJPY"])
+    pair = st.selectbox("Coppia", ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"])
     rsi_buy = st.slider("RSI Buy Level", 20, 40, 30)
     rsi_sell = st.slider("RSI Sell Level", 60, 80, 70)
     
@@ -131,30 +131,6 @@ if st.session_state.get('connected', False) and 'df' in st.session_state:
     if not new_sells.empty:
         latest = new_sells.iloc[-1]
         send_telegram_signal("🔴 SELL", 'pair', latest['close'], latest['RSI'], latest['MACD'])
-
-    # MAIN LOGIC
-    if st.session_state.get('connected', False):
-        # **BARRA 60s CHE SCORRE VERSO 0 (tempo reale)**
-        
-        # Calcola progresso REALE (da 60s a 0s)
-        seconds_left = 60 - (time.time() % 60)
-        progress = seconds_left / 60.0
-        
-        st.markdown(f"""
-        <div style='background: linear-gradient(90deg, #333 0%, #333 100%); 
-                    height: 25px; border-radius: 15px; overflow: hidden; 
-                    border: 3px solid #00ff88; box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);'>
-            <div style='background: linear-gradient(90deg, #00ff88, #00cc66, #00ff88); 
-                        height: 100%; width: {progress*100:.1f}%; 
-                        animation: none; transition: width 0.1s linear; 
-                        box-shadow: 0 0 20px rgba(0,255,136,0.7);'>
-            </div>
-        </div>
-        <div style='text-align: center; color: #00ff88; font-weight: bold; font-size: 20px; 
-                   text-shadow: 0 0 10px rgba(0,255,136,0.5); margin-top: 5px;'>
-            ⏱️ {int(seconds_left)} SECONDI al prossimo scan
-        </div>
-        """, unsafe_allow_html=True)
 
 # **SCANNER MULTI-VALUTE ogni 60s + GRAFICO SINGOLO separato**
 
@@ -312,9 +288,6 @@ if st.session_state.get('connected', False):
             
     except Exception as e:
         st.error(f"Dati: {e}")
-    
-    # GRAFICO
-    # **GRAFICO CAND ELE GIAPPONESI ULTIMA ORA + RIGHE VERTICALI OGNI MINUTO**
     
     # Filtra ultima ora (60 candele 1m)
     df_last_hour = df.tail(60).copy()
