@@ -130,27 +130,27 @@ if st.session_state.get('connected', False) and 'df' in st.session_state:
 
     # MAIN LOGIC
     if st.session_state.get('connected', False):
-    # **BARRA 60s CHE SCORRE VERSO 0 (tempo reale)**
-    
-    # Calcola progresso REALE (da 60s a 0s)
-    seconds_left = 60 - (time.time() % 60)
-    progress = seconds_left / 60.0
-    
-    st.markdown(f"""
-    <div style='background: linear-gradient(90deg, #333 0%, #333 100%); 
-                height: 25px; border-radius: 15px; overflow: hidden; 
-                border: 3px solid #00ff88; box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);'>
-        <div style='background: linear-gradient(90deg, #00ff88, #00cc66, #00ff88); 
-                    height: 100%; width: {progress*100:.1f}%; 
-                    animation: none; transition: width 0.1s linear; 
-                    box-shadow: 0 0 20px rgba(0,255,136,0.7);'>
+        # **BARRA 60s CHE SCORRE VERSO 0 (tempo reale)**
+        
+        # Calcola progresso REALE (da 60s a 0s)
+        seconds_left = 60 - (time.time() % 60)
+        progress = seconds_left / 60.0
+        
+        st.markdown(f"""
+        <div style='background: linear-gradient(90deg, #333 0%, #333 100%); 
+                    height: 25px; border-radius: 15px; overflow: hidden; 
+                    border: 3px solid #00ff88; box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);'>
+            <div style='background: linear-gradient(90deg, #00ff88, #00cc66, #00ff88); 
+                        height: 100%; width: {progress*100:.1f}%; 
+                        animation: none; transition: width 0.1s linear; 
+                        box-shadow: 0 0 20px rgba(0,255,136,0.7);'>
+            </div>
         </div>
-    </div>
-    <div style='text-align: center; color: #00ff88; font-weight: bold; font-size: 20px; 
-               text-shadow: 0 0 10px rgba(0,255,136,0.5); margin-top: 5px;'>
-        ⏱️ {int(seconds_left)} SECONDI al prossimo scan
-    </div>
-    """, unsafe_allow_html=True)
+        <div style='text-align: center; color: #00ff88; font-weight: bold; font-size: 20px; 
+                   text-shadow: 0 0 10px rgba(0,255,136,0.5); margin-top: 5px;'>
+            ⏱️ {int(seconds_left)} SECONDI al prossimo scan
+        </div>
+        """, unsafe_allow_html=True)
 
 # **SCANNER MULTI-VALUTE ogni 60s + GRAFICO SINGOLO separato**
 
