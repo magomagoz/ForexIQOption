@@ -102,53 +102,53 @@ with st.sidebar:
             st.success("👋 Disconnesso!")
             st.rerun()
 
-# **POPUP BUY con TASTO CHIUDI**
-if not buy_signals.empty:
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        st.markdown(f"""
-        <div id="buy_popup" style='position: fixed; top: 35%; left: 50%; transform: translate(-50%, -50%);
-        background: linear-gradient(45deg, #00ff88, #00cc66); padding: 30px; border-radius: 25px;
-        border: 5px solid #00ff00; z-index: 1000; font-size: 28px; font-weight: bold;
-        box-shadow: 0 20px 50px rgba(0,255,0,0.7); text-align: center; color: black; 
-        min-width: 450px;'>
-            <div style='font-size: 36px; margin-bottom: 15px;'>🚀 **BUY {pair.upper()}**</div>
-            <div><b>💰 Prezzo Entrata:</b> <span style='color: #00ff00; font-size: 32px;'>{latest_buy['close']:.5f}</span></div>
-            <div style='font-size: 34px; color: #00ff00; margin-top: 15px;'>**HIGHER 1 MINUTO ORA!**</div>
-        </div>
-        """, unsafe_allow_html=True)
+    # **POPUP BUY con TASTO CHIUDI**
+    if not buy_signals.empty:
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            st.markdown(f"""
+            <div id="buy_popup" style='position: fixed; top: 35%; left: 50%; transform: translate(-50%, -50%);
+            background: linear-gradient(45deg, #00ff88, #00cc66); padding: 30px; border-radius: 25px;
+            border: 5px solid #00ff00; z-index: 1000; font-size: 28px; font-weight: bold;
+            box-shadow: 0 20px 50px rgba(0,255,0,0.7); text-align: center; color: black; 
+            min-width: 450px;'>
+                <div style='font-size: 36px; margin-bottom: 15px;'>🚀 **BUY {pair.upper()}**</div>
+                <div><b>💰 Prezzo Entrata:</b> <span style='color: #00ff00; font-size: 32px;'>{latest_buy['close']:.5f}</span></div>
+                <div style='font-size: 34px; color: #00ff00; margin-top: 15px;'>**HIGHER 1 MINUTO ORA!**</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col2:
+            if st.button("❌", key="close_buy"):
+                st.session_state['hide_popup'] = True
+                st.rerun()
     
-    with col2:
-        if st.button("❌", key="close_buy"):
-            st.session_state['hide_popup'] = True
-            st.rerun()
-
-# **POPUP SELL con TASTO CHIUDI**  
-elif not sell_signals.empty:
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        st.markdown(f"""
-        <div id="sell_popup" style='position: fixed; top: 35%; left: 50%; transform: translate(-50%, -50%);
-        background: linear-gradient(45deg, #ff4444, #cc0000); padding: 30px; border-radius: 25px;
-        border: 5px solid #ff0000; z-index: 1000; font-size: 28px; font-weight: bold;
-        box-shadow: 0 20px 50px rgba(255,0,0,0.7); text-align: center; color: white; 
-        min-width: 450px;'>
-            <div style='font-size: 36px; margin-bottom: 15px;'>🔻 **SELL {pair.upper()}**</div>
-            <div><b>💰 Prezzo Entrata:</b> <span style='color: #ffaaaa; font-size: 32px;'>{latest_sell['close']:.5f}</span></div>
-            <div style='font-size: 34px; color: #ffaaaa; margin-top: 15px;'>**LOWER 1 MINUTO ORA!**</div>
-        </div>
-        """, unsafe_allow_html=True)
+    # **POPUP SELL con TASTO CHIUDI**  
+    elif not sell_signals.empty:
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            st.markdown(f"""
+            <div id="sell_popup" style='position: fixed; top: 35%; left: 50%; transform: translate(-50%, -50%);
+            background: linear-gradient(45deg, #ff4444, #cc0000); padding: 30px; border-radius: 25px;
+            border: 5px solid #ff0000; z-index: 1000; font-size: 28px; font-weight: bold;
+            box-shadow: 0 20px 50px rgba(255,0,0,0.7); text-align: center; color: white; 
+            min-width: 450px;'>
+                <div style='font-size: 36px; margin-bottom: 15px;'>🔻 **SELL {pair.upper()}**</div>
+                <div><b>💰 Prezzo Entrata:</b> <span style='color: #ffaaaa; font-size: 32px;'>{latest_sell['close']:.5f}</span></div>
+                <div style='font-size: 34px; color: #ffaaaa; margin-top: 15px;'>**LOWER 1 MINUTO ORA!**</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col2:
+            if st.button("❌", key="close_sell"):
+                st.session_state['hide_popup'] = True
+                st.rerun()
     
-    with col2:
-        if st.button("❌", key="close_sell"):
-            st.session_state['hide_popup'] = True
-            st.rerun()
-
-# **NON MOSTRA popup se chiuso manualmente**
-if st.session_state.get('hide_popup', False):
-    pass  # Salta popup
-else:
-    # [qui il codice popup originale]
+    # **NON MOSTRA popup se chiuso manualmente**
+    if st.session_state.get('hide_popup', False):
+        pass  # Salta popup
+    else:
+        # [qui il codice popup originale]
     
     # **NUOVO BUY → TELEGRAM**
     new_buys = df[df['BUY_SIGNAL'] == True].tail(1)
