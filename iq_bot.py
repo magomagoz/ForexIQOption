@@ -8,6 +8,41 @@ from iqoptionapi.stable_api import IQ_Option
 from datetime import datetime
 from PIL import Image
 import base64
+import requests
+from datetime import datetime
+
+# **CONFIG TELEGRAM** (metti nella sidebar)
+TELEGRAM_TOKEN = "123456:ABCdefGHI..."  # Il tuo token
+TELEGRAM_CHAT_ID = "123456789"         # Il tuo Chat ID
+
+def send_telegram_signal(signal_type, pair, price, rsi, macd):
+    """Invia notifica Telegram completa"""
+    timestamp = datetime.now().strftime("%H:%M:%S")
+    
+    message = f"""
+🚀 *IQ SIGNALS PRO* 🚀
+
+*{signal_type} {pair}*
+💰 *Prezzo Entrata:* `{price:.5f}`
+📊 *RSI:* `{rsi:.1f}`
+🔥 *MACD:* `{macd:.5f}`
+⏰ *Ora:* {timestamp}
+
+{'🟢 HIGHER 1m ORA!' if signal_type == 'BUY' else '🔴 LOWER 1m ORA!'}
+"""
+    
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    payload = {
+        "chat_id": TELEGRAM_CHAT_ID,
+        "text": message,
+        "parse_mode": "Markdown"
+    }
+    
+    try:
+        response = requests.post(url, data=payload, timeout=5)
+        return response.json()
+    except:
+        return None
 
 st.set_page_config(page_title="IQ Signals PRO", page_icon="🚀", layout="wide")
 
@@ -80,6 +115,18 @@ if st.session_state.get('connected', False) and 'df' in st.session_state:
             <div style='font-size: 34px; color: #ffaaaa; margin-top: 15px;'>**LOWER 1 MINUTO ORA!**</div>
         </div>
         """, unsafe_allow_html=True)
+    
+    # **NUOVO BUY → TELEGRAM**
+    new_buys = df[df['BUY_SIGNAL'] == True].tail(1)
+    if not new_buys.empty:
+        latest = new_buys.iloc[-1]
+        send_telegram_signal("🟢 BUY", pair, latest['close'], latest['RSI'], latest['MACD'])
+    
+    # **NUOVO SELL → TELEGRAM**  
+    new_sells = df[df['SELL_SIGNAL'] == True].tail(1)
+    if not new_sells.empty:
+        latest = new_sells.iloc[-1]
+        send_telegram_signal("🔴 SELL", pair, latest['close'], latest['RSI'], latest['MACD'])
 
 # MAIN LOGIC
 if st.session_state.get('connected', False):
