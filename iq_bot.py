@@ -42,7 +42,8 @@ with st.sidebar:
     )
     
     # SALVA EMAIL NEL SESSION STATE
-    st.session_state['saved_email'] = st.session_state['email_input']    password = st.text_input("Password", type="password")
+    st.session_state['saved_email'] = st.session_state['email_input']    
+    password = st.text_input("Password", type="password")
     pair = st.selectbox("Coppia", ["EURUSD", "GBPUSD", "USDJPY"])
     rsi_buy = st.slider("RSI Buy Level", 20, 40, 30)
     rsi_sell = st.slider("RSI Sell Level", 60, 80, 70)
