@@ -13,12 +13,12 @@ st.set_page_config(page_title="IQ Signals PRO", page_icon="🚀", layout="wide")
 
 # Metti il tuo logo.png nella stessa cartella del file .py
 logo = Image.open("banner1.png")  # 400x100px ideale
-#st.image(logo, use_column_width=True, caption="IQ Signals PRO")
+st.image(logo, use_column_width=True, caption="IQ Signals PRO")
 
 # SIDEBAR
 with st.sidebar:
     st.header("⚙️ Config")
-    email = st.text_input("Email Practice", type="password")
+    email = st.text("Email Practice", "mago_magoz@libero.it")
     password = st.text_input("Password", type="password")
     pair = st.selectbox("Coppia", ["EURUSD", "GBPUSD", "USDJPY"])
     rsi_buy = st.slider("RSI Buy Level", 20, 40, 30)
