@@ -107,7 +107,7 @@ if not buy_signals.empty:
     col1, col2 = st.columns([3, 1])
     with col1:
         st.markdown(f"""
-        <div id="buy_popup" style='position: fixed; top: 25%; left: 50%; transform: translate(-50%, -50%);
+        <div id="buy_popup" style='position: fixed; top: 35%; left: 50%; transform: translate(-50%, -50%);
         background: linear-gradient(45deg, #00ff88, #00cc66); padding: 30px; border-radius: 25px;
         border: 5px solid #00ff00; z-index: 1000; font-size: 28px; font-weight: bold;
         box-shadow: 0 20px 50px rgba(0,255,0,0.7); text-align: center; color: black; 
