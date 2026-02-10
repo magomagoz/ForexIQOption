@@ -180,7 +180,7 @@ if st.session_state.get('connected', False) and 'df' in st.session_state:
             <div id="buy_popup" style='position: fixed; top: 35%; left: 50%; transform: translate(-50%, -50%);
             background: linear-gradient(45deg, #00ff88, #00cc66); padding: 35px; border-radius: 25px;
             border: 5px solid #00ff00; z-index: 1000; font-size: 28px; font-weight: bold;
-            box-shadow: 0 20px 50px rgba(0,255,0,0.7); text-align: center; color: black; 
+            box-shadow: 0 20px 50px rgba(102,204,0,0.7); text-align: center; color: black; 
             min-width: 450px;'>
                 <button onclick="document.getElementById('buy_popup').style.display='none'; 
                                 window.parent.document.getElementById('close_buy_popup').click();"
@@ -195,7 +195,7 @@ if st.session_state.get('connected', False) and 'df' in st.session_state:
             """, unsafe_allow_html=True)
             
             # TELEGRAM
-            send_telegram_signal("🟢 BUY", pair, latest_buy['close'], latest_buy['RSI'], latest_buy['MACD'])
+            send_telegram_signal("🟢 COMPRA", pair, latest_buy['close'], latest_buy['RSI'], latest_buy['MACD'])
         
         # **POPUP SELL con ❌ DENTRO**
         elif not sell_signals.empty:
@@ -219,7 +219,7 @@ if st.session_state.get('connected', False) and 'df' in st.session_state:
             """, unsafe_allow_html=True)
             
             # TELEGRAM
-            send_telegram_signal("🔴 SELL", pair, latest_sell['close'], latest_sell['RSI'], latest_sell['MACD'])
+            send_telegram_signal("🔴 VENDI", pair, latest_sell['close'], latest_sell['RSI'], latest_sell['MACD'])
 
     # **TASTI NASCOSTI per chiudere popup** (fuori dal controllo popup)
     if st.button("", key="close_buy_popup", help=""):
