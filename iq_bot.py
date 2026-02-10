@@ -12,8 +12,8 @@ import requests
 from datetime import datetime
 
 # **CONFIG TELEGRAM** (metti nella sidebar)
-TELEGRAM_TOKEN = "123456:ABCdefGHI..."  # Il tuo token
-TELEGRAM_CHAT_ID = "123456789"         # Il tuo Chat ID
+TELEGRAM_TOKEN = "8235666467:AAGCsvEhlrzl7bH537bJTjsSwQ3P3PMRW10"  # Il tuo token
+TELEGRAM_CHAT_ID = "7191509088"         # Il tuo Chat ID
 
 def send_telegram_signal(signal_type, pair, price, rsi, macd):
     """Invia notifica Telegram completa"""
