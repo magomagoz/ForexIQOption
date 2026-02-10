@@ -130,4 +130,4 @@ if st.session_state.get('connected', False):
 if st.session_state.get('connected', False):
     # COUNTDOWN
     next_refresh = st.session_state.get('next_refresh', time.time() + 60)
-    remaining =
+    #remaining =
