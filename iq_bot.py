@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import pandas_ta as ta
-import time
+import time as time
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from iqoptionapi.stable_api import IQ_Option
