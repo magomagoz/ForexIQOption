@@ -5,10 +5,15 @@ import time
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from iqoptionapi.stable_api import IQ_Option
+from PIL import Image
+
+# Metti il tuo logo.png nella stessa cartella del file .py
+logo = Image.open("banner.png")
+st.image(logo, use_column_width=True, caption="IQ Signals PRO")
 
 st.set_page_config(page_title="IQ Signals PRO", layout="wide")
 
-st.title("🚀 SENTINEL AI")
+#st.title("🚀 SENTINEL AI")
 
 # SIDEBAR CONFIG
 with st.sidebar:
