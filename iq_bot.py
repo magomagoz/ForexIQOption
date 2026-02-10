@@ -126,8 +126,3 @@ if st.session_state.get('connected', False):
         </style>
         """, unsafe_allow_html=True)
 
-# MAIN CONTENT
-if st.session_state.get('connected', False):
-    # COUNTDOWN
-    #next_refresh = st.session_state.get('next_refresh', time.time() + 60)
-    #remaining =
