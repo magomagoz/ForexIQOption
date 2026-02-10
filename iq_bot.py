@@ -227,38 +227,79 @@ if st.session_state.get('connected', False):
 
 
     
-    # **GRAFICO CENTRALE - usa pair dal session_state**
+# **GRAFICO CENTRALE - CORRETTO**
 if st.session_state.get('connected', False):
     Iq = st.session_state['iq']
-    pair = st.session_state.get('pair', 'EURUSD')  # ✅ Prende dalla sidebar
+    pair = st.session_state.get('pair', 'EURUSD')  # Dalla sidebar
     rsi_buy = st.session_state.get('rsi_buy', 30)
     rsi_sell = st.session_state.get('rsi_sell', 70)
     
     st.subheader(f"📊 GRAFICO REALTIME - {pair.upper()}")
     
     try:
-        # **CARICA DATI della COPPIA SCELTA**
+        # CARICA DATI COPPIA SCELTA (SOLO 1 try!)
         candles = Iq.get_candles(pair, 60, 150, time.time())
         df = pd.DataFrame(candles)
         df['from'] = pd.to_datetime(df['from'], unit='s')
         df.set_index('from', inplace=True)
         
-        # [calcolo indicatori e segnali come prima...]
+        # INDICATORI
         df['RSI'] = ta.rsi(df['close'], length=14)
         macd = ta.macd(df['close'])
         df['MACD'] = macd['MACD_12_26_9']
         df['MACD_signal'] = macd['MACDs_12_26_9']
         
-        # SEGNALI con RSI dai slider
+        # SEGNALI
+        df['prev_MACD'] = df['MACD'].shift(1)
+        df['prev_signal'] = df['MACD_signal'].shift(1)
+        
         df['BUY_SIGNAL'] = (
             (df['RSI'] < rsi_buy) & 
             (df['MACD'] > df['MACD_signal']) &
-            (df['MACD'].shift(1) <= df['MACD_signal'].shift(1))
+            (df['prev_MACD'] <= df['prev_signal'])
+        )
+        
+        df['SELL_SIGNAL'] = (
+            (df['RSI'] > rsi_sell) & 
+            (df['MACD'] < df['MACD_signal']) &
+            (df['prev_MACD'] >= df['prev_signal'])
         )
         
         st.session_state['df'] = df
         
-        # **GRAFICO candele per PAIR SCELTA**
+        # CRONOLOGIA SEGNALI
+        new_buys = df[df['BUY_SIGNAL'] == True].tail(1)
+        new_sells = df[df['SELL_SIGNAL'] == True].tail(1)
+        
+        if not new_buys.empty:
+            signal = {
+                'time': new_buys.index[-1].strftime('%H:%M:%S'),
+                'type': '🟢 BUY',
+                'price': f"{new_buys['close'].iloc[-1]:.5f}",
+                'rsi': f"{new_buys['RSI'].iloc[-1]:.1f}",
+                'macd': f"{new_buys['MACD'].iloc[-1]:.5f}"
+            }
+            if 'signal_history' not in st.session_state:
+                st.session_state['signal_history'] = []
+            if signal not in st.session_state['signal_history']:
+                st.session_state['signal_history'].insert(0, signal)
+                if len(st.session_state['signal_history']) > 20:
+                    st.session_state['signal_history'].pop()
+        
+        if not new_sells.empty:
+            signal = {
+                'time': new_sells.index[-1].strftime('%H:%M:%S'),
+                'type': '🔴 SELL',
+                'price': f"{new_sells['close'].iloc[-1]:.5f}",
+                'rsi': f"{new_sells['RSI'].iloc[-1]:.1f}",
+                'macd': f"{new_sells['MACD'].iloc[-1]:.5f}"
+            }
+            if signal not in st.session_state['signal_history']:
+                st.session_state['signal_history'].insert(0, signal)
+                if len(st.session_state['signal_history']) > 20:
+                    st.session_state['signal_history'].pop()
+        
+        # GRAFICO CANDELE ULTIMA ORA
         df_last_hour = df.tail(60).copy()
         fig = make_subplots(
             rows=4, cols=1,
@@ -268,134 +309,47 @@ if st.session_state.get('connected', False):
             shared_xaxes=True
         )
         
-    try:
-        candles = Iq.get_candles(pair, 60, 150, time.time())
-        df = pd.DataFrame(candles)
-        df['from'] = pd.to_datetime(df['from'], unit='s')
-        df.set_index('from', inplace=True)
-            
-        # INDICATORI
-        df['RSI'] = ta.rsi(df['close'], length=14)
-        macd = ta.macd(df['close'])
-        df['MACD'] = macd['MACD_12_26_9']
-        df['MACD_signal'] = macd['MACDs_12_26_9']
-            
-        # SEGNALI
-        df['prev_MACD'] = df['MACD'].shift(1)
-        df['prev_signal'] = df['MACD_signal'].shift(1)
-            
-        df['BUY_SIGNAL'] = (
-            (df['RSI'] < rsi_buy) & 
-            (df['MACD'] > df['MACD_signal']) &
-            (df['prev_MACD'] <= df['prev_signal'])
-        )
-            
-        df['SELL_SIGNAL'] = (
-            (df['RSI'] > rsi_sell) & 
-            (df['MACD'] < df['MACD_signal']) &
-            (df['prev_MACD'] >= df['prev_signal'])
-        )
-            
-        st.session_state['df'] = df
+        # CANDELE
+        fig.add_trace(go.Candlestick(
+            x=df_last_hour.index, open=df_last_hour['open'], 
+            high=df_last_hour['max'], low=df_last_hour['min'], 
+            close=df_last_hour['close'], increasing_line_color='#00ff88', 
+            decreasing_line_color='#ff4444'), row=1, col=1)
         
-        # SALVA NUOVI SEGNALI NELLA CRONOLOGIA
-        new_buys = df[df['BUY_SIGNAL'] == True].tail(1)
-        new_sells = df[df['SELL_SIGNAL'] == True].tail(1)
-            
-        if not new_buys.empty:
-            signal = {
-                'time': new_buys.index[-1].strftime('%H:%M:%S'),
-                'type': '🟢 BUY',
-                'price': f"{new_buys['close'].iloc[-1]:.5f}",
-                'rsi': f"{new_buys['RSI'].iloc[-1]:.1f}",
-                'macd': f"{new_buys['MACD'].iloc[-1]:.5f}"
-            }
-            if signal not in st.session_state['signal_history']:
-                st.session_state['signal_history'].insert(0, signal)
-                if len(st.session_state['signal_history']) > 20:
-                    st.session_state['signal_history'].pop()
-            
-        if not new_sells.empty:
-            signal = {
-                'time': new_sells.index[-1].strftime('%H:%M:%S'),
-                'type': '🔴 SELL',
-                'price': f"{new_sells['close'].iloc[-1]:.5f}",
-                'rsi': f"{new_sells['RSI'].iloc[-1]:.1f}",
-                'macd': f"{new_sells['MACD'].iloc[-1]:.5f}"
-        }
-            if signal not in st.session_state['signal_history']:
-                st.session_state['signal_history'].insert(0, signal)
-                if len(st.session_state['signal_history']) > 20:
-                    st.session_state['signal_history'].pop()
-            
+        # RSI + LIVELLI
+        fig.add_trace(go.Scatter(x=df_last_hour.index, y=df_last_hour['RSI'], 
+                               line=dict(color='purple', width=2)), row=2, col=1)
+        fig.add_hline(y=rsi_buy, line_dash="solid", line_color="#00ff00", line_width=3, row=2, col=1)
+        fig.add_hline(y=rsi_sell, line_dash="solid", line_color="#ff0000", line_width=3, row=2, col=1)
+        
+        # MACD
+        fig.add_trace(go.Scatter(x=df_last_hour.index, y=df_last_hour['MACD'], 
+                               line=dict(color='orange', width=2)), row=3, col=1)
+        fig.add_trace(go.Scatter(x=df_last_hour.index, y=df_last_hour['MACD_signal'], 
+                               line=dict(color='red', width=2)), row=3, col=1)
+        fig.add_hline(y=0, line_dash="dot", line_color="gray", row=3, col=1)
+        
+        # PREZZO
+        fig.add_trace(go.Scatter(x=df_last_hour.index, y=df_last_hour['close'], 
+                               line=dict(color='#00ff88', width=2)), row=4, col=1)
+        
+        # RIGHE VERTICALI
+        for i in range(0, len(df_last_hour), 5):  # Ogni 5min per non appesantire
+            fig.add_vline(x=df_last_hour.index[i], line_dash="dot", line_color="gray", 
+                         opacity=0.3, row=1, col=1, layer="below")
+            fig.add_vline(x=df_last_hour.index[i], line_dash="dot", line_color="gray", 
+                         opacity=0.3, row=2, col=1, layer="below")
+            fig.add_vline(x=df_last_hour.index[i], line_dash="dot", line_color="gray", 
+                         opacity=0.3, row=3, col=1, layer="below")
+            fig.add_vline(x=df_last_hour.index[i], line_dash="dot", line_color="gray", 
+                         opacity=0.3, row=4, col=1, layer="below")
+        
+        fig.update_layout(height=900, showlegend=False, title=f"🎯 {pair.upper()} - ULTIMA ORA", 
+                         xaxis_rangeslider_visible=False, margin=dict(t=100))
+        st.plotly_chart(fig, use_container_width=True)
+        
     except Exception as e:
-        st.error(f"Dati: {e}")
-    
-    # Filtra ultima ora (60 candele 1m)
-    df_last_hour = df.tail(60).copy()
-    
-    # Crea grafico con 4 subplot (candele + 3 indicatori)
-    fig = make_subplots(
-        rows=4, cols=1,
-        subplot_titles=('💹 CANDELE 1m (ULTIMA ORA)', '📊 RSI', '🔥 MACD', '💰 PREZZO'),
-        row_heights=[0.5, 0.175, 0.175, 0.15],
-        vertical_spacing=0.05,
-        shared_xaxes=True  # ✅ STESSO TEMPO per tutti!
-    )
-    
-    # **CANDELE GIAPPONESI**
-    fig.add_trace(
-        go.Candlestick(
-            x=df_last_hour.index,
-            open=df_last_hour['open'],
-            high=df_last_hour['max'],
-            low=df_last_hour['min'],
-            close=df_last_hour['close'],
-            name="Candele",
-            increasing_line_color='#00ff88', 
-            decreasing_line_color='#ff4444'
-        ),
-        row=1, col=1
-    )
-    
-    # **RSI**
-    fig.add_trace(go.Scatter(x=df_last_hour.index, y=df_last_hour['RSI'], 
-                            name='RSI', line=dict(color='purple', width=2)), row=2, col=1)
-    fig.add_hline(y=rsi_buy, line_dash="solid", line_color="#00ff00", line_width=3, row=2, col=1)
-    fig.add_hline(y=rsi_sell, line_dash="solid", line_color="#ff0000", line_width=3, row=2, col=1)
-    
-    # **MACD** 
-    fig.add_trace(go.Scatter(x=df_last_hour.index, y=df_last_hour['MACD'], 
-                            name='MACD', line=dict(color='orange', width=2)), row=3, col=1)
-    fig.add_trace(go.Scatter(x=df_last_hour.index, y=df_last_hour['MACD_signal'], 
-                            name='Signal', line=dict(color='red', width=2)), row=3, col=1)
-    fig.add_hline(y=0, line_dash="dot", line_color="gray", row=3, col=1)
-    
-    # **PREZZO CLOSE** (linea per facile lettura)
-    fig.add_trace(go.Scatter(x=df_last_hour.index, y=df_last_hour['close'], 
-                            name='Prezzo', line=dict(color='#00ff88', width=2)), row=4, col=1)
-    
-    # **RIGHE VERTICALI OGNI MINUTO** (linee tratteggiate grigie)
-    for i in range(0, len(df_last_hour), 1):  # Ogni candela = 1 minuto
-        fig.add_vline(x=df_last_hour.index[i], line_dash="dot", 
-                      line_color="gray", opacity=0.3, row=1, col=1)
-        fig.add_vline(x=df_last_hour.index[i], line_dash="dot", 
-                      line_color="gray", opacity=0.3, row=2, col=1)
-        fig.add_vline(x=df_last_hour.index[i], line_dash="dot", 
-                      line_color="gray", opacity=0.3, row=3, col=1)
-        fig.add_vline(x=df_last_hour.index[i], line_dash="dot", 
-                      line_color="gray", opacity=0.3, row=4, col=1)
-    
-    # Layout ottimizzato
-    fig.update_layout(
-        height=900,
-        showlegend=False,
-        title=f"🎯 {pair} - ULTIMA ORA (1m) - SINCRONIZZATO",
-        xaxis_rangeslider_visible=False,
-        margin=dict(t=100, b=50)
-    )
-    
-    st.plotly_chart(fig, use_container_width=True)
+        st.error(f"❌ Dati {pair}: {e}")
         
     # **CRONOLOGIA SEGNALI IN FONDO**
     st.markdown("---")
