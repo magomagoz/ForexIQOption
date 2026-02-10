@@ -89,6 +89,65 @@ with st.sidebar:
         )
         st.session_state['rsi_buy'] = st.slider("RSI Buy", 20, 40, 30)
         st.session_state['rsi_sell'] = st.slider("RSI Sell", 60, 80, 70)
+
+    # **SESSIONI MERCATO FOREX** (aggiungi dopo gli slider RSI)
+    if st.session_state.get('connected', False):
+        st.markdown("---")
+        st.header("🌍 **SESSIONI MERCATO**")
+        
+        from datetime import datetime, time
+        import pytz
+        
+        # Orari sessioni FOREX (CET = UTC+1)
+        now_cet = datetime.now()
+        ora_cet = now_cet.time()
+        
+        # Sessioni con orari CET (Italia)
+        sessioni = {
+            "🦘 SYDNEY": {"inizio": time(23,0), "fine": time(8,0)},
+            "🇯🇵 TOKYO": {"inizio": time(1,0), "fine": time(10,0)}, 
+            "🇬🇧 LONDRA": {"inizio": time(9,0), "fine": time(18,0)},
+            "🇺🇸 NEW YORK": {"inizio": time(14,0), "fine": time(23,0)}
+        }
+        
+        for nome, orari in sessioni.items():
+            inizio, fine = orari["inizio"], orari["fine"]
+            
+            # Logica APERTO/CHIUSO (considera notti)
+            if inizio < fine:
+                aperto = inizio <= ora_cet <= fine
+            else:  # Sessioni che attraversano mezzanotte
+                aperto = ora_cet >= inizio or ora_cet <= fine
+            
+            # Colori e status
+            if aperto:
+                colore = "🟢 **APERTO**"
+                badge = "background: linear-gradient(45deg, #00ff88, #00cc66); color: black;"
+            else:
+                colore = "🔴 **CHIUSO**"
+                badge = "background: #333; color: #aaa;"
+            
+            st.markdown(f"""
+            <div style='padding: 12px; margin: 5px 0; border-radius: 12px; 
+                        {badge} text-align: center; font-weight: bold; font-size: 16px;'>
+                {nome} | {colore} | {ora_cet.strftime('%H:%M')}
+            </div>
+            """, unsafe_allow_html=True)
+        
+        # **SOVRAPPOSIZIONI** (massimo volume)
+        sovrapposizioni = []
+        if time(9,0) <= ora_cet <= time(10,0): sovrapposizioni.append("🌍 Tokyo-Londra")
+        if time(14,0) <= ora_cet <= time(18,0): sovrapposizioni.append("🚀 Londra-NY")
+        
+        if sovrapposizioni:
+            st.markdown(f"""
+            <div style='padding: 10px; margin: 10px 0; background: linear-gradient(45deg, #ffaa00, #ff8800); 
+                        color: black; border-radius: 12px; text-align: center; font-weight: bold;'>
+                ⚡ **SOVRAPPOSIZIONE: {' + '.join(sovrapposizioni)}** (MAX VOLUME!)
+            </div>
+            """, unsafe_allow_html=True)
+        
+        st.markdown("---")
         
         # ✅ TASTO ESCI (rosso)
         if st.button("🔴 **ESCI**", type="secondary", use_container_width=True):
