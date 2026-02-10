@@ -233,7 +233,10 @@ if st.session_state.get('connected', False) and 'df' in st.session_state:
 # Lista valute principali per scanning
 ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"]
 
-# **SCANNER BACKGROUND** (esegue ogni 60s)
+# **ALL_PAIRS** (aggiungi PRIMA dello scanner)
+ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"]
+
+# **SCANNER BACKGROUND** (corretto)
 if st.session_state.get('connected', False):
     if 'scanner_data' not in st.session_state:
         st.session_state['scanner_data'] = {}
@@ -242,54 +245,53 @@ if st.session_state.get('connected', False):
     # Scanner ogni 60s
     current_time = time.time()
     if current_time - st.session_state['scanner_last_update'] > 60:
-        with st.spinner("🔍 Scanning globale..."):
-            Iq = st.session_state['iq']
-            st.session_state['scanner_data'] = {}
-            
-            for pair in ALL_PAIRS:
-                try:
-                    # Ultime 50 candele per analisi veloce
-                    candles = Iq.get_candles(pair, 60, 50, time.time())
-                    df = pd.DataFrame(candles)
-                    df['from'] = pd.to_datetime(df['from'], unit='s')
-                    df.set_index('from', inplace=True)
-                    
-                    # Indicatori rapidi
-                    df['RSI'] = ta.rsi(df['close'], length=14)
-                    macd = ta.macd(df['close'])
-                    df['MACD'] = macd['MACD_12_26_9']
-                    df['MACD_signal'] = macd['MACDs_12_26_9']
-                    
-                    # Segnali
-                    latest_rsi = df['RSI'].iloc[-1]
-                    macd_bullish = df['MACD'].iloc[-1] > df['MACD_signal'].iloc[-1]
-                    
-                    signal = ""
-                    if latest_rsi < 30 and macd_bullish:
-                        signal = "🟢 COMPRA"
-                    elif latest_rsi > 70 and not macd_bullish:
-                        signal = "🔴 VENDI"
-                    else:
-                        signal = "⚪ ATTESA SEGNALE"
-                    
-                    st.session_state['scanner_data'][pair] = {
-                        'price': df['close'].iloc[-1],
-                        'rsi': latest_rsi,
-                        'signal': signal
-                    }
-                    
-                except:
-                    st.session_state['scanner_data'][pair] = {'price': 0, 'rsi': 0, 'signal': '❌ ERR'}
-            
-            st.session_state['scanner_last_update'] = current_time
-            st.success("✅ Scanner aggiornato!")
+        # ✅ Spinner che si chiude
+        spinner_placeholder = st.empty()
+        with spinner_placeholder.container():
+            st.spinner("🔍 Scanning globale...")
+        
+        Iq = st.session_state['iq']
+        st.session_state['scanner_data'] = {}
+        
+        for pair in ALL_PAIRS:
+            try:
+                candles = Iq.get_candles(pair, 60, 50, time.time())
+                df = pd.DataFrame(candles)
+                df['from'] = pd.to_datetime(df['from'], unit='s')
+                df.set_index('from', inplace=True)
+                
+                df['RSI'] = ta.rsi(df['close'], length=14)
+                macd = ta.macd(df['close'])
+                df['MACD'] = macd['MACD_12_26_9']
+                df['MACD_signal'] = macd['MACDs_12_26_9']
+                
+                latest_rsi = df['RSI'].iloc[-1]
+                macd_bullish = df['MACD'].iloc[-1] > df['MACD_signal'].iloc[-1]
+                
+                if latest_rsi < 30 and macd_bullish:
+                    signal = "🟢 COMPRA"
+                elif latest_rsi > 70 and not macd_bullish:
+                    signal = "🔴 VENDI"
+                else:
+                    signal = "⚪ ATTESA"
+                
+                st.session_state['scanner_data'][pair] = {
+                    'price': f"{df['close'].iloc[-1]:.5f}",
+                    'rsi': f"{latest_rsi:.1f}",
+                    'signal': signal
+                }
+                
+            except Exception as e:
+                st.session_state['scanner_data'][pair] = {'price': '❌', 'rsi': '❌', 'signal': 'ERROR'}
+        
+        st.session_state['scanner_last_update'] = current_time
+        spinner_placeholder.success("✅ Scanner aggiornato!")  # ✅ Chiude spinner
 
-    # **TABELLA SCANNER** (separata dal grafico)
-    st.subheader("🔍 SCANNER VALUTE (Aggiornato ogni 60s)")
+    # **MOSTRA TABELLA SCANNER**
+    st.subheader("🔍 **SCANNER 10 VALUTE**")
     if st.session_state.get('scanner_data'):
         scanner_df = pd.DataFrame(st.session_state['scanner_data']).T
-        scanner_df = scanner_df[['signal', 'price', 'rsi']].round(5)
-        st.dataframe(scanner_df, use_container_width=True, height=400)
+        st.dataframe(scanner_df, use_container_width=True, height=400, hide_index=True)
         
     Iq = st.session_state['iq']
 
