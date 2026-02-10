@@ -67,12 +67,11 @@ with st.sidebar:
                 st.session_state['iq'] = Iq
                 st.session_state['connected'] = True
                 st.session_state['email'] = email
-                st.selectbox("Coppia", ["EURUSD", "GBPUSD", "USDJPY"])
+                st.selectbox("Coppia", ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"])
                 st.slider("RSI Buy Level", 20, 40, 30)
                 st.slider("RSI Sell Level", 60, 80, 70)
-    
-                
-                st.session_state['pair'] = pair
+                    
+                #st.session_state['pair'] = pair
                 st.success("✅ CONNESSO!")
                 st.balloons()
                 st.session_state['signal_history'] = []
@@ -214,7 +213,7 @@ if st.session_state.get('connected', False):
             st.success("✅ Scanner aggiornato!")
 
     # **TABELLA SCANNER** (separata dal grafico)
-    st.subheader("🔍 SCANNER MULTI-VALUTE (Aggiornato 60s)")
+    st.subheader("🔍 SCANNER MULTI-VALUTE (Aggiornato ogni 60s)")
     if st.session_state.get('scanner_data'):
         scanner_df = pd.DataFrame(st.session_state['scanner_data']).T
         scanner_df = scanner_df[['signal', 'price', 'rsi']].round(5)
