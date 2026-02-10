@@ -52,7 +52,7 @@ st.image(logo, use_column_width=True, caption="IQ Signals PRO")
 
 # **SIDEBAR con tasto dinamico CONNETTI/ESCI**
 with st.sidebar:
-    st.header("⚙️ Config")
+    st.header("⚙️ Trading IQ Option")
     
     # SOLO credenziali se NON connesso
     if not st.session_state.get('connected', False):
@@ -77,11 +77,11 @@ with st.sidebar:
             except Exception as e:
                 st.error(f"❌ {e}")
     
-    # **CONFIG TRADING + TASCO ESCI se CONNESSO**
+    # **CONFIG TRADING + TASTO ESCI se CONNESSO**
     else:
         st.success(f"🟢 Connesso: {st.session_state['email']}")
         
-        st.header("📊 Trading")
+        st.header("📊 Trading Desk")
         st.session_state['pair'] = st.selectbox(
             "Coppia", 
             ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"], 
@@ -118,7 +118,7 @@ if st.session_state.get('connected', False) and 'df' in st.session_state:
         border: 5px solid #00ff00; z-index: 1000; font-size: 28px; font-weight: bold;
         box-shadow: 0 20px 50px rgba(0,255,0,0.7); text-align: center; color: black; 
         min-width: 400px;'>
-            <div style='font-size: 36px; margin-bottom: 15px;'>🚀 **BUY {pair.upper()}**</div>
+            <div style='font-size: 36px; margin-bottom: 15px;'>🚀 **COMPRA {pair.upper()}**</div>
             <div><b>💰 Prezzo Entrata:</b> <span style='color: #00ff00; font-size: 32px;'>{latest_buy['close']:.5f}</span></div>
             <div style='font-size: 34px; color: #00ff00; margin-top: 15px;'>**HIGHER 1 MINUTO ORA!**</div>
         </div>
@@ -132,7 +132,7 @@ if st.session_state.get('connected', False) and 'df' in st.session_state:
         border: 5px solid #ff0000; z-index: 1000; font-size: 28px; font-weight: bold;
         box-shadow: 0 20px 50px rgba(255,0,0,0.7); text-align: center; color: white; 
         min-width: 400px;'>
-            <div style='font-size: 36px; margin-bottom: 15px;'>🔻 **SELL {pair.upper()}**</div>
+            <div style='font-size: 36px; margin-bottom: 15px;'>🔻 **VENDI {pair.upper()}**</div>
             <div><b>💰 Prezzo Entrata:</b> <span style='color: #ffaaaa; font-size: 32px;'>{latest_sell['close']:.5f}</span></div>
             <div style='font-size: 34px; color: #ffaaaa; margin-top: 15px;'>**LOWER 1 MINUTO ORA!**</div>
         </div>
