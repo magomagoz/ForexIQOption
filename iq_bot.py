@@ -6,8 +6,28 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from iqoptionapi.stable_api import IQ_Option
 from datetime import datetime
+import base64
+from PIL import Image
+
+# Metti il tuo logo.png nella stessa cartella del file .py
+logo = Image.open("banner1.png")  # 400x100px ideale
+#st.image(logo, use_column_width=True, caption="IQ Signals PRO")
 
 st.set_page_config(page_title="IQ Signals PRO", page_icon="🚀", layout="wide")
+
+# SOUNDS (base64 per cross-browser)
+def play_sound(sound_type):
+    """Suona alert BUY/SELL"""
+    if sound_type == "buy":
+        sound_b64 = "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAo"
+    else:  # sell
+        sound_b64 = "data:audio/wav;base64,UklGRp4GAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAo"
+    
+    st.markdown(f"""
+    <audio autoplay="true">
+        <source src="{sound_b64}" type="audio/wav">
+    </audio>
+    """, unsafe_allow_html=True)
 
 # LOGO CENTRALE
 col1, col2, col3 = st.columns([1, 2, 1])
@@ -27,8 +47,8 @@ with col2:
 # SIDEBAR
 with st.sidebar:
     st.header("⚙️ Config")
-    email = st.text_input("Email Practice", type="password")
-    password = st.text_input("Password", type="password")
+    email = st.text_input("Email Practice", type="mago_magoz@libero.it")
+    password = st.text_input("Password", type="Infini00y")
     pair = st.selectbox("Coppia", ["EURUSD", "GBPUSD", "USDJPY"])
     rsi_buy = st.slider("RSI Buy Level", 20, 40, 30)
     rsi_sell = st.slider("RSI Sell Level", 60, 80, 70)
