@@ -127,7 +127,7 @@ if st.session_state.get('connected', False):
         fig = make_subplots(rows=3, cols=1,
                           subplot_titles=('💹 PREZZO', '📊 MACD', '🎯 RSI 30/70'),
                           row_heights=[0.55, 0.225, 0.225],  # **Più spazio in alto**
-                          vertical_spacing=0.08,  # **Più spazio tra grafici**
+                          vertical_spacing=0.18,  # **Più spazio tra grafici**
                           specs=[[{"secondary_y": False}], [{"secondary_y": False}], [{"secondary_y": False}]])
         
         # Prezzo (ultime 60 candele)
@@ -159,29 +159,29 @@ if st.session_state.get('connected', False):
         
         st.plotly_chart(fig, use_container_width=True)
     
-# **POPUP**
-st.header("📈 LIVE STATUS")
-        
-if 'df' in st.session_state:
-    df = st.session_state['df']
-    latest = df.iloc[-1]
+    # **POPUP**
+    st.header("📈 LIVE STATUS")
             
-    st.markdown("### 💰 **PREZZO ENTRATA**")
-    st.metric("", f"{latest['close']:.5f}")
-            
-    col_rsi, col_macd = st.columns(2)
-    with col_rsi:
-        st.metric("📊 RSI", f"{latest['RSI']:.0f}", 
-                         delta=None, delta_color="normal")
-    with col_macd:
-        st.metric("🔥 MACD", f"{latest['MACD']:.5f}")
-            
-    # **ISTRUZIONI CENTRALIZZATE**
-    st.markdown("---")
-    st.markdown("""
-    <div style='background: linear-gradient(45deg, #1e3c72, #2a5298); 
-    color: white; padding: 15px; border-radius: 10px; text-align: center;'>
-        <b>🎯 TURBO 1m:</b><br>
-        **ENTRATA ORA** → HIGHER/LOWER → **Scadenza 60s**
-    </div>
-    """, unsafe_allow_html=True)
+    if 'df' in st.session_state:
+        df = st.session_state['df']
+        latest = df.iloc[-1]
+                
+        st.markdown("### 💰 **PREZZO ENTRATA**")
+        st.metric("", f"{latest['close']:.5f}")
+                
+        col_rsi, col_macd = st.columns(2)
+        with col_rsi:
+            st.metric("📊 RSI", f"{latest['RSI']:.0f}", 
+                             delta=None, delta_color="normal")
+        with col_macd:
+            st.metric("🔥 MACD", f"{latest['MACD']:.5f}")
+                
+        # **ISTRUZIONI CENTRALIZZATE**
+        st.markdown("---")
+        st.markdown("""
+        <div style='background: linear-gradient(45deg, #1e3c72, #2a5298); 
+        color: white; padding: 15px; border-radius: 10px; text-align: center;'>
+            <b>🎯 TURBO 1m:</b><br>
+            **ENTRATA ORA** → HIGHER/LOWER → **Scadenza 60s**
+        </div>
+        """, unsafe_allow_html=True)
