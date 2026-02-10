@@ -225,30 +225,73 @@ if st.session_state.get('connected', False):
         st.error(f"Dati: {e}")
     
     # GRAFICO
-    if 'df' in st.session_state:
-        df = st.session_state['df']
-        fig = make_subplots(rows=3, cols=1, subplot_titles=('💹 PREZZO', '📊 MACD', '🎯 RSI'),
-                          row_heights=[0.55, 0.225, 0.225], vertical_spacing=0.08)
-        
-        fig.add_trace(go.Scatter(x=df.index[-60:], y=df['close'][-60:], name='Close', 
-                               line=dict(width=3, color='#00ff88')), row=1, col=1)
-        fig.add_trace(go.Scatter(x=df.index[-60:], y=df['MACD'][-60:], name='MACD', 
-                               line=dict(color='orange', width=2)), row=2, col=1)
-        fig.add_trace(go.Scatter(x=df.index[-60:], y=df['MACD_signal'][-60:], name='Signal', 
-                               line=dict(color='red', width=2)), row=2, col=1)
-        fig.add_trace(go.Scatter(x=df.index[-60:], y=df['RSI'][-60:], name='RSI', 
-                               line=dict(color='purple', width=2.5)), row=3, col=1)
-        
-        fig.add_hline(y=rsi_buy, line_dash="solid", line_color="#00ff00", line_width=4, 
-                     annotation_text="🟢 BUY", row=3, col=1)
-        fig.add_hline(y=rsi_sell, line_dash="solid", line_color="#ff0000", line_width=4, 
-                     annotation_text="🔴 SELL", row=3, col=1)
-        fig.add_hline(y=50, line_dash="dash", line_color="gray", row=3, col=1)
-        fig.add_hline(y=0, line_dash="dot", line_color="gray", row=2, col=1)
-        
-        fig.update_layout(height=650, title=f"🎯 {pair} 1m - IQ OPTION TURBO", 
-                        showlegend=False, margin=dict(t=90))
-        st.plotly_chart(fig, use_container_width=True)
+    # **GRAFICO CAND ELE GIAPPONESI ULTIMA ORA + RIGHE VERTICALI OGNI MINUTO**
+    
+    # Filtra ultima ora (60 candele 1m)
+    df_last_hour = df.tail(60).copy()
+    
+    # Crea grafico con 4 subplot (candele + 3 indicatori)
+    fig = make_subplots(
+        rows=4, cols=1,
+        subplot_titles=('💹 CANDELE 1m (ULTIMA ORA)', '📊 RSI', '🔥 MACD', '💰 PREZZO'),
+        row_heights=[0.5, 0.175, 0.175, 0.15],
+        vertical_spacing=0.05,
+        shared_xaxes=True  # ✅ STESSO TEMPO per tutti!
+    )
+    
+    # **CANDELE GIAPPONESI**
+    fig.add_trace(
+        go.Candlestick(
+            x=df_last_hour.index,
+            open=df_last_hour['open'],
+            high=df_last_hour['max'],
+            low=df_last_hour['min'],
+            close=df_last_hour['close'],
+            name="Candele",
+            increasing_line_color='#00ff88', 
+            decreasing_line_color='#ff4444'
+        ),
+        row=1, col=1
+    )
+    
+    # **RSI**
+    fig.add_trace(go.Scatter(x=df_last_hour.index, y=df_last_hour['RSI'], 
+                            name='RSI', line=dict(color='purple', width=2)), row=2, col=1)
+    fig.add_hline(y=rsi_buy, line_dash="solid", line_color="#00ff00", line_width=3, row=2, col=1)
+    fig.add_hline(y=rsi_sell, line_dash="solid", line_color="#ff0000", line_width=3, row=2, col=1)
+    
+    # **MACD** 
+    fig.add_trace(go.Scatter(x=df_last_hour.index, y=df_last_hour['MACD'], 
+                            name='MACD', line=dict(color='orange', width=2)), row=3, col=1)
+    fig.add_trace(go.Scatter(x=df_last_hour.index, y=df_last_hour['MACD_signal'], 
+                            name='Signal', line=dict(color='red', width=2)), row=3, col=1)
+    fig.add_hline(y=0, line_dash="dot", line_color="gray", row=3, col=1)
+    
+    # **PREZZO CLOSE** (linea per facile lettura)
+    fig.add_trace(go.Scatter(x=df_last_hour.index, y=df_last_hour['close'], 
+                            name='Prezzo', line=dict(color='#00ff88', width=2)), row=4, col=1)
+    
+    # **RIGHE VERTICALI OGNI MINUTO** (linee tratteggiate grigie)
+    for i in range(0, len(df_last_hour), 1):  # Ogni candela = 1 minuto
+        fig.add_vline(x=df_last_hour.index[i], line_dash="dot", 
+                      line_color="gray", opacity=0.3, row=1, col=1)
+        fig.add_vline(x=df_last_hour.index[i], line_dash="dot", 
+                      line_color="gray", opacity=0.3, row=2, col=1)
+        fig.add_vline(x=df_last_hour.index[i], line_dash="dot", 
+                      line_color="gray", opacity=0.3, row=3, col=1)
+        fig.add_vline(x=df_last_hour.index[i], line_dash="dot", 
+                      line_color="gray", opacity=0.3, row=4, col=1)
+    
+    # Layout ottimizzato
+    fig.update_layout(
+        height=900,
+        showlegend=False,
+        title=f"🎯 {pair} - ULTIMA ORA (1m) - SINCRONIZZATO",
+        xaxis_rangeslider_visible=False,
+        margin=dict(t=100, b=50)
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
         
     # **CRONOLOGIA SEGNALI IN FONDO**
     st.markdown("---")
