@@ -22,13 +22,13 @@ def send_telegram_signal(signal_type, pair, price, rsi, macd):
     message = f"""
 🚀 *SENTINEL AI* 🚀
 
-*{signal_type} - `{pair}`*
+*{signal_type} - {pair}*
 💰 *Prezzo Entrata:* `{price:.5f}`
 📊 *RSI:* `{rsi:.1f}`
 🔥 *MACD:* `{macd:.5f}`
 ⏰ *Ora:* {timestamp}
 
-{'🟢 HIGHER 1m!' if signal_type == 'BUY' else '🔴 LOWER 1m!'}
+{'🟢 Esito 1m!' if signal_type == 'BUY' else '🔴 ESITO 1m!'}
 """
     
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
@@ -351,8 +351,7 @@ if st.session_state.get('connected', False):
             if signal['outcome'] == '⏳ PENDENTE':
                 signal_time = datetime.strptime(signal['time'], '%H:%M:%S')
                 now = datetime.now().time()
-                time_diff = (datetime.combine(datetime.now().date(), now) - 
-                            datetime.combine(datetime.now().date(), signal_time)).seconds
+                time_diff = (datetime.combine(datetime.now().date(), now) - datetime.combine(datetime.now().date(), signal_time)).seconds
                 
                 if time_diff >= 60:  # 1 minuto passato
                     try:
