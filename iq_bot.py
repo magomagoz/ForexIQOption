@@ -159,30 +159,29 @@ if st.session_state.get('connected', False):
         
         st.plotly_chart(fig, use_container_width=True)
     
-    # **PANEL DESTRA CENTRATO**
-    with center_col:
-        st.header("📈 LIVE STATUS")
+# **POPUP**
+st.header("📈 LIVE STATUS")
         
-        if 'df' in st.session_state:
-            df = st.session_state['df']
-            latest = df.iloc[-1]
+    if 'df' in st.session_state:
+        df = st.session_state['df']
+        latest = df.iloc[-1]
             
-            st.markdown("### 💰 **PREZZO ENTRATA**")
-            st.metric("", f"{latest['close']:.5f}")
+        st.markdown("### 💰 **PREZZO ENTRATA**")
+        st.metric("", f"{latest['close']:.5f}")
             
-            col_rsi, col_macd = st.columns(2)
-            with col_rsi:
-                st.metric("📊 RSI", f"{latest['RSI']:.0f}", 
+        col_rsi, col_macd = st.columns(2)
+        with col_rsi:
+            st.metric("📊 RSI", f"{latest['RSI']:.0f}", 
                          delta=None, delta_color="normal")
-            with col_macd:
-                st.metric("🔥 MACD", f"{latest['MACD']:.5f}")
+        with col_macd:
+            st.metric("🔥 MACD", f"{latest['MACD']:.5f}")
             
-            # **ISTRUZIONI CENTRALIZZATE**
-            st.markdown("---")
-            st.markdown("""
-            <div style='background: linear-gradient(45deg, #1e3c72, #2a5298); 
-            color: white; padding: 15px; border-radius: 10px; text-align: center;'>
-                <b>🎯 TURBO 1m:</b><br>
-                **ENTRATA ORA** → HIGHER/LOWER → **Scadenza 60s**
-            </div>
-            """, unsafe_allow_html=True)
+        # **ISTRUZIONI CENTRALIZZATE**
+        st.markdown("---")
+        st.markdown("""
+        <div style='background: linear-gradient(45deg, #1e3c72, #2a5298); 
+        color: white; padding: 15px; border-radius: 10px; text-align: center;'>
+            <b>🎯 TURBO 1m:</b><br>
+            **ENTRATA ORA** → HIGHER/LOWER → **Scadenza 60s**
+        </div>
+        """, unsafe_allow_html=True)
