@@ -65,6 +65,7 @@ with st.sidebar:
                 st.session_state['connected'] = True
                 st.session_state['email'] = email
                 st.session_state['signal_history'] = []
+                st.session_state['pair'] = "EURUSD"  # ✅ Default EURUSD
                 st.success("✅ CONNESSO!")
                 st.balloons()
                 st.rerun()
@@ -73,15 +74,16 @@ with st.sidebar:
         except Exception as e:
             st.error(f"❌ {e}")
     
-    # ✅ SLIDER E SELECTBOX SOLO DOPO LOGIN
+    # ✅ SLIDER SOLO DOPO LOGIN
     if st.session_state.get('connected', False):
-        st.header("📊 Trading Config")
-        pair = st.selectbox("Coppia", ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD"])
-        rsi_buy = st.slider("RSI Buy Level", 20, 40, 30)
-        rsi_sell = st.slider("RSI Sell Level", 60, 80, 70)
-        st.session_state['pair'] = pair
-        st.session_state['rsi_buy'] = rsi_buy
-        st.session_state['rsi_sell'] = rsi_sell
+        st.header("📊 Trading")
+        st.session_state['pair'] = st.selectbox(
+            "Coppia", 
+            ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF"], 
+            index=0  # ✅ EURUSD PRIMA
+        )
+        st.session_state['rsi_buy'] = st.slider("RSI Buy", 20, 40, 30)
+        st.session_state['rsi_sell'] = st.slider("RSI Sell", 60, 80, 70)
 
 # **POPUP ALERT CENTRALE con VALUTA**
 if st.session_state.get('connected', False) and 'df' in st.session_state:
@@ -223,8 +225,49 @@ if st.session_state.get('connected', False):
 
     st.markdown("---")
 
-    # GRAFICO (sotto live status - larghezza piena)
-    st.subheader("📊 GRAFICO REALTIME")
+
+    
+    # **GRAFICO CENTRALE - usa pair dal session_state**
+if st.session_state.get('connected', False):
+    Iq = st.session_state['iq']
+    pair = st.session_state.get('pair', 'EURUSD')  # ✅ Prende dalla sidebar
+    rsi_buy = st.session_state.get('rsi_buy', 30)
+    rsi_sell = st.session_state.get('rsi_sell', 70)
+    
+    st.subheader(f"📊 GRAFICO REALTIME - {pair.upper()}")
+    
+    try:
+        # **CARICA DATI della COPPIA SCELTA**
+        candles = Iq.get_candles(pair, 60, 150, time.time())
+        df = pd.DataFrame(candles)
+        df['from'] = pd.to_datetime(df['from'], unit='s')
+        df.set_index('from', inplace=True)
+        
+        # [calcolo indicatori e segnali come prima...]
+        df['RSI'] = ta.rsi(df['close'], length=14)
+        macd = ta.macd(df['close'])
+        df['MACD'] = macd['MACD_12_26_9']
+        df['MACD_signal'] = macd['MACDs_12_26_9']
+        
+        # SEGNALI con RSI dai slider
+        df['BUY_SIGNAL'] = (
+            (df['RSI'] < rsi_buy) & 
+            (df['MACD'] > df['MACD_signal']) &
+            (df['MACD'].shift(1) <= df['MACD_signal'].shift(1))
+        )
+        
+        st.session_state['df'] = df
+        
+        # **GRAFICO candele per PAIR SCELTA**
+        df_last_hour = df.tail(60).copy()
+        fig = make_subplots(
+            rows=4, cols=1,
+            subplot_titles=(f'💹 {pair.upper()} CANDELE', 'RSI', 'MACD', 'PREZZO'),
+            row_heights=[0.5, 0.175, 0.175, 0.15],
+            vertical_spacing=0.05,
+            shared_xaxes=True
+        )
+        
     try:
         candles = Iq.get_candles(pair, 60, 150, time.time())
         df = pd.DataFrame(candles)
