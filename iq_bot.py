@@ -377,31 +377,33 @@ if st.session_state.get('connected', False):
         st.error(f"❌ Dati {pair}: {e}")
 
     # **CHECK ESITI dopo 1 minuto**
-    if 'signal_history' in st.session_state:
-        for i, signal in enumerate(st.session_state['signal_history']):
-            if signal['outcome'] == '⏳ PENDENTE':
-                signal_time = datetime.strptime(signal['time'], '%H:%M:%S')
-                now = datetime.now().time()
-                time_diff = (datetime.combine(datetime.now().date(), now) - datetime.combine(datetime.now().date(), signal_time)).seconds
-                
-                if time_diff >= 60:  # 1 minuto passato
-                    try:
-                        # RILEGGE prezzo dopo 1m
-                        candles = Iq.get_candles(signal['pair'], 60, 2, time.time())
-                        latest_price = pd.DataFrame(candles)['close'].iloc[-1]
-                        entry_price = float(signal['price_entry'])
-                        
-                        # CALCOLA ESITO
-                        if signal['type'] == '🟢 COMPRA':
-                            outcome = "✅ WIN" if latest_price > entry_price else "❌ LOSS"
-                        else:  # SELL
-                            outcome = "✅ WIN" if latest_price < entry_price else "❌ LOSS"
-                        
-                        st.session_state['signal_history'][i]['outcome'] = outcome
-                        st.session_state['signal_history'][i]['price_exit'] = f"{latest_price:.5f}"
-                        
-                    except:
-                        st.session_state['signal_history'][i]['outcome'] = '❓ ERRORE'
+# **CHECK ESITI dopo 1 minuto - CORRETTO**
+if 'signal_history' in st.session_state:
+    current_time = time.time()
+    for i, signal in enumerate(st.session_state['signal_history']):
+        if signal['outcome'] == '⏳ PENDENTE':
+            # ✅ USA time.time() invece di datetime
+            signal_timestamp = datetime.strptime(signal['time'], '%H:%M:%S').timestamp()
+            time_diff = current_time - signal_timestamp
+            
+            if time_diff >= 60:  # 1 minuto passato
+                try:
+                    Iq = st.session_state['iq']
+                    candles = Iq.get_candles(signal['pair'], 60, 2, time.time())
+                    latest_price = pd.DataFrame(candles)['close'].iloc[-1]
+                    entry_price = float(signal['price_entry'])
+                    
+                    # CALCOLA ESITO
+                    if signal['type'] == '🟢 BUY':
+                        outcome = "✅ WIN" if latest_price > entry_price else "❌ LOSS"
+                    else:  # SELL
+                        outcome = "✅ WIN" if latest_price < entry_price else "❌ LOSS"
+                    
+                    st.session_state['signal_history'][i]['outcome'] = outcome
+                    st.session_state['signal_history'][i]['price_exit'] = f"{latest_price:.5f}"
+                    
+                except:
+                    st.session_state['signal_history'][i]['outcome'] = '❓ ERRORE'
  
     # **CRONOLOGIA SEGNALI IN FONDO**
     st.markdown("---")
