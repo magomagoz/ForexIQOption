@@ -8,7 +8,6 @@ from iqoptionapi.stable_api import IQ_Option
 from PIL import Image
 import base64
 import requests
-from datetime import datetime
 
 # **CONFIG TELEGRAM** (metti nella sidebar)
 TELEGRAM_TOKEN = "8235666467:AAGCsvEhlrzl7bH537bJTjsSwQ3P3PMRW10"  # Il tuo token
@@ -89,6 +88,18 @@ with st.sidebar:
         st.session_state['rsi_buy'] = st.slider("RSI Buy", 20, 40, 30)
         st.session_state['rsi_sell'] = st.slider("RSI Sell", 60, 80, 70)
 
+            # ✅ TASTO ESCI (rosso)
+        if st.button("🔴 **ESCI**", type="secondary", use_container_width=True):
+            try:
+                st.session_state['iq'].close()  # Chiude connessione IQ Option
+            except:
+                pass
+            # Pulisce tutto
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+            st.success("👋 Disconnesso!")
+            st.rerun()
+    
     # **SESSIONI MERCATO FOREX** (aggiungi dopo gli slider RSI)
     if st.session_state.get('connected', False):
         st.markdown("---")
@@ -148,18 +159,6 @@ with st.sidebar:
         
         st.markdown("---")
         
-        # ✅ TASTO ESCI (rosso)
-        if st.button("🔴 **ESCI**", type="secondary", use_container_width=True):
-            try:
-                st.session_state['iq'].close()  # Chiude connessione IQ Option
-            except:
-                pass
-            # Pulisce tutto
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
-            st.success("👋 Disconnesso!")
-            st.rerun()
-
 # **POPUP con ❌ INTEGRATO e TELEGRAM**
 if st.session_state.get('connected', False) and 'df' in st.session_state:
     df = st.session_state['df']
@@ -189,7 +188,7 @@ if st.session_state.get('connected', False) and 'df' in st.session_state:
                 ❌</button>
                 <div style='font-size: 36px; margin-bottom: 15px;'>🚀 **BUY {pair.upper()}**</div>
                 <div><b>💰 Prezzo Entrata:</b> <span style='color: #00ff00; font-size: 32px;'>{latest_buy['close']:.5f}</span></div>
-                <div style='font-size: 34px; color: #00ff00; margin-top: 15px;'>**HIGHER 1 MINUTO ORA!**</div>
+                <div style='font-size: 34px; color: #00ff00; margin-top: 15px;'>**ESITO FRA 1 MINUTO!**</div>
             </div>
             """, unsafe_allow_html=True)
             
@@ -213,7 +212,7 @@ if st.session_state.get('connected', False) and 'df' in st.session_state:
                 ❌</button>
                 <div style='font-size: 36px; margin-bottom: 15px;'>🔻 **SELL {pair.upper()}**</div>
                 <div><b>💰 Prezzo Entrata:</b> <span style='color: #ffaaaa; font-size: 32px;'>{latest_sell['close']:.5f}</span></div>
-                <div style='font-size: 34px; color: #ffaaaa; margin-top: 15px;'>**LOWER 1 MINUTO ORA!**</div>
+                <div style='font-size: 34px; color: #ffaaaa; margin-top: 15px;'>**ESITO FRA 1 MINUTO!**</div>
             </div>
             """, unsafe_allow_html=True)
             
@@ -229,9 +228,6 @@ if st.session_state.get('connected', False) and 'df' in st.session_state:
         st.rerun()
 
 # **SCANNER MULTI-VALUTE ogni 60s + GRAFICO SINGOLO separato**
-
-# Lista valute principali per scanning
-ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"]
 
 # **ALL_PAIRS** (aggiungi PRIMA dello scanner)
 ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"]
@@ -295,12 +291,13 @@ if st.session_state.get('connected', False):
         
     Iq = st.session_state['iq']
 
-    # **LIVE STATUS SOPRA GRAFICO - LARGHEZZA PIENA**
+    # ❌ Sostituisci con:
     st.subheader("📈 LIVE STATUS")
-    if 'df' in st.session_state:
-        df = st.session_state['df'].iloc[-1]
+    if st.session_state.get('connected', False) and 'df' in st.session_state:
+        df = st.session_state['df'].iloc[-1] if len(st.session_state['df']) > 0 else None
         
-        col1, col2, col3, col4 = st.columns(4)
+        if df is not None:
+            col1, col2, col3, col4 = st.columns(4)
         with col1:
             st.metric("💰 PREZZO", f"{df['close']:.5f}", delta=None)
         with col2:
@@ -437,33 +434,33 @@ if st.session_state.get('connected', False):
         st.error(f"❌ Dati {pair}: {e}")
 
     # **CHECK ESITI dopo 1 minuto**
-# **CHECK ESITI dopo 1 minuto - CORRETTO**
-if 'signal_history' in st.session_state:
-    current_time = time.time()
-    for i, signal in enumerate(st.session_state['signal_history']):
-        if signal['outcome'] == '⏳ PENDENTE':
-            # ✅ USA time.time() invece di datetime
-            signal_timestamp = datetime.strptime(signal['time'], '%H:%M:%S').timestamp()
-            time_diff = current_time - signal_timestamp
-            
-            if time_diff >= 60:  # 1 minuto passato
-                try:
-                    Iq = st.session_state['iq']
-                    candles = Iq.get_candles(signal['pair'], 60, 2, time.time())
-                    latest_price = pd.DataFrame(candles)['close'].iloc[-1]
-                    entry_price = float(signal['price_entry'])
-                    
-                    # CALCOLA ESITO
-                    if signal['type'] == '🟢 BUY':
-                        outcome = "✅ WIN" if latest_price > entry_price else "❌ LOSS"
-                    else:  # SELL
-                        outcome = "✅ WIN" if latest_price < entry_price else "❌ LOSS"
-                    
-                    st.session_state['signal_history'][i]['outcome'] = outcome
-                    st.session_state['signal_history'][i]['price_exit'] = f"{latest_price:.5f}"
-                    
-                except:
-                    st.session_state['signal_history'][i]['outcome'] = '❓ ERRORE'
+    # **CHECK ESITI dopo 1 minuto - CORRETTO**
+    if 'signal_history' in st.session_state:
+        current_time = time.time()
+        for i, signal in enumerate(st.session_state['signal_history']):
+            if signal['outcome'] == '⏳ PENDENTE':
+                # ✅ USA time.time() invece di datetime
+                signal_timestamp = datetime.strptime(signal['time'], '%H:%M:%S').timestamp()
+                time_diff = current_time - signal_timestamp
+                
+                if time_diff >= 60:  # 1 minuto passato
+                    try:
+                        Iq = st.session_state['iq']
+                        candles = Iq.get_candles(signal['pair'], 60, 2, time.time())
+                        latest_price = pd.DataFrame(candles)['close'].iloc[-1]
+                        entry_price = float(signal['price_entry'])
+                        
+                        # CALCOLA ESITO
+                        if signal['type'] == '🟢 BUY':
+                            outcome = "✅ WIN" if latest_price > entry_price else "❌ LOSS"
+                        else:  # SELL
+                            outcome = "✅ WIN" if latest_price < entry_price else "❌ LOSS"
+                        
+                        st.session_state['signal_history'][i]['outcome'] = outcome
+                        st.session_state['signal_history'][i]['price_exit'] = f"{latest_price:.5f}"
+                        
+                    except:
+                        st.session_state['signal_history'][i]['outcome'] = '❓ ERRORE'
  
     # **CRONOLOGIA SEGNALI IN FONDO**
     st.markdown("---")
