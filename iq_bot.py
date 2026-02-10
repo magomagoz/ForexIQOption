@@ -44,11 +44,6 @@ def send_telegram_signal(signal_type, pair, price, rsi, macd):
     except:
         return None
 
-    
-rsi_buy = st.slider("RSI Buy Level", 20, 40, 30)
-
-rsi_sell = st.slider("RSI Sell Level", 60, 80, 70)
-
 st.set_page_config(page_title="IQ Signals PRO", page_icon="🚀", layout="wide")
 
 # Metti il tuo logo.png nella stessa cartella del file .py
@@ -60,7 +55,9 @@ with st.sidebar:
     st.header("⚙️ Config")
     email = st.text_input("Email Practice", value="mago_magoz@libero.it")
     password = st.text_input("Password", type="password")
-    #pair = st.selectbox("Coppia", ["EURUSD", "GBPUSD", "USDJPY"])
+    pair = st.selectbox("Coppia", ["EURUSD", "GBPUSD", "USDJPY"])
+    rsi_buy = st.slider("RSI Buy Level", 20, 40, 30)
+    rsi_sell = st.slider("RSI Sell Level", 60, 80, 70)
     
     if st.button("🔗 CONNETTI PRACTICE", use_container_width=True):
         try:
@@ -70,11 +67,11 @@ with st.sidebar:
                 st.session_state['iq'] = Iq
                 st.session_state['connected'] = True
                 st.session_state['email'] = email
-                st.selectbox("Coppia", ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"])
-                st.slider("RSI Buy Level", 20, 40, 30)
-                st.slider("RSI Sell Level", 60, 80, 70)
+                #st.selectbox("Coppia", ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"])
+                #st.slider("RSI Buy Level", 20, 40, 30)
+                #st.slider("RSI Sell Level", 60, 80, 70)
                     
-                #st.session_state['pair'] = pair
+                st.session_state['pair'] = pair
                 st.success("✅ CONNESSO!")
                 st.balloons()
                 st.session_state['signal_history'] = []
