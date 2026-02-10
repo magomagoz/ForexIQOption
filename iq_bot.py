@@ -8,7 +8,7 @@ from iqoptionapi.stable_api import IQ_Option
 
 st.set_page_config(page_title="IQ Signals PRO", layout="wide")
 
-st.title("🚀 IQ Option Signals PRO - ALERT CENTRALE")
+st.title("🚀 SENTINEL AI")
 
 # SIDEBAR CONFIG
 with st.sidebar:
@@ -155,7 +155,7 @@ if st.session_state.get('connected', False):
         st.plotly_chart(fig, use_container_width=True)
     
     # **PANEL DESTRA CENTRATO**
-    with right_col:
+    with center_col:
         st.header("📈 LIVE STATUS")
         
         if 'df' in st.session_state:
