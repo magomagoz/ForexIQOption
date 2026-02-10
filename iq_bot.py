@@ -8,7 +8,7 @@ from iqoptionapi.stable_api import IQ_Option
 
 st.set_page_config(page_title="IQ Signals PRO", layout="wide")
 
-st.title("🚀 IQ Option Signals PRO - Popup Alert 1m")
+st.title("🚀 IQ Option Signals PRO - ALERT CENTRALE")
 
 # SIDEBAR CONFIG
 with st.sidebar:
@@ -19,7 +19,6 @@ with st.sidebar:
     rsi_buy = st.slider("RSI Buy Level", 20, 40, 30)
     rsi_sell = st.slider("RSI Sell Level", 60, 80, 70)
     
-    st.header("📊 Status")
     if st.button("🔗 CONNETTI PRACTICE", use_container_width=True):
         try:
             Iq = IQ_Option(email, password)
@@ -36,32 +35,45 @@ with st.sidebar:
         except Exception as e:
             st.error(f"❌ {e}")
 
-# MAIN LOGIC + AUTO REFRESH 60s
+# **ALERT CENTRALE SOPRA TUTTO**
+if st.session_state.get('connected', False) and 'df' in st.session_state:
+    df = st.session_state['df']
+    latest_signals = df[df['BUY_SIGNAL'] == True].tail(1)
+    
+    if not latest_signals.empty:
+        latest = latest_signals.iloc[0]
+        # **POPUP CENTRALE GIGANTE**
+        st.markdown("""
+        <div style='position: fixed; top: 20%; left: 50%; transform: translate(-50%, -50%);
+        background: linear-gradient(45deg, #00ff88, #00cc66); padding: 20px; border-radius: 15px;
+        border: 3px solid #00ff00; z-index: 1000; font-size: 24px; font-weight: bold;
+        box-shadow: 0 10px 30px rgba(0,255,0,0.5); text-align: center; color: black;'>
+            🚀 **SEGNALE BUY {pair}!**<br>
+            💰 **ENTRATA: {latest_close:.5f}**<br>
+            📊 **RSI: {latest_rsi:.0f}**<br>
+            **HIGHER 1 MINUTO ORA!**
+        </div>
+        """.format(pair=pair, latest_close=latest['close'], latest_rsi=latest['RSI']),
+        unsafe_allow_html=True)
+
+# MAIN CONTENT
 if st.session_state.get('connected', False):
-    # COUNTDOWN VISIBILE
+    Iq = st.session_state['iq']
+    
+    # COUNTDOWN CENTRALE
     next_refresh = st.session_state.get('next_refresh', time.time() + 60)
     remaining = max(0, next_refresh - time.time())
+    st.metric("⏱️ AUTO-REFRESH TRA", f"{int(remaining)}s")
     
-    col1, col2 = st.columns([3,1])
-    with col1:
-        st.metric("⏱️ PROSSIMO REFRESH", f"{int(remaining)} secondi", delta=None)
-    with col2:
-        if st.button("🔄 REFRESH ORA", use_container_width=True):
-            st.session_state['next_refresh'] = time.time()
-    
-    # AUTO REFRESH
     if remaining <= 0:
         st.session_state['next_refresh'] = time.time() + 60
         st.rerun()
     
-    # ANALISI REALTIME
-    Iq = st.session_state['iq']
-    
-    # Layout 2 colonne
-    left_col, right_col = st.columns([2,1])
+    # ANALISI DATI
+    left_col, right_col = st.columns([3, 1])
     
     with left_col:
-        # GRANDE GRAFICO CON LINEE RSI
+        st.subheader("📊 GRAFICO REALTIME")
         try:
             candles = Iq.get_candles(pair, 60, 150, time.time())
             df = pd.DataFrame(candles)
@@ -74,7 +86,7 @@ if st.session_state.get('connected', False):
             df['MACD'] = macd['MACD_12_26_9']
             df['MACD_signal'] = macd['MACDs_12_26_9']
             
-            # SEGNALI IQ OPTION 1m
+            # SEGNALI
             df['prev_MACD'] = df['MACD'].shift(1)
             df['prev_signal'] = df['MACD_signal'].shift(1)
             
@@ -92,87 +104,80 @@ if st.session_state.get('connected', False):
             
             st.session_state['df'] = df
             
-            # **POPUP ALERT** NUOVI SEGNALI
+            # ALERT TOAST (backup)
             current_signals = len(df[df['BUY_SIGNAL'] == True].tail(5))
             prev_signals = st.session_state.get('prev_signals', 0)
-            
             if current_signals > prev_signals:
-                # 🎉 POPUP TOAST AGGRESSIVO
-                st.toast(f"🚀 **SEGNALE BUY {pair}!** RSI:{df['RSI'].iloc[-1]:.0f} Prezzo:{df['close'].iloc[-1]:.5f}", 
-                        icon="📈")
-                st.balloons()
-            
+                st.toast(f"🚀 NUOVO SEGNALE BUY {pair}!", icon="📈")
             st.session_state['prev_signals'] = current_signals
             
         except Exception as e:
             st.error(f"Dati: {e}")
     
-    # GRAFICO PLOTLY CON RSI 30/70
+    # **GRAFICO OTTIMIZZATO** (spazio per titoli)
     if 'df' in st.session_state:
         df = st.session_state['df']
         
-        fig = make_subplots(rows=3, cols=1, 
-                          subplot_titles=('💹 Prezzo Close', '📊 MACD', '🎯 RSI LEVELS'),
-                          row_heights=[0.5, 0.25, 0.25],
-                          vertical_spacing=0.05)
+        # **GRAFICO PIÙ BASSO** per titoli leggibili
+        fig = make_subplots(rows=3, cols=1,
+                          subplot_titles=('💹 PREZZO', '📊 MACD', '🎯 RSI 30/70'),
+                          row_heights=[0.55, 0.225, 0.225],  # **Più spazio in alto**
+                          vertical_spacing=0.08,  # **Più spazio tra grafici**
+                          specs=[[{"secondary_y": False}], [{"secondary_y": False}], [{"secondary_y": False}]])
         
-        # Prezzo
-        fig.add_trace(go.Scatter(x=df.index[-60:], y=df['close'][-60:], 
-                               name='Close', line=dict(width=2, color='#00ff88')), row=1, col=1)
+        # Prezzo (ultime 60 candele)
+        fig.add_trace(go.Scatter(x=df.index[-60:], y=df['close'][-60:],
+                               name='Close', line=dict(width=3, color='#00ff88')), row=1, col=1)
         
-        # MACD
-        colors = ['orange' if x > 0 else 'red' for x in df['MACD'].tail(60)]
-        fig.add_trace(go.Scatter(x=df.index[-60:], y=df['MACD'][-60:], 
-                               name='MACD', line=dict(color='orange')), row=2, col=1)
-        fig.add_trace(go.Scatter(x=df.index[-60:], y=df['MACD_signal'][-60:], 
-                               name='Signal', line=dict(color='red')), row=2, col=1)
+        # MACD colorato
+        fig.add_trace(go.Scatter(x=df.index[-60:], y=df['MACD'][-60:],
+                               name='MACD', line=dict(color='orange', width=2)), row=2, col=1)
+        fig.add_trace(go.Scatter(x=df.index[-60:], y=df['MACD_signal'][-60:],
+                               name='Signal', line=dict(color='red', width=2)), row=2, col=1)
         
-        # RSI CON LINEE EVIDENZIATE
-        fig.add_trace(go.Scatter(x=df.index[-60:], y=df['RSI'][-60:], 
-                               name='RSI', line=dict(color='purple', width=2)), row=3, col=1)
+        # RSI con livelli EVIDENZIATI
+        fig.add_trace(go.Scatter(x=df.index[-60:], y=df['RSI'][-60:],
+                               name='RSI', line=dict(color='purple', width=2.5)), row=3, col=1)
         
-        # **LINE RSI 30/70 SUPER EVIDENZIATE**
+        # **LINE RSI SUPER EVIDENZIATE**
         fig.add_hline(y=rsi_buy, line_dash="solid", line_color="#00ff00", 
-                     line_width=3, annotation_text=f"🟢 BUY <{rsi_buy}", row=3, col=1)
+                     line_width=4, annotation_text=f"🟢 BUY", row=3, col=1)
         fig.add_hline(y=rsi_sell, line_dash="solid", line_color="#ff0000", 
-                     line_width=3, annotation_text=f"🔴 SELL >{rsi_sell}", row=3, col=1)
+                     line_width=4, annotation_text="🔴 SELL", row=3, col=1)
         fig.add_hline(y=50, line_dash="dash", line_color="gray", row=3, col=1)
+        fig.add_hline(y=0, line_dash="dot", line_color="gray", row=2, col=1)
         
-        fig.update_layout(height=750, showlegend=True, 
-                        title=f"🎯 {pair} 1m - **IQ OPTION TURBO SIGNALS**")
+        fig.update_layout(height=650,  # **Più basso**
+                        title=f"🎯 {pair} 1m - IQ OPTION TURBO",
+                        showlegend=False,
+                        margin=dict(t=80, b=20, l=20, r=20))  # **Margini per titoli**
+        
         st.plotly_chart(fig, use_container_width=True)
     
-    # **PANEL DESTRA: ALERT + STATS**
+    # **PANEL DESTRA CENTRATO**
     with right_col:
-        st.header("🚨 ALERT LIVE")
+        st.header("📈 LIVE STATUS")
         
         if 'df' in st.session_state:
             df = st.session_state['df']
             latest = df.iloc[-1]
             
-            # **CONFERMA TRADE IQ OPTION 1m**
-            st.markdown("### 📋 **COME FARE IL TRADE**")
-            st.info("""
-            **TURBO OPTION 1 MINUTO:**
-            1. **ENTRATA**: Prezzo attuale candela corrente
-            2. **DIREZIONE**: Higher/Lower basata sul segnale  
-            3. **SCADENZA**: 60 secondi (1 candela)
-            4. **VITTORIA**: Se candela chiude nella direzione giusta
-            5. **PAYOUT**: 80-95% profitto
-            """)
+            st.markdown("### 💰 **PREZZO ENTRATA**")
+            st.metric("", f"{latest['close']:.5f}")
             
-            col_a, col_b = st.columns(2)
-            with col_a:
-                st.metric("💵 **PREZZO ENTRATA**", f"{latest['close']:.5f}")
-                st.metric("📊 **RSI ATTUALE**", f"{latest['RSI']:.0f}")
+            col_rsi, col_macd = st.columns(2)
+            with col_rsi:
+                st.metric("📊 RSI", f"{latest['RSI']:.0f}", 
+                         delta=None, delta_color="normal")
+            with col_macd:
+                st.metric("🔥 MACD", f"{latest['MACD']:.5f}")
             
-            with col_b:
-                st.metric("🔥 **MACD**", f"{latest['MACD']:.5f}")
-                st.metric("⚡ **Trend**", "🟢 BULLISH" if latest['MACD'] > latest['MACD_signal'] else "🔴 BEARISH")
-            
-            # SEGNALI RECENTI
-            buy_signals = df[df['BUY_SIGNAL'] == True].tail(3)
-            if not buy_signals.empty:
-                st.success(f"🚀 **{len(buy_signals)} BUY RECENTI**")
-                for idx, row in buy_signals.iterrows():
-                    st.caption(f"🕐 {idx.strftime('%H:%M')} | 💰 {row['close']:.5f} | RSI {row['RSI']:.0f}")
+            # **ISTRUZIONI CENTRALIZZATE**
+            st.markdown("---")
+            st.markdown("""
+            <div style='background: linear-gradient(45deg, #1e3c72, #2a5298); 
+            color: white; padding: 15px; border-radius: 10px; text-align: center;'>
+                <b>🎯 TURBO 1m:</b><br>
+                **ENTRATA ORA** → HIGHER/LOWER → **Scadenza 60s**
+            </div>
+            """, unsafe_allow_html=True)
