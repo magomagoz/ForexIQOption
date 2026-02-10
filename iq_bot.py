@@ -1,13 +1,14 @@
 import streamlit as st
 import pandas as pd
 import pandas_ta as ta
-import time as time
+import time
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from iqoptionapi.stable_api import IQ_Option
 from PIL import Image
 import base64
 import requests
+from datetime import datetime
 
 # **CONFIG TELEGRAM** (metti nella sidebar)
 TELEGRAM_TOKEN = "8235666467:AAGCsvEhlrzl7bH537bJTjsSwQ3P3PMRW10"  # Il tuo token
@@ -100,13 +101,10 @@ with st.sidebar:
             st.success("👋 Disconnesso!")
             st.rerun()
     
-    # **SESSIONI MERCATO FOREX** (aggiungi dopo gli slider RSI)
+    # **SESSIONI MERCATO FOREX** (SENZA import nella sidebar)
     if st.session_state.get('connected', False):
         st.markdown("---")
         st.header("🌍 **SESSIONI MERCATO**")
-        
-        from datetime import datetime, time
-        import pytz
         
         # Orari sessioni FOREX (CET = UTC+1)
         now_cet = datetime.now()
