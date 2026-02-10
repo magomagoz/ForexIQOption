@@ -22,7 +22,7 @@ def send_telegram_signal(signal_type, pair, price, rsi, macd):
     message = f"""
 🚀 *IQ SIGNALS PRO* 🚀
 
-*{signal_type} {pair}*
+*{signal_type} - {pair}*
 💰 *Prezzo Entrata:* `{price:.5f}`
 📊 *RSI:* `{rsi:.1f}`
 🔥 *MACD:* `{macd:.5f}`
@@ -55,9 +55,9 @@ with st.sidebar:
     st.header("⚙️ Config")
     email = st.text_input("Email Practice", value="mago_magoz@libero.it")
     password = st.text_input("Password", type="password")
-    pair = st.selectbox("Coppia", ["EURUSD", "GBPUSD", "USDJPY"])
-    rsi_buy = st.slider("RSI Buy Level", 20, 40, 30)
-    rsi_sell = st.slider("RSI Sell Level", 60, 80, 70)
+    #pair = st.selectbox("Coppia", ["EURUSD", "GBPUSD", "USDJPY"])
+    #rsi_buy = st.slider("RSI Buy Level", 20, 40, 30)
+    #rsi_sell = st.slider("RSI Sell Level", 60, 80, 70)
     
     if st.button("🔗 CONNETTI PRACTICE", use_container_width=True):
         try:
@@ -67,6 +67,11 @@ with st.sidebar:
                 st.session_state['iq'] = Iq
                 st.session_state['connected'] = True
                 st.session_state['email'] = email
+                st.selectbox("Coppia", ["EURUSD", "GBPUSD", "USDJPY"])
+                st.slider("RSI Buy Level", 20, 40, 30)
+                st.slider("RSI Sell Level", 60, 80, 70)
+    
+                
                 st.session_state['pair'] = pair
                 st.success("✅ CONNESSO!")
                 st.balloons()
@@ -92,7 +97,7 @@ if st.session_state.get('connected', False) and 'df' in st.session_state:
         border: 5px solid #00ff00; z-index: 1000; font-size: 28px; font-weight: bold;
         box-shadow: 0 20px 50px rgba(0,255,0,0.7); text-align: center; color: black; 
         min-width: 400px;'>
-            <div style='font-size: 36px; margin-bottom: 15px;'>🚀 **SEGNALE BUY**</div>
+            <div style='font-size: 36px; margin-bottom: 15px;'>🚀 **SEGNALE BUY - {pair}**</div>
             <div><b>💰 Prezzo Entrata:</b> <span style='color: #00ff00; font-size: 32px;'>{latest_buy['close']:.5f}</span></div>
             <div><b>📊 RSI:</b> <span style='color: #ff00ff;'>{latest_buy['RSI']:.1f}</span></div>
             <div><b>🔥 MACD:</b> <span style='color: #ff8800;'>{latest_buy['MACD']:.5f}</span></div>
@@ -120,13 +125,13 @@ if st.session_state.get('connected', False) and 'df' in st.session_state:
     new_buys = df[df['BUY_SIGNAL'] == True].tail(1)
     if not new_buys.empty:
         latest = new_buys.iloc[-1]
-        send_telegram_signal("🟢 BUY", pair, latest['close'], latest['RSI'], latest['MACD'])
+        send_telegram_signal("🟢 BUY", 'pair', latest['close'], latest['RSI'], latest['MACD'])
     
     # **NUOVO SELL → TELEGRAM**  
     new_sells = df[df['SELL_SIGNAL'] == True].tail(1)
     if not new_sells.empty:
         latest = new_sells.iloc[-1]
-        send_telegram_signal("🔴 SELL", pair, latest['close'], latest['RSI'], latest['MACD'])
+        send_telegram_signal("🔴 SELL", 'pair', latest['close'], latest['RSI'], latest['MACD'])
 
     # MAIN LOGIC
     if st.session_state.get('connected', False):
@@ -194,7 +199,7 @@ if st.session_state.get('connected', False):
                     elif latest_rsi > 70 and not macd_bullish:
                         signal = "🔴 SELL"
                     else:
-                        signal = "⚪ WAIT"
+                        signal = "⚪ SCANNING"
                     
                     st.session_state['scanner_data'][pair] = {
                         'price': df['close'].iloc[-1],
@@ -215,25 +220,6 @@ if st.session_state.get('connected', False):
         scanner_df = scanner_df[['signal', 'price', 'rsi']].round(5)
         st.dataframe(scanner_df, use_container_width=True, height=400)
     
-    # **GRAFICO DEDICATO** (solo la coppia scelta)
-    st.subheader(f"📊 DETTAGLIO {pair}")
-    # [qui il tuo grafico candele dettagliato per 'pair' selezionato]
-    
-    # Barra progresso scanner
-    if st.session_state.get('scanner_last_update'):
-        time_since = time.time() - st.session_state['scanner_last_update']
-        progress = max(0, 60 - time_since) / 60.0
-        st.markdown(f"""
-        <div style='background: #333; height: 20px; border-radius: 10px; overflow: hidden;'>
-            <div style='background: linear-gradient(90deg, #00ff88, #00cc66); 
-                        height: 100%; width: {progress*100}%; transition: width 1s linear;'>
-            </div>
-        </div>
-        <div style='text-align: center; color: #00ff88; font-size: 14px;'>
-            Prossimo scan: {int(progress*60)}s
-        </div>
-        """, unsafe_allow_html=True)
-
     # **LIVE STATUS SEMPLICE** (solo titolo - sopra grafico)
     #st.markdown("""
     #<div style='background: linear-gradient(45deg, #1e3c72, #2a5298); 
