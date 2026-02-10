@@ -50,40 +50,57 @@ st.set_page_config(page_title="Sentinel AI", page_icon="🚀", layout="wide")
 logo = Image.open("banner.png")  # 400x100px ideale
 st.image(logo, use_column_width=True, caption="IQ Signals PRO")
 
-# SIDEBAR
+# **SIDEBAR con tasto dinamico CONNETTI/ESCI**
 with st.sidebar:
-    st.header("⚙️ Login to IQ Option")
-    email = st.text_input("Email", value="mago_magoz@libero.it")
-    password = st.text_input("Password", type="password")
+    st.header("⚙️ Config")
     
-    if st.button("🔗 CONNETTI PRACTICE", use_container_width=True):
-        try:
-            Iq = IQ_Option(email, password)
-            check, reason = Iq.connect()
-            if check:
-                st.session_state['iq'] = Iq
-                st.session_state['connected'] = True
-                st.session_state['email'] = email
-                st.session_state['signal_history'] = []
-                st.session_state['pair'] = "EURUSD"  # ✅ Default EURUSD
-                st.success("✅ CONNESSO!")
-                st.balloons()
-                st.rerun()
-            else:
-                st.error(f"❌ {reason}")
-        except Exception as e:
-            st.error(f"❌ {e}")
+    # SOLO credenziali se NON connesso
+    if not st.session_state.get('connected', False):
+        email = st.text_input("Email Practice", value="mago_magoz@libero.it")
+        password = st.text_input("Password", type="password")
+        
+        if st.button("🔗 **CONNETTI**", type="primary", use_container_width=True):
+            try:
+                Iq = IQ_Option(email, password)
+                check, reason = Iq.connect()
+                if check:
+                    st.session_state['iq'] = Iq
+                    st.session_state['connected'] = True
+                    st.session_state['email'] = email
+                    st.session_state['pair'] = "EURUSD"
+                    st.session_state['signal_history'] = []
+                    st.success("✅ CONNESSO!")
+                    st.balloons()
+                    st.rerun()
+                else:
+                    st.error(f"❌ {reason}")
+            except Exception as e:
+                st.error(f"❌ {e}")
     
-    # ✅ SLIDER SOLO DOPO LOGIN
-    if st.session_state.get('connected', False):
-        st.header("📊 Scegli la coppia FOREX")
+    # **CONFIG TRADING + TASCO ESCI se CONNESSO**
+    else:
+        st.success(f"🟢 Connesso: {st.session_state['email']}")
+        
+        st.header("📊 Trading")
         st.session_state['pair'] = st.selectbox(
             "Coppia", 
             ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"], 
-            index=0  # ✅ EURUSD PRIMA
+            index=0
         )
         st.session_state['rsi_buy'] = st.slider("RSI Buy", 20, 40, 30)
         st.session_state['rsi_sell'] = st.slider("RSI Sell", 60, 80, 70)
+        
+        # ✅ TASTO ESCI (rosso)
+        if st.button("🔴 **ESCI**", type="secondary", use_container_width=True):
+            try:
+                st.session_state['iq'].close()  # Chiude connessione IQ Option
+            except:
+                pass
+            # Pulisce tutto
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+            st.success("👋 Disconnesso!")
+            st.rerun()
 
 # **POPUP ALERT CENTRALE con VALUTA**
 if st.session_state.get('connected', False) and 'df' in st.session_state:
