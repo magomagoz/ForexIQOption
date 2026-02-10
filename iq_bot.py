@@ -368,8 +368,6 @@ if st.session_state.get('connected', False):
                          opacity=0.3, row=2, col=1, layer="below")
             fig.add_vline(x=df_last_hour.index[i], line_dash="dot", line_color="gray", 
                          opacity=0.3, row=3, col=1, layer="below")
-            fig.add_vline(x=df_last_hour.index[i], line_dash="dot", line_color="gray", 
-                         opacity=0.3, row=4, col=1, layer="below")
         
         fig.update_layout(height=900, showlegend=False, title=f"🎯 {pair.upper()} - ULTIMA ORA", 
                          xaxis_rangeslider_visible=False, margin=dict(t=100))
