@@ -52,8 +52,8 @@ st.image(logo, use_column_width=True, caption="IQ Signals PRO")
 
 # SIDEBAR
 with st.sidebar:
-    st.header("⚙️ Config")
-    email = st.text_input("Email Practice", value="mago_magoz@libero.it")
+    st.header("⚙️ Login to IQ Option")
+    email = st.text_input("Email", value="mago_magoz@libero.it")
     password = st.text_input("Password", type="password")
     
     if st.button("🔗 CONNETTI PRACTICE", use_container_width=True):
@@ -76,10 +76,10 @@ with st.sidebar:
     
     # ✅ SLIDER SOLO DOPO LOGIN
     if st.session_state.get('connected', False):
-        st.header("📊 Trading")
+        st.header("📊 Scegli la coppia FOREX")
         st.session_state['pair'] = st.selectbox(
             "Coppia", 
-            ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF"], 
+            ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"], 
             index=0  # ✅ EURUSD PRIMA
         )
         st.session_state['rsi_buy'] = st.slider("RSI Buy", 20, 40, 30)
@@ -125,13 +125,13 @@ if st.session_state.get('connected', False) and 'df' in st.session_state:
     new_buys = df[df['BUY_SIGNAL'] == True].tail(1)
     if not new_buys.empty:
         latest = new_buys.iloc[-1]
-        send_telegram_signal("🟢 BUY", 'pair', latest['close'], latest['RSI'], latest['MACD'])
+        send_telegram_signal("🟢 COMPRA", 'pair', latest['close'], latest['RSI'], latest['MACD'])
     
     # **NUOVO SELL → TELEGRAM**  
     new_sells = df[df['SELL_SIGNAL'] == True].tail(1)
     if not new_sells.empty:
         latest = new_sells.iloc[-1]
-        send_telegram_signal("🔴 SELL", 'pair', latest['close'], latest['RSI'], latest['MACD'])
+        send_telegram_signal("🔴 VENDI", 'pair', latest['close'], latest['RSI'], latest['MACD'])
 
 # **SCANNER MULTI-VALUTE ogni 60s + GRAFICO SINGOLO separato**
 
@@ -147,7 +147,7 @@ if st.session_state.get('connected', False):
     # Scanner ogni 60s
     current_time = time.time()
     if current_time - st.session_state['scanner_last_update'] > 60:
-        with st.spinner("🔍 Scanning tutte le valute..."):
+        with st.spinner("🔍 Scanning globale..."):
             Iq = st.session_state['iq']
             st.session_state['scanner_data'] = {}
             
@@ -171,11 +171,11 @@ if st.session_state.get('connected', False):
                     
                     signal = ""
                     if latest_rsi < 30 and macd_bullish:
-                        signal = "🟢 BUY"
+                        signal = "🟢 COMPRA"
                     elif latest_rsi > 70 and not macd_bullish:
-                        signal = "🔴 SELL"
+                        signal = "🔴 VENDI"
                     else:
-                        signal = "⚪ SCANNING"
+                        signal = "⚪ ATTESA SEGNALE"
                     
                     st.session_state['scanner_data'][pair] = {
                         'price': df['close'].iloc[-1],
@@ -190,21 +190,12 @@ if st.session_state.get('connected', False):
             st.success("✅ Scanner aggiornato!")
 
     # **TABELLA SCANNER** (separata dal grafico)
-    st.subheader("🔍 SCANNER MULTI-VALUTE (Aggiornato ogni 60s)")
+    st.subheader("🔍 SCANNER VALUTE (Aggiornato ogni 60s)")
     if st.session_state.get('scanner_data'):
         scanner_df = pd.DataFrame(st.session_state['scanner_data']).T
         scanner_df = scanner_df[['signal', 'price', 'rsi']].round(5)
         st.dataframe(scanner_df, use_container_width=True, height=400)
-    
-    # **LIVE STATUS SEMPLICE** (solo titolo - sopra grafico)
-    #st.markdown("""
-    #<div style='background: linear-gradient(45deg, #1e3c72, #2a5298); 
-               #color: white; padding: 20px; border-radius: 15px; text-align: center; 
-               #margin: 20px 0; box-shadow: 0 10px 30px rgba(0,0,0,0.3);'>
-        #<h2 style='margin: 0; font-size: 28px;'>📈 LIVE TRADING STATUS</h2>
-    #</div>
-    #""", unsafe_allow_html=True)
-    
+        
     Iq = st.session_state['iq']
 
     # **LIVE STATUS SOPRA GRAFICO - LARGHEZZA PIENA**
@@ -225,8 +216,6 @@ if st.session_state.get('connected', False):
 
     st.markdown("---")
 
-
-    
 # **GRAFICO CENTRALE - CORRETTO**
 if st.session_state.get('connected', False):
     Iq = st.session_state['iq']
@@ -274,10 +263,12 @@ if st.session_state.get('connected', False):
         if not new_buys.empty:
             signal = {
                 'time': new_buys.index[-1].strftime('%H:%M:%S'),
+                'pair': {new_buys['MACD'].iloc[-1]:.5f}",
                 'type': '🟢 BUY',
                 'price': f"{new_buys['close'].iloc[-1]:.5f}",
                 'rsi': f"{new_buys['RSI'].iloc[-1]:.1f}",
-                'macd': f"{new_buys['MACD'].iloc[-1]:.5f}"
+                'macd': f"{new_buys['MACD'].iloc[-1]:.5f}",
+                'esito': f"{new_buys['MACD'].iloc[-1]:.5f}"
             }
             if 'signal_history' not in st.session_state:
                 st.session_state['signal_history'] = []
@@ -289,11 +280,14 @@ if st.session_state.get('connected', False):
         if not new_sells.empty:
             signal = {
                 'time': new_sells.index[-1].strftime('%H:%M:%S'),
+                'pair': {new_buys['MACD'].iloc[-1]:.5f}",
                 'type': '🔴 SELL',
                 'price': f"{new_sells['close'].iloc[-1]:.5f}",
                 'rsi': f"{new_sells['RSI'].iloc[-1]:.1f}",
                 'macd': f"{new_sells['MACD'].iloc[-1]:.5f}"
+                'esito': f"{new_buys['MACD'].iloc[-1]:.5f}"
             }
+            
             if signal not in st.session_state['signal_history']:
                 st.session_state['signal_history'].insert(0, signal)
                 if len(st.session_state['signal_history']) > 20:
@@ -353,7 +347,7 @@ if st.session_state.get('connected', False):
         
     # **CRONOLOGIA SEGNALI IN FONDO**
     st.markdown("---")
-    st.subheader("📋 CRONOLOGIA SEGNALI (ultimi 20)")
+    st.subheader("📋 CRONOLOGIA SEGNALI")
     
     if 'signal_history' in st.session_state and st.session_state['signal_history']:
         signals_df = pd.DataFrame(st.session_state['signal_history'])
