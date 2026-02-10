@@ -55,9 +55,6 @@ with st.sidebar:
     st.header("⚙️ Config")
     email = st.text_input("Email Practice", value="mago_magoz@libero.it")
     password = st.text_input("Password", type="password")
-    pair = st.selectbox("Coppia", ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"])
-    rsi_buy = st.slider("RSI Buy Level", 20, 40, 30)
-    rsi_sell = st.slider("RSI Sell Level", 60, 80, 70)
     
     if st.button("🔗 CONNETTI PRACTICE", use_container_width=True):
         try:
@@ -67,26 +64,32 @@ with st.sidebar:
                 st.session_state['iq'] = Iq
                 st.session_state['connected'] = True
                 st.session_state['email'] = email
-                #st.selectbox("Coppia", ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"])
-                #st.slider("RSI Buy Level", 20, 40, 30)
-                #st.slider("RSI Sell Level", 60, 80, 70)
-                    
-                st.session_state['pair'] = pair
+                st.session_state['signal_history'] = []
                 st.success("✅ CONNESSO!")
                 st.balloons()
-                st.session_state['signal_history'] = []
+                st.rerun()
             else:
                 st.error(f"❌ {reason}")
         except Exception as e:
             st.error(f"❌ {e}")
+    
+    # ✅ SLIDER E SELECTBOX SOLO DOPO LOGIN
+    if st.session_state.get('connected', False):
+        st.header("📊 Trading Config")
+        pair = st.selectbox("Coppia", ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD"])
+        rsi_buy = st.slider("RSI Buy Level", 20, 40, 30)
+        rsi_sell = st.slider("RSI Sell Level", 60, 80, 70)
+        st.session_state['pair'] = pair
+        st.session_state['rsi_buy'] = rsi_buy
+        st.session_state['rsi_sell'] = rsi_sell
 
-# **POPUP ALERT CENTRALE COMPLETO**
+# **POPUP ALERT CENTRALE con VALUTA**
 if st.session_state.get('connected', False) and 'df' in st.session_state:
     df = st.session_state['df']
+    pair = st.session_state.get('pair', 'EURUSD')
     
-    # Controlla NUOVI segnali
-    buy_signals = df[df['BUY_SIGNAL'] == True]
-    sell_signals = df[df['SELL_SIGNAL'] == True]
+    buy_signals = df[df['BUY_SIGNAL'] == True].tail(1)
+    sell_signals = df[df['SELL_SIGNAL'] == True].tail(1)
     
     if not buy_signals.empty:
         latest_buy = buy_signals.iloc[-1]
@@ -96,10 +99,8 @@ if st.session_state.get('connected', False) and 'df' in st.session_state:
         border: 5px solid #00ff00; z-index: 1000; font-size: 28px; font-weight: bold;
         box-shadow: 0 20px 50px rgba(0,255,0,0.7); text-align: center; color: black; 
         min-width: 400px;'>
-            <div style='font-size: 36px; margin-bottom: 15px;'>🚀 **SEGNALE BUY - {pair}**</div>
+            <div style='font-size: 36px; margin-bottom: 15px;'>🚀 **BUY {pair.upper()}**</div>
             <div><b>💰 Prezzo Entrata:</b> <span style='color: #00ff00; font-size: 32px;'>{latest_buy['close']:.5f}</span></div>
-            <div><b>📊 RSI:</b> <span style='color: #ff00ff;'>{latest_buy['RSI']:.1f}</span></div>
-            <div><b>🔥 MACD:</b> <span style='color: #ff8800;'>{latest_buy['MACD']:.5f}</span></div>
             <div style='font-size: 34px; color: #00ff00; margin-top: 15px;'>**HIGHER 1 MINUTO ORA!**</div>
         </div>
         """, unsafe_allow_html=True)
@@ -112,10 +113,8 @@ if st.session_state.get('connected', False) and 'df' in st.session_state:
         border: 5px solid #ff0000; z-index: 1000; font-size: 28px; font-weight: bold;
         box-shadow: 0 20px 50px rgba(255,0,0,0.7); text-align: center; color: white; 
         min-width: 400px;'>
-            <div style='font-size: 36px; margin-bottom: 15px;'>🔻 **SEGNALE SELL**</div>
+            <div style='font-size: 36px; margin-bottom: 15px;'>🔻 **SELL {pair.upper()}**</div>
             <div><b>💰 Prezzo Entrata:</b> <span style='color: #ffaaaa; font-size: 32px;'>{latest_sell['close']:.5f}</span></div>
-            <div><b>📊 RSI:</b> <span style='color: #ffaa00;'>{latest_sell['RSI']:.1f}</span></div>
-            <div><b>🔥 MACD:</b> <span style='color: #ff5500;'>{latest_sell['MACD']:.5f}</span></div>
             <div style='font-size: 34px; color: #ffaaaa; margin-top: 15px;'>**LOWER 1 MINUTO ORA!**</div>
         </div>
         """, unsafe_allow_html=True)
