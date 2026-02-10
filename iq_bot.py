@@ -109,4 +109,107 @@ if st.session_state.get('connected', False):
         try:
             candles = Iq.get_candles(pair, 60, 150, time.time())
             df = pd.DataFrame(candles)
-            df['from'] = pd.to_datetime(df['from'], unit=
+            df['from'] = pd.to_datetime(df['from'], unit='s')
+            df.set_index('from', inplace=True)
+            
+            # INDICATORI
+            df['RSI'] = ta.rsi(df['close'], length=14)
+            macd = ta.macd(df['close'])
+            df['MACD'] = macd['MACD_12_26_9']
+            df['MACD_signal'] = macd['MACDs_12_26_9']
+            
+            # SEGNALI
+            df['prev_MACD'] = df['MACD'].shift(1)
+            df['prev_signal'] = df['MACD_signal'].shift(1)
+            
+            df['BUY_SIGNAL'] = (
+                (df['RSI'] < rsi_buy) & 
+                (df['MACD'] > df['MACD_signal']) &
+                (df['prev_MACD'] <= df['prev_signal'])
+            )
+            
+            df['SELL_SIGNAL'] = (
+                (df['RSI'] > rsi_sell) & 
+                (df['MACD'] < df['MACD_signal']) &
+                (df['prev_MACD'] >= df['prev_signal'])
+            )
+            
+            st.session_state['df'] = df
+            
+            # SALVA NUOVI SEGNALI NELLA CRONOLOGIA
+            new_buys = df[df['BUY_SIGNAL'] == True].tail(1)
+            new_sells = df[df['SELL_SIGNAL'] == True].tail(1)
+            
+            if not new_buys.empty:
+                signal = {
+                    'time': new_buys.index[-1].strftime('%H:%M:%S'),
+                    'type': '🟢 BUY',
+                    'price': f"{new_buys['close'].iloc[-1]:.5f}",
+                    'rsi': f"{new_buys['RSI'].iloc[-1]:.1f}",
+                    'macd': f"{new_buys['MACD'].iloc[-1]:.5f}"
+                }
+                if signal not in st.session_state['signal_history']:
+                    st.session_state['signal_history'].insert(0, signal)
+                    if len(st.session_state['signal_history']) > 20:
+                        st.session_state['signal_history'].pop()
+            
+            if not new_sells.empty:
+                signal = {
+                    'time': new_sells.index[-1].strftime('%H:%M:%S'),
+                    'type': '🔴 SELL',
+                    'price': f"{new_sells['close'].iloc[-1]:.5f}",
+                    'rsi': f"{new_sells['RSI'].iloc[-1]:.1f}",
+                    'macd': f"{new_sells['MACD'].iloc[-1]:.5f}"
+                }
+                if signal not in st.session_state['signal_history']:
+                    st.session_state['signal_history'].insert(0, signal)
+                    if len(st.session_state['signal_history']) > 20:
+                        st.session_state['signal_history'].pop()
+            
+        except Exception as e:
+            st.error(f"Dati: {e}")
+    
+    # GRAFICO
+    if 'df' in st.session_state:
+        df = st.session_state['df']
+        fig = make_subplots(rows=3, cols=1, subplot_titles=('💹 PREZZO', '📊 MACD', '🎯 RSI'),
+                          row_heights=[0.55, 0.225, 0.225], vertical_spacing=0.08)
+        
+        fig.add_trace(go.Scatter(x=df.index[-60:], y=df['close'][-60:], name='Close', 
+                               line=dict(width=3, color='#00ff88')), row=1, col=1)
+        fig.add_trace(go.Scatter(x=df.index[-60:], y=df['MACD'][-60:], name='MACD', 
+                               line=dict(color='orange', width=2)), row=2, col=1)
+        fig.add_trace(go.Scatter(x=df.index[-60:], y=df['MACD_signal'][-60:], name='Signal', 
+                               line=dict(color='red', width=2)), row=2, col=1)
+        fig.add_trace(go.Scatter(x=df.index[-60:], y=df['RSI'][-60:], name='RSI', 
+                               line=dict(color='purple', width=2.5)), row=3, col=1)
+        
+        fig.add_hline(y=rsi_buy, line_dash="solid", line_color="#00ff00", line_width=4, 
+                     annotation_text="🟢 BUY", row=3, col=1)
+        fig.add_hline(y=rsi_sell, line_dash="solid", line_color="#ff0000", line_width=4, 
+                     annotation_text="🔴 SELL", row=3, col=1)
+        fig.add_hline(y=50, line_dash="dash", line_color="gray", row=3, col=1)
+        fig.add_hline(y=0, line_dash="dot", line_color="gray", row=2, col=1)
+        
+        fig.update_layout(height=650, title=f"🎯 {pair} 1m - IQ OPTION TURBO", 
+                        showlegend=False, margin=dict(t=90))
+        st.plotly_chart(fig, use_container_width=True)
+    
+    # PANEL DESTRO
+    with right_col:
+        st.header("📈 LIVE STATUS")
+        if 'df' in st.session_state:
+            df = st.session_state['df'].iloc[-1]
+            st.metric("💰 PREZZO ENTRATA", f"{df['close']:.5f}")
+            st.metric("📊 RSI", f"{df['RSI']:.1f}")
+            st.metric("🔥 MACD", f"{df['MACD']:.5f}")
+    
+    # **CRONOLOGIA SEGNALI IN FONDO**
+    st.markdown("---")
+    st.subheader("📋 CRONOLOGIA SEGNALI (ultimi 20)")
+    
+    if 'signal_history' in st.session_state and st.session_state['signal_history']:
+        signals_df = pd.DataFrame(st.session_state['signal_history'])
+        st.dataframe(signals_df, use_container_width=True, height=300)
+    else:
+        st.info("⏳ Nessun segnale ancora generato")
