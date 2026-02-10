@@ -259,16 +259,16 @@ if st.session_state.get('connected', False):
         # CRONOLOGIA SEGNALI
         new_buys = df[df['BUY_SIGNAL'] == True].tail(1)
         new_sells = df[df['SELL_SIGNAL'] == True].tail(1)
-        
+
         if not new_buys.empty:
             signal = {
                 'time': new_buys.index[-1].strftime('%H:%M:%S'),
-                'pair': {new_buys['MACD'].iloc[-1]:.5f}",
+                'pair': pair,  # ✅ VALUTA AGGIUNTA
                 'type': '🟢 BUY',
-                'price': f"{new_buys['close'].iloc[-1]:.5f}",
+                'price_entry': f"{new_buys['close'].iloc[-1]:.5f}",
                 'rsi': f"{new_buys['RSI'].iloc[-1]:.1f}",
                 'macd': f"{new_buys['MACD'].iloc[-1]:.5f}",
-                'esito': f"{new_buys['MACD'].iloc[-1]:.5f}"
+                'outcome': '⏳ PENDENTE'  # ✅ ESITO INIZIALE
             }
             if 'signal_history' not in st.session_state:
                 st.session_state['signal_history'] = []
@@ -277,17 +277,17 @@ if st.session_state.get('connected', False):
                 if len(st.session_state['signal_history']) > 20:
                     st.session_state['signal_history'].pop()
         
+        # SELL
         if not new_sells.empty:
             signal = {
                 'time': new_sells.index[-1].strftime('%H:%M:%S'),
-                'pair': {new_buys['MACD'].iloc[-1]:.5f}",
+                'pair': pair,  # ✅ VALUTA AGGIUNTA
                 'type': '🔴 SELL',
-                'price': f"{new_sells['close'].iloc[-1]:.5f}",
+                'price_entry': f"{new_sells['close'].iloc[-1]:.5f}",
                 'rsi': f"{new_sells['RSI'].iloc[-1]:.1f}",
-                'macd': f"{new_sells['MACD'].iloc[-1]:.5f}"
-                'esito': f"{new_buys['MACD'].iloc[-1]:.5f}"
+                'macd': f"{new_sells['MACD'].iloc[-1]:.5f}",
+                'outcome': '⏳ PENDENTE'  # ✅ ESITO INIZIALE
             }
-            
             if signal not in st.session_state['signal_history']:
                 st.session_state['signal_history'].insert(0, signal)
                 if len(st.session_state['signal_history']) > 20:
@@ -344,13 +344,46 @@ if st.session_state.get('connected', False):
         
     except Exception as e:
         st.error(f"❌ Dati {pair}: {e}")
-        
+
+    # **CHECK ESITI dopo 1 minuto**
+    if 'signal_history' in st.session_state:
+        for i, signal in enumerate(st.session_state['signal_history']):
+            if signal['outcome'] == '⏳ PENDENTE':
+                signal_time = datetime.strptime(signal['time'], '%H:%M:%S')
+                now = datetime.now().time()
+                time_diff = (datetime.combine(datetime.now().date(), now) - 
+                            datetime.combine(datetime.now().date(), signal_time)).seconds
+                
+                if time_diff >= 60:  # 1 minuto passato
+                    try:
+                        # RILEGGE prezzo dopo 1m
+                        candles = Iq.get_candles(signal['pair'], 60, 2, time.time())
+                        latest_price = pd.DataFrame(candles)['close'].iloc[-1]
+                        entry_price = float(signal['price_entry'])
+                        
+                        # CALCOLA ESITO
+                        if signal['type'] == '🟢 BUY':
+                            outcome = "✅ WIN" if latest_price > entry_price else "❌ LOSS"
+                        else:  # SELL
+                            outcome = "✅ WIN" if latest_price < entry_price else "❌ LOSS"
+                        
+                        st.session_state['signal_history'][i]['outcome'] = outcome
+                        st.session_state['signal_history'][i]['price_exit'] = f"{latest_price:.5f}"
+                        
+                    except:
+                        st.session_state['signal_history'][i]['outcome'] = '❓ ERRORE'
+
+
+    
     # **CRONOLOGIA SEGNALI IN FONDO**
     st.markdown("---")
     st.subheader("📋 CRONOLOGIA SEGNALI")
     
     if 'signal_history' in st.session_state and st.session_state['signal_history']:
         signals_df = pd.DataFrame(st.session_state['signal_history'])
-        st.dataframe(signals_df, use_container_width=True, height=300)
+        # ORDINA colonne
+        cols = ['time', 'pair', 'type', 'price_entry', 'rsi', 'macd', 'outcome']
+        signals_df = signals_df[cols]
+        st.dataframe(signals_df, use_container_width=True, height=350)
     else:
-        st.info("⏳ Nessun segnale ancora generato")
+        st.info("⏳ Nessun segnale generato")
