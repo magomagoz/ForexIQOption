@@ -146,17 +146,97 @@ if st.session_state.get('connected', False):
         ⏱️ {int(progress*60)}s fino al refresh
     </div>
     """, unsafe_allow_html=True)
+
+# **SCANNER MULTI-VALUTE ogni 60s + GRAFICO SINGOLO separato**
+
+# Lista valute principali per scanning
+ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"]
+
+# **SCANNER BACKGROUND** (esegue ogni 60s)
+if st.session_state.get('connected', False):
+    if 'scanner_data' not in st.session_state:
+        st.session_state['scanner_data'] = {}
+        st.session_state['scanner_last_update'] = 0
     
+    # Scanner ogni 60s
+    current_time = time.time()
+    if current_time - st.session_state['scanner_last_update'] > 60:
+        with st.spinner("🔍 Scanning tutte le valute..."):
+            Iq = st.session_state['iq']
+            st.session_state['scanner_data'] = {}
+            
+            for pair in ALL_PAIRS:
+                try:
+                    # Ultime 50 candele per analisi veloce
+                    candles = Iq.get_candles(pair, 60, 50, time.time())
+                    df = pd.DataFrame(candles)
+                    df['from'] = pd.to_datetime(df['from'], unit='s')
+                    df.set_index('from', inplace=True)
+                    
+                    # Indicatori rapidi
+                    df['RSI'] = ta.rsi(df['close'], length=14)
+                    macd = ta.macd(df['close'])
+                    df['MACD'] = macd['MACD_12_26_9']
+                    df['MACD_signal'] = macd['MACDs_12_26_9']
+                    
+                    # Segnali
+                    latest_rsi = df['RSI'].iloc[-1]
+                    macd_bullish = df['MACD'].iloc[-1] > df['MACD_signal'].iloc[-1]
+                    
+                    signal = ""
+                    if latest_rsi < 30 and macd_bullish:
+                        signal = "🟢 BUY"
+                    elif latest_rsi > 70 and not macd_bullish:
+                        signal = "🔴 SELL"
+                    else:
+                        signal = "⚪ WAIT"
+                    
+                    st.session_state['scanner_data'][pair] = {
+                        'price': df['close'].iloc[-1],
+                        'rsi': latest_rsi,
+                        'signal': signal
+                    }
+                    
+                except:
+                    st.session_state['scanner_data'][pair] = {'price': 0, 'rsi': 0, 'signal': '❌ ERR'}
+            
+            st.session_state['scanner_last_update'] = current_time
+            st.success("✅ Scanner aggiornato!")
+
+    # **TABELLA SCANNER** (separata dal grafico)
+    st.subheader("🔍 SCANNER MULTI-VALUTE (Aggiornato 60s)")
+    if st.session_state.get('scanner_data'):
+        scanner_df = pd.DataFrame(st.session_state['scanner_data']).T
+        scanner_df = scanner_df[['signal', 'price', 'rsi']].round(5)
+        st.dataframe(scanner_df, use_container_width=True, height=400)
+    
+    # **GRAFICO DEDICATO** (solo la coppia scelta)
+    st.subheader(f"📊 DETTAGLIO {pair}")
+    # [qui il tuo grafico candele dettagliato per 'pair' selezionato]
+    
+    # Barra progresso scanner
+    if st.session_state.get('scanner_last_update'):
+        time_since = time.time() - st.session_state['scanner_last_update']
+        progress = max(0, 60 - time_since) / 60.0
+        st.markdown(f"""
+        <div style='background: #333; height: 20px; border-radius: 10px; overflow: hidden;'>
+            <div style='background: linear-gradient(90deg, #00ff88, #00cc66); 
+                        height: 100%; width: {progress*100}%; transition: width 1s linear;'>
+            </div>
+        </div>
+        <div style='text-align: center; color: #00ff88; font-size: 14px;'>
+            Prossimo scan: {int(progress*60)}s
+        </div>
+        """, unsafe_allow_html=True)
+
     # **LIVE STATUS SEMPLICE** (solo titolo - sopra grafico)
-    st.markdown("""
-    <div style='background: linear-gradient(45deg, #1e3c72, #2a5298); 
-               color: white; padding: 20px; border-radius: 15px; text-align: center; 
-               margin: 20px 0; box-shadow: 0 10px 30px rgba(0,0,0,0.3);'>
-        <h2 style='margin: 0; font-size: 28px;'>📈 LIVE TRADING STATUS</h2>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Grafico candele qui sotto...
+    #st.markdown("""
+    #<div style='background: linear-gradient(45deg, #1e3c72, #2a5298); 
+               #color: white; padding: 20px; border-radius: 15px; text-align: center; 
+               #margin: 20px 0; box-shadow: 0 10px 30px rgba(0,0,0,0.3);'>
+        #<h2 style='margin: 0; font-size: 28px;'>📈 LIVE TRADING STATUS</h2>
+    #</div>
+    #""", unsafe_allow_html=True)
     
     Iq = st.session_state['iq']
 
