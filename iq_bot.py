@@ -140,72 +140,87 @@ if st.session_state.get('connected', False):
         st.rerun()
     
     Iq = st.session_state['iq']
-    left_col, right_col = st.columns([3, 1])
+
+    # **LIVE STATUS SOPRA GRAFICO - LARGHEZZA PIENA**
+    st.header("📈 LIVE STATUS")
+    if 'df' in st.session_state:
+        df = st.session_state['df'].iloc[-1]
+        
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("💰 PREZZO", f"{df['close']:.5f}", delta=None)
+        with col2:
+            st.metric("📊 RSI", f"{df['RSI']:.1f}", delta=None)
+        with col3:
+            st.metric("🔥 MACD", f"{df['MACD']:.5f}", delta=None)
+        with col4:
+            trend = "🟢 BULL" if df['MACD'] > df['MACD_signal'] else "🔴 BEAR"
+            st.metric("⚡ TREND", trend, delta=None)
     
-    with left_col:
-        st.subheader("📊 GRAFICO REALTIME")
-        try:
-            candles = Iq.get_candles(pair, 60, 150, time.time())
-            df = pd.DataFrame(candles)
-            df['from'] = pd.to_datetime(df['from'], unit='s')
-            df.set_index('from', inplace=True)
+    # GRAFICO (sotto live status - larghezza piena)
+    st.subheader("📊 GRAFICO REALTIME")
+    try:
+        candles = Iq.get_candles(pair, 60, 150, time.time())
+        df = pd.DataFrame(candles)
+        df['from'] = pd.to_datetime(df['from'], unit='s')
+        df.set_index('from', inplace=True)
             
-            # INDICATORI
-            df['RSI'] = ta.rsi(df['close'], length=14)
-            macd = ta.macd(df['close'])
-            df['MACD'] = macd['MACD_12_26_9']
-            df['MACD_signal'] = macd['MACDs_12_26_9']
+        # INDICATORI
+        df['RSI'] = ta.rsi(df['close'], length=14)
+        macd = ta.macd(df['close'])
+        df['MACD'] = macd['MACD_12_26_9']
+        df['MACD_signal'] = macd['MACDs_12_26_9']
             
-            # SEGNALI
-            df['prev_MACD'] = df['MACD'].shift(1)
-            df['prev_signal'] = df['MACD_signal'].shift(1)
+        # SEGNALI
+        df['prev_MACD'] = df['MACD'].shift(1)
+        df['prev_signal'] = df['MACD_signal'].shift(1)
             
-            df['BUY_SIGNAL'] = (
-                (df['RSI'] < rsi_buy) & 
-                (df['MACD'] > df['MACD_signal']) &
-                (df['prev_MACD'] <= df['prev_signal'])
-            )
+        df['BUY_SIGNAL'] = (
+            (df['RSI'] < rsi_buy) & 
+            (df['MACD'] > df['MACD_signal']) &
+            (df['prev_MACD'] <= df['prev_signal'])
+        )
             
-            df['SELL_SIGNAL'] = (
-                (df['RSI'] > rsi_sell) & 
-                (df['MACD'] < df['MACD_signal']) &
-                (df['prev_MACD'] >= df['prev_signal'])
-            )
+        df['SELL_SIGNAL'] = (
+            (df['RSI'] > rsi_sell) & 
+            (df['MACD'] < df['MACD_signal']) &
+            (df['prev_MACD'] >= df['prev_signal'])
+        )
             
-            st.session_state['df'] = df
+        st.session_state['df'] = df
+        
+        # SALVA NUOVI SEGNALI NELLA CRONOLOGIA
+        new_buys = df[df['BUY_SIGNAL'] == True].tail(1)
+        new_sells = df[df['SELL_SIGNAL'] == True].tail(1)
             
-            # SALVA NUOVI SEGNALI NELLA CRONOLOGIA
-            new_buys = df[df['BUY_SIGNAL'] == True].tail(1)
-            new_sells = df[df['SELL_SIGNAL'] == True].tail(1)
+        if not new_buys.empty:
+            signal = {
+                'time': new_buys.index[-1].strftime('%H:%M:%S'),
+                'type': '🟢 BUY',
+                'price': f"{new_buys['close'].iloc[-1]:.5f}",
+                'rsi': f"{new_buys['RSI'].iloc[-1]:.1f}",
+                'macd': f"{new_buys['MACD'].iloc[-1]:.5f}"
+            }
+            if signal not in st.session_state['signal_history']:
+                st.session_state['signal_history'].insert(0, signal)
+                if len(st.session_state['signal_history']) > 20:
+                    st.session_state['signal_history'].pop()
             
-            if not new_buys.empty:
-                signal = {
-                    'time': new_buys.index[-1].strftime('%H:%M:%S'),
-                    'type': '🟢 BUY',
-                    'price': f"{new_buys['close'].iloc[-1]:.5f}",
-                    'rsi': f"{new_buys['RSI'].iloc[-1]:.1f}",
-                    'macd': f"{new_buys['MACD'].iloc[-1]:.5f}"
-                }
-                if signal not in st.session_state['signal_history']:
-                    st.session_state['signal_history'].insert(0, signal)
-                    if len(st.session_state['signal_history']) > 20:
-                        st.session_state['signal_history'].pop()
+        if not new_sells.empty:
+            signal = {
+                'time': new_sells.index[-1].strftime('%H:%M:%S'),
+                'type': '🔴 SELL',
+                'price': f"{new_sells['close'].iloc[-1]:.5f}",
+                'rsi': f"{new_sells['RSI'].iloc[-1]:.1f}",
+                'macd': f"{new_sells['MACD'].iloc[-1]:.5f}"
+        }
+            if signal not in st.session_state['signal_history']:
+                st.session_state['signal_history'].insert(0, signal)
+                if len(st.session_state['signal_history']) > 20:
+                    st.session_state['signal_history'].pop()
             
-            if not new_sells.empty:
-                signal = {
-                    'time': new_sells.index[-1].strftime('%H:%M:%S'),
-                    'type': '🔴 SELL',
-                    'price': f"{new_sells['close'].iloc[-1]:.5f}",
-                    'rsi': f"{new_sells['RSI'].iloc[-1]:.1f}",
-                    'macd': f"{new_sells['MACD'].iloc[-1]:.5f}"
-                }
-                if signal not in st.session_state['signal_history']:
-                    st.session_state['signal_history'].insert(0, signal)
-                    if len(st.session_state['signal_history']) > 20:
-                        st.session_state['signal_history'].pop()
-            
-        except Exception as e:
-            st.error(f"Dati: {e}")
+    except Exception as e:
+        st.error(f"Dati: {e}")
     
     # GRAFICO
     if 'df' in st.session_state:
@@ -232,16 +247,7 @@ if st.session_state.get('connected', False):
         fig.update_layout(height=650, title=f"🎯 {pair} 1m - IQ OPTION TURBO", 
                         showlegend=False, margin=dict(t=90))
         st.plotly_chart(fig, use_container_width=True)
-    
-    # PANEL DESTRO
-    with right_col:
-        st.header("📈 LIVE STATUS")
-        if 'df' in st.session_state:
-            df = st.session_state['df'].iloc[-1]
-            st.metric("💰 PREZZO ENTRATA", f"{df['close']:.5f}")
-            st.metric("📊 RSI", f"{df['RSI']:.1f}")
-            st.metric("🔥 MACD", f"{df['MACD']:.5f}")
-    
+        
     # **CRONOLOGIA SEGNALI IN FONDO**
     st.markdown("---")
     st.subheader("📋 CRONOLOGIA SEGNALI (ultimi 20)")
