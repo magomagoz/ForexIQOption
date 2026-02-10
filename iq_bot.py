@@ -150,17 +150,17 @@ with st.sidebar:
     else:
         # [qui il codice popup originale]
     
-    # **NUOVO BUY → TELEGRAM**
-    new_buys = df[df['BUY_SIGNAL'] == True].tail(1)
-    if not new_buys.empty:
-        latest = new_buys.iloc[-1]
-        send_telegram_signal("🟢 COMPRA", 'pair', latest['close'], latest['RSI'], latest['MACD'])
-    
-    # **NUOVO SELL → TELEGRAM**  
-    new_sells = df[df['SELL_SIGNAL'] == True].tail(1)
-    if not new_sells.empty:
-        latest = new_sells.iloc[-1]
-        send_telegram_signal("🔴 VENDI", 'pair', latest['close'], latest['RSI'], latest['MACD'])
+        # **NUOVO BUY → TELEGRAM**
+        new_buys = df[df['BUY_SIGNAL'] == True].tail(1)
+        if not new_buys.empty:
+            latest = new_buys.iloc[-1]
+            send_telegram_signal("🟢 COMPRA", 'pair', latest['close'], latest['RSI'], latest['MACD'])
+        
+        # **NUOVO SELL → TELEGRAM**  
+        new_sells = df[df['SELL_SIGNAL'] == True].tail(1)
+        if not new_sells.empty:
+            latest = new_sells.iloc[-1]
+            send_telegram_signal("🔴 VENDI", 'pair', latest['close'], latest['RSI'], latest['MACD'])
 
 # **SCANNER MULTI-VALUTE ogni 60s + GRAFICO SINGOLO separato**
 
