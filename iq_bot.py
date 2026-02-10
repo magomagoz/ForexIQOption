@@ -45,9 +45,9 @@ def send_telegram_signal(signal_type, pair, price, rsi, macd):
         return None
 
     
-def rsi_buy = st.slider("RSI Buy Level", 20, 40, 30)
+def rsi_buy(st.slider("RSI Buy Level", 20, 40, 30))
 
-def rsi_sell = st.slider("RSI Sell Level", 60, 80, 70)
+def rsi_sell(st.slider("RSI Sell Level", 60, 80, 70))
 
 st.set_page_config(page_title="IQ Signals PRO", page_icon="🚀", layout="wide")
 
