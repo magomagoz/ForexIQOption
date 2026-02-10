@@ -22,7 +22,7 @@ def send_telegram_signal(signal_type, pair, price, rsi, macd):
     message = f"""
 🚀 *SENTINEL AI* 🚀
 
-*{signal_type} - {pair}*
+*{signal_type} - {pair.upper()}*
 💰 *Prezzo Entrata:* `{price:.5f}`
 📊 *RSI:* `{rsi:.1f}`
 🔥 *MACD:* `{macd:.5f}`
