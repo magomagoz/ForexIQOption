@@ -130,14 +130,33 @@ if st.session_state.get('connected', False) and 'df' in st.session_state:
 
 # MAIN LOGIC
 if st.session_state.get('connected', False):
-    # COUNTDOWN
-    next_refresh = st.session_state.get('next_refresh', time.time() + 60)
-    remaining = max(0, next_refresh - time.time())
-    st.metric("⏱️ AUTO-REFRESH TRA", f"{int(remaining)}s")
+    # **BARRA PROGRESS 1m al posto del countdown**
     
-    if remaining <= 0:
-        st.session_state['next_refresh'] = time.time() + 60
-        st.rerun()
+    # Barra che si svuota ogni 60s
+    progress = max(0, 60 - int(time.time() % 60)) / 60.0
+    st.markdown(f"""
+    <div style='background: #333; height: 25px; border-radius: 15px; 
+                overflow: hidden; border: 3px solid #00ff88;'>
+        <div style='background: linear-gradient(90deg, #00ff88, #00cc66); 
+                    height: 100%; width: {progress*100}%; transition: width 1s linear; 
+                    border-radius: 12px; box-shadow: 0 0 20px rgba(0,255,136,0.6);'>
+        </div>
+    </div>
+    <div style='text-align: center; color: #00ff88; font-weight: bold; font-size: 18px;'>
+        ⏱️ {int(progress*60)}s fino al refresh
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # **LIVE STATUS SEMPLICE** (solo titolo - sopra grafico)
+    st.markdown("""
+    <div style='background: linear-gradient(45deg, #1e3c72, #2a5298); 
+               color: white; padding: 20px; border-radius: 15px; text-align: center; 
+               margin: 20px 0; box-shadow: 0 10px 30px rgba(0,0,0,0.3);'>
+        <h2 style='margin: 0; font-size: 28px;'>📈 LIVE TRADING STATUS</h2>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Grafico candele qui sotto...
     
     Iq = st.session_state['iq']
 
