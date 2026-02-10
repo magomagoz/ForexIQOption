@@ -18,7 +18,7 @@ st.image(logo, use_column_width=True, caption="IQ Signals PRO")
 # SIDEBAR
 with st.sidebar:
     st.header("⚙️ Config")
-    email = st.text("Email Practice", "mago_magoz@libero.it")
+    email = st.text("Email Practice", value="mago_magoz@libero.it")
     password = st.text_input("Password", type="password")
     pair = st.selectbox("Coppia", ["EURUSD", "GBPUSD", "USDJPY"])
     rsi_buy = st.slider("RSI Buy Level", 20, 40, 30)
