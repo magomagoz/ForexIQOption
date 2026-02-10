@@ -7,27 +7,13 @@ from plotly.subplots import make_subplots
 from iqoptionapi.stable_api import IQ_Option
 from datetime import datetime
 from PIL import Image
+import base64
 
 # Metti il tuo logo.png nella stessa cartella del file .py
 logo = Image.open("banner1.png")  # 400x100px ideale
-st.image(logo, use_column_width=True, caption="IQ Signals PRO")
+#st.image(logo, use_column_width=True, caption="IQ Signals PRO")
 
 st.set_page_config(page_title="IQ Signals PRO", page_icon="🚀", layout="wide")
-
-# LOGO CENTRALE
-col1, col2, col3 = st.columns([1, 2, 1])
-with col2:
-    st.markdown("""
-    <div style='text-align: center; padding: 20px 0;'>
-        <h1 style='color: #00ff88; font-size: 48px; margin: 0; font-weight: bold; 
-                   text-shadow: 2px 2px 4px rgba(0,0,0,0.5);'>
-            🚀 IQ SIGNALS PRO
-        </h1>
-        <p style='color: #ffffff; font-size: 20px; margin: 5px 0 0 0;'>
-            Turbo Options 1m • RSI + MACD • Alert Centrali
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
 
 # SIDEBAR
 with st.sidebar:
@@ -43,6 +29,7 @@ with st.sidebar:
     
     # SALVA EMAIL NEL SESSION STATE
     st.session_state['saved_email'] = st.session_state['email_input']    
+
     password = st.text_input("Password", type="password")
     pair = st.selectbox("Coppia", ["EURUSD", "GBPUSD", "USDJPY"])
     rsi_buy = st.slider("RSI Buy Level", 20, 40, 30)
