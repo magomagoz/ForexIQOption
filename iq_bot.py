@@ -113,7 +113,7 @@ if st.session_state.get('connected', False) and 'df' in st.session_state:
     if not buy_signals.empty:
         latest_buy = buy_signals.iloc[-1]
         st.markdown(f"""
-        <div style='position: fixed; top: 25%; left: 50%; transform: translate(-50%, -50%);
+        <div style='position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
         background: linear-gradient(45deg, #00ff88, #00cc66); padding: 30px; border-radius: 25px;
         border: 5px solid #00ff00; z-index: 1000; font-size: 28px; font-weight: bold;
         box-shadow: 0 20px 50px rgba(0,255,0,0.7); text-align: center; color: black; 
@@ -127,7 +127,7 @@ if st.session_state.get('connected', False) and 'df' in st.session_state:
     elif not sell_signals.empty:
         latest_sell = sell_signals.iloc[-1]
         st.markdown(f"""
-        <div style='position: fixed; top: 25%; left: 50%; transform: translate(-50%, -50%);
+        <div style='position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
         background: linear-gradient(45deg, #ff4444, #cc0000); padding: 30px; border-radius: 25px;
         border: 5px solid #ff0000; z-index: 1000; font-size: 28px; font-weight: bold;
         box-shadow: 0 20px 50px rgba(255,0,0,0.7); text-align: center; color: white; 
