@@ -205,6 +205,18 @@ if st.session_state.get('connected', False):
         st.session_state.rsi_buy = 30  # ← Anche questi!
     if 'rsi_sell' not in st.session_state:
         st.session_state.rsi_sell = 70
+    if 'amount' not in st.session_state: st.session_state.amount = 1
+    if 'trades_executed' not in st.session_state: st.session_state.trades_executed = []
+    if 'total_profit' not in st.session_state: st.session_state.total_profit = 0
+
+    Iq = st.session_state['iq']
+
+    # ✅ TOGGLE SCANNER + TRADE AUTO
+    col1, col2 = st.columns(2)
+    with col1:
+        st.session_state.scanner = st.toggle("🔍 **Attiva Scanner**", value=st.session_state.scanner)
+    with col2:
+        auto_trade = st.toggle("🤖 **Trade Automatici 1m**", value=False)
     
     # ✅ STATUS SCANNER
     last_scan = datetime.fromtimestamp(st.session_state.scanner_last_update).strftime("%H:%M:%S")
