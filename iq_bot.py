@@ -52,9 +52,9 @@ if time_module.time() - st.session_state.last_refresh > 60:
     st.session_state.last_refresh = time_module.time()
     st.rerun()
 
-st.session_state.refresh_counter += 1
-if st.session_state.refresh_counter % 60 == 0:  # Ogni 60 iterazioni
-    st.rerun()
+#st.session_state.refresh_counter += 1
+#if st.session_state.refresh_counter % 60 == 0:  # Ogni 60 iterazioni
+    #st.rerun()
 
 # Metti il tuo logo.png nella stessa cartella del file .py
 logo = Image.open("banner.png")  # 400x100px ideale
