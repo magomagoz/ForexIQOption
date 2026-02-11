@@ -135,10 +135,10 @@ with st.sidebar:
             
             # Colori e status
             if aperto:
-                colore = "🟢 **APERTO**"
+                colore = "🟢 APERTO"
                 badge = "background: linear-gradient(45deg, #00ff88, #00cc66); color: black;"
             else:
-                colore = "🔴 **CHIUSO**"
+                colore = "🔴 CHIUSO"
                 badge = "background: #333; color: #aaa;"
             
             st.markdown(f"""
@@ -157,7 +157,7 @@ with st.sidebar:
             st.markdown(f"""
             <div style='padding: 10px; margin: 10px 0; background: linear-gradient(45deg, #ffaa00, #ff8800); 
                         color: black; border-radius: 12px; text-align: center; font-weight: bold;'>
-                ⚡ **SOVRAPPOSIZIONE: {' + '.join(sovrapposizioni)}** (MAX VOLUME!)
+                ⚡ SOVRAPPOSIZIONE: {' + '.join(sovrapposizioni)}** (MAX VOLUME!)
             </div>
             """, unsafe_allow_html=True)
        
