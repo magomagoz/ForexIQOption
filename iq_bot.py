@@ -104,6 +104,12 @@ with st.sidebar:
                 del st.session_state[key]
             st.success("👋 Disconnesso!")
             st.rerun()
+
+    # ✅ Toggle per attivare/disattivare scanner
+    st.session_state.scanner = st.toggle(
+        "🔍 **Attiva Scanner Forex**", 
+        value=st.session_state.get('scanner', False)
+    )
     
     # **SESSIONI MERCATO FOREX** (SENZA import nella sidebar)
     if st.session_state.get('connected', False):
@@ -186,13 +192,19 @@ with st.sidebar:
 ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"]
 
 if st.session_state.get('connected', False):
-    # ✅ INIZIALIZZAZIONE UNA VOLTA SOLA
+    # ✅ INIZIALIZZAZIONE COMPLETA (aggiungi questa riga!)
+    if 'scanner' not in st.session_state:
+        st.session_state.scanner = False  # ← SOLUZIONE!
     if 'scanner_data' not in st.session_state:
         st.session_state.scanner_data = {}
     if 'scanner_last_update' not in st.session_state:
         st.session_state.scanner_last_update = 0
     if 'scanner_alerts' not in st.session_state:
         st.session_state.scanner_alerts = []
+    if 'rsi_buy' not in st.session_state:
+        st.session_state.rsi_buy = 30  # ← Anche questi!
+    if 'rsi_sell' not in st.session_state:
+        st.session_state.rsi_sell = 70
     
     # ✅ STATUS SCANNER
     last_scan = datetime.fromtimestamp(st.session_state.scanner_last_update).strftime("%H:%M:%S")
