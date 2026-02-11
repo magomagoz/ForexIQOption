@@ -190,33 +190,33 @@ with st.sidebar:
             st.success("✅ Pulito!")
             st.rerun()
 
-# **SCANNER COMPLETO** (sostituisci dalle righe 170-350)
 # **SCANNER COMPLETO PULITO**
 ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"]
 
 if st.session_state.get('connected', False):
-    # ✅ INIZIALIZZAZIONE CONSISTENTE
-    if 'scanner_data' not in st.session_state:
-        st.session_state['scanner_data'] = {}
-    if 'scanner_last_update' not in st.session_state:
-        st.session_state['scanner_last_update'] = 0
-    if 'scanner_alerts' not in st.session_state:
-        st.session_state['scanner_alerts'] = []
+    # ✅ INIZIALIZZAZIONE
+    if 'scanner_data' not in st.session_state: st.session_state['scanner_data'] = {}
+    if 'scanner_last_update' not in st.session_state: st.session_state['scanner_last_update'] = 0
+    if 'scanner_alerts' not in st.session_state: st.session_state['scanner_alerts'] = []
     
-    # ✅ STATUS SCANNER
+    # ✅ STATUS GLOBALE SCANNER (sopra tabella)
+    current_time = time_module.time()
     if st.session_state['scanner_last_update'] > 0:
         last_scan = datetime.fromtimestamp(st.session_state['scanner_last_update']).strftime("%H:%M:%S")
-        st.caption(f"🕐 Scanner ultimo update: **{last_scan}**")
+        st.info(f"🕐 **Scanner globale aggiornato: {last_scan}** ⏱️ **Prossimo: ~{int(60-(current_time-st.session_state['scanner_last_update']))}s**")
     
     # ✅ SCANNER OGNI 60s
-    current_time = time_module.time()
     if current_time - st.session_state['scanner_last_update'] > 60:
         placeholder = st.empty()
-        st.spinner("🔍 Scanning 10 valute...")
+        with placeholder.container():
+            st.spinner("🔍 Scanning 10 valute...")
         
         Iq = st.session_state['iq']
         st.session_state['scanner_data'] = {}
         st.session_state['scanner_alerts'] = []
+        
+        # ✅ TIMESTAMP GLOBALE per TUTTE le coppie
+        scan_time = datetime.now().strftime("%H:%M:%S")
         
         for pair in ALL_PAIRS:
             try:
@@ -237,25 +237,24 @@ if st.session_state.get('connected', False):
                 if latest_rsi < 30 and macd_bullish:
                     signal = "🟢 COMPRA"
                     st.session_state['scanner_alerts'].append({
-                        'pair': pair, 'type': '🟢 COMPRA', 'price': f"{df['close'].iloc[-1]:.5f}",
-                        'rsi': f"{latest_rsi:.1f}"
+                        'pair': pair, 'type': '🟢 COMPRA', 'price': f"{df['close'].iloc[-1]:.5f}", 'rsi': f"{latest_rsi:.1f}"
                     })
                 elif latest_rsi > 70 and not macd_bullish:
                     signal = "🔴 VENDI"
                     st.session_state['scanner_alerts'].append({
-                        'pair': pair, 'type': '🔴 VENDI', 'price': f"{df['close'].iloc[-1]:.5f}",
-                        'rsi': f"{latest_rsi:.1f}"
+                        'pair': pair, 'type': '🔴 VENDI', 'price': f"{df['close'].iloc[-1]:.5f}", 'rsi': f"{latest_rsi:.1f}"
                     })
                 
+                # ✅ STESSO TIMESTAMP per tutte le coppie!
                 st.session_state['scanner_data'][pair] = {
                     'price': f"{df['close'].iloc[-1]:.5f}",
                     'rsi': f"{latest_rsi:.1f}",
                     'signal': signal,
-                    'last_scan': datetime.now().strftime("%H:%M:%S")
+                    'last_scan': scan_time  # ✅ CAMBIA ogni 60s!
                 }
             except:
                 st.session_state['scanner_data'][pair] = {
-                    'price': '❌', 'rsi': '❌', 'signal': 'ERROR', 'last_scan': '❌'
+                    'price': '❌', 'rsi': '❌', 'signal': 'ERROR', 'last_scan': scan_time
                 }
         
         st.session_state['scanner_last_update'] = current_time
