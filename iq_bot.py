@@ -156,9 +156,7 @@ with st.sidebar:
                 ⚡ **SOVRAPPOSIZIONE: {' + '.join(sovrapposizioni)}** (MAX VOLUME!)
             </div>
             """, unsafe_allow_html=True)
-        
-        st.markdown("---")
-
+       
         # **TEST ALERT BUTTON** (aggiungi in FONDO sidebar dopo st.markdown("---"))
         with st.sidebar:
             st.markdown("---")
