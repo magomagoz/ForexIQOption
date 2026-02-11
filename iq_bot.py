@@ -436,7 +436,7 @@ if st.session_state.get('connected', False):
         )
             
         # Legenda Bollinger
-        fig.add_annotation(x=0.02, y=0.98, xref="paper", yref="paper", showarrow=False, font=dict(size=12), bgcolor="rgba(0,204,255,0.2)", bordercolor="#00ccff")
+        #fig.add_annotation(x=0.02, y=0.98, xref="paper", yref="paper", showarrow=False, font=dict(size=12), bgcolor="rgba(0,204,255,0.2)", bordercolor="#00ccff")
         
         # RSI + LIVELLI
         fig.add_trace(go.Scatter(x=df_last_hour.index, y=df_last_hour['RSI'], 
