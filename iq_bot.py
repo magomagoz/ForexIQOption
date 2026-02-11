@@ -1,14 +1,14 @@
 import streamlit as st
 import pandas as pd
 import pandas_ta as ta
-import time
+import time as time_module
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from iqoptionapi.stable_api import IQ_Option
 from PIL import Image
 import base64
 import requests
-from datetime import datetime
+from datetime import datetime, time
 
 # **CONFIG TELEGRAM** (metti nella sidebar)
 TELEGRAM_TOKEN = "8235666467:AAGCsvEhlrzl7bH537bJTjsSwQ3P3PMRW10"  # Il tuo token
@@ -109,6 +109,9 @@ with st.sidebar:
         # Orari sessioni FOREX (CET = UTC+1)
         now_cet = datetime.now()
         ora_cet = now_cet.time()
+
+        # **SCANNER e BARRA** (usa time_module)
+        current_time = time_module.time()  # ✅ Invece di time.time()
         
         # Sessioni con orari CET (Italia)
         sessioni = {
