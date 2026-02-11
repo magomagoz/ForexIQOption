@@ -419,29 +419,27 @@ if st.session_state.get('connected', False):
             close=df_last_hour['close'], increasing_line_color='#00ff88', 
             decreasing_line_color='#ff4444'), row=1, col=1)
 
-            # ✅ BANDE BOLLINGER sul grafico candele
-            fig.add_trace(go.Scatter(
-                x=df_last_hour.index, y=df_last_hour['BBU'], 
-                line=dict(color='#00ccff', width=1.5), 
-                name='BBU', opacity=0.7), row=1, col=1
-            )
-            fig.add_trace(go.Scatter(
-                x=df_last_hour.index, y=df_last_hour['BBM'], 
-                line=dict(color='#ffaa00', width=2), 
-                name='BBM', opacity=0.8), row=1, col=1
-            )
-            fig.add_trace(go.Scatter(
-                x=df_last_hour.index, y=df_last_hour['BBL'], 
-                line=dict(color='#00ccff', width=1.5), 
-                name='BBL', opacity=0.7, fill='tonexty',
-                fillcolor='rgba(0, 204, 255, 0.15)',  # ✅ Area celestina tra BBM-BBL
-                showlegend=False), row=1, col=1
-            )
+        # ✅ BANDE BOLLINGER sul grafico candele
+        fig.add_trace(go.Scatter(
+            x=df_last_hour.index, y=df_last_hour['BBU'], 
+            line=dict(color='#00ccff', width=1.5), 
+            name='BBU', opacity=0.7), row=1, col=1
+        )
+        fig.add_trace(go.Scatter(
+            x=df_last_hour.index, y=df_last_hour['BBM'], 
+            line=dict(color='#ffaa00', width=2), 
+            name='BBM', opacity=0.8), row=1, col=1
+        )
+        fig.add_trace(go.Scatter(
+            x=df_last_hour.index, y=df_last_hour['BBL'], 
+            line=dict(color='#00ccff', width=1.5), 
+            name='BBL', opacity=0.7, fill='tonexty',
+            fillcolor='rgba(0, 204, 255, 0.15)',  # ✅ Area celestina tra BBM-BBL
+            showlegend=False), row=1, col=1
+        )
             
-            # Legenda Bollinger
-            fig.add_annotation(x=0.02, y=0.98, xref="paper", yref="paper", 
-                               text="💙 BBANDS", showarrow=False, font=dict(size=12),
-                               bgcolor="rgba(0,204,255,0.2)", bordercolor="#00ccff")
+        # Legenda Bollinger
+        fig.add_annotation(x=0.02, y=0.98, xref="paper", yref="paper", text="💙 BBANDS", showarrow=False, font=dict(size=12), bgcolor="rgba(0,204,255,0.2)", bordercolor="#00ccff")
         
         # RSI + LIVELLI
         fig.add_trace(go.Scatter(x=df_last_hour.index, y=df_last_hour['RSI'], 
