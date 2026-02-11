@@ -11,8 +11,8 @@ import requests
 from datetime import datetime, time
 
 # **CONFIG TELEGRAM** (metti nella sidebar)
-TELEGRAM_TOKEN = st.secrets["telegram_token"]
-TELEGRAM_CHAT_ID = st.secrets["telegram_chat_id"]
+TELEGRAM_TOKEN = st.secrets["TELEGRAM_TOKEN"]
+TELEGRAM_CHAT_ID = st.secrets["TELEGRAM_CHAT_ID"]
 
 def send_telegram_signal(signal_type, pair, price, rsi, macd):
     """Invia notifica Telegram completa"""
