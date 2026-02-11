@@ -90,8 +90,8 @@ with st.sidebar:
             ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"], 
             index=0
         )
-        st.session_state['rsi_buy'] = st.slider("RSI Buy", 20, 40, 30)
-        st.session_state['rsi_sell'] = st.slider("RSI Sell", 60, 80, 70)
+        #st.session_state['rsi_buy'] = st.slider("RSI Buy", 20, 40, 30)
+        #st.session_state['rsi_sell'] = st.slider("RSI Sell", 60, 80, 70)
 
             # ✅ TASTO ESCI (rosso)
         if st.button("🔴 **ESCI**", type="secondary", use_container_width=True):
@@ -106,10 +106,7 @@ with st.sidebar:
             st.rerun()
 
         # ✅ Toggle per attivare/disattivare scanner
-        st.session_state.scanner = st.toggle(
-            "🔍 **Attiva Scanner Forex**", 
-            value=st.session_state.get('scanner', False)
-        )
+        #st.session_state.scanner = st.toggle("🔍 **Attiva Scanner Forex**", value=st.session_state.get('scanner', False))
     
     # **SESSIONI MERCATO FOREX** (SENZA import nella sidebar)
     if st.session_state.get('connected', False):
