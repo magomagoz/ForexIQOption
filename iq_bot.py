@@ -244,11 +244,11 @@ if st.session_state.get('connected', False):
 
     col1, col2, col3 = st.columns(3)
     with col1: 
-        st.session_state.rsi_buy = st.number_input("🟢 RSI Buy", value=30, min_value=10, max_value=40)
+        st.session_state.rsi_buy = st.number_input("🟢 RSI Buy", value=30, min_value=10, max_value=45)
     with col2: 
-        st.session_state.rsi_sell = st.number_input("🔴 RSI Sell", value=70, min_value=60, max_value=90)
+        st.session_state.rsi_sell = st.number_input("🔴 RSI Sell", value=70, min_value=55, max_value=90)
     with col3: 
-        st.session_state.amount = st.number_input("💵 Importo €", value=1, min_value=1, max_value=100)
+        st.session_state.amount = st.number_input("💵 Importo €", value=100, min_value=1, max_value=1000)
     
     # 🔄 SCANNER + TRADING (SEZIONE 4)
     if st.session_state.scanner:
@@ -367,11 +367,11 @@ if st.session_state.get('connected', False):
         
     # ✅ TABELLA SCANNER
     st.subheader("🔍 **SCANNER FOREX**")
-    if st.session_state.scanner:
+    if st.session_state.scanner_
         scanner_df = pd.DataFrame(st.session_state.scanner_data).T
         scanner_df.reset_index(inplace=True)
         scanner_df.rename(columns={'index': 'PAIR'}, inplace=True)
-        scanner_df = scanner_df[['pair', 'price', 'rsi', 'signal']]
+        scanner_df = scanner_df[['PAIR', 'price', 'rsi', 'signal']]
         st.dataframe(scanner_df, use_container_width=True, height=400, hide_index=True)
         
     # ✅ TRADES LIVE
