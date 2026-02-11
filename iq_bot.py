@@ -190,27 +190,32 @@ with st.sidebar:
             st.success("✅ Pulito!")
             st.rerun()
 
-# **SCANNER MULTI-VALUTE ogni 60s + GRAFICO SINGOLO separato**
+# **SCANNER COMPLETO** (sostituisci dalle righe 170-350)
 ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"]
 
-# **SCANNER BACKGROUND CON POPUP ALERT**
 if st.session_state.get('connected', False):
+    # ✅ INIZIALIZZAZIONE UNA VOLTA SOLA
     if 'scanner_data' not in st.session_state:
-        st.session_state['scanner_data'] = {}
-        if st.session_state.get('scanner_last_update', 0) > 0:
-            last_scan = datetime.fromtimestamp(st.session_state['scanner_last_update']).strftime("%H:%M:%S")
-            st.caption(f"🕐 Scanner ultimo update: **{last_scan}**")
-        st.session_state['scanner_alerts'] = []  # ✅ Nuovi alert scanner
+        st.session_state.scanner_data = {}
+    if 'scanner_last_update' not in st.session_state:
+        st.session_state.scanner_last_update = 0
+    if 'scanner_alerts' not in st.session_state:
+        st.session_state.scanner_alerts = []
     
+    # ✅ STATUS SCANNER
+    last_scan = datetime.fromtimestamp(st.session_state.scanner_last_update).strftime("%H:%M:%S")
+    st.caption(f"🕐 Scanner ultimo update: **{last_scan}**")
+    
+    # ✅ SCANNER OGNI 60s
     current_time = time_module.time()
-    if current_time - st.session_state['scanner_last_update'] > 60:
-        spinner_placeholder = st.empty()
-        with spinner_placeholder.container():
-            st.spinner("🔍 Scanning globale...")
+    if current_time - st.session_state.scanner_last_update > 60:
+        placeholder = st.empty()
+        with placeholder.container():
+            st.spinner("🔍 Scanning 10 valute...")
         
         Iq = st.session_state['iq']
-        st.session_state['scanner_data'] = {}
-        st.session_state['scanner_alerts'] = []  # ✅ Reset alert
+        st.session_state.scanner_data = {}
+        st.session_state.scanner_alerts = []
         
         for pair in ALL_PAIRS:
             try:
@@ -230,50 +235,46 @@ if st.session_state.get('connected', False):
                 signal = "⚪ ATTESA"
                 if latest_rsi < 30 and macd_bullish:
                     signal = "🟢 COMPRA"
-                    st.session_state['scanner_alerts'].append({
+                    st.session_state.scanner_alerts.append({
                         'pair': pair, 'type': '🟢 COMPRA', 'price': f"{df['close'].iloc[-1]:.5f}",
                         'rsi': f"{latest_rsi:.1f}"
                     })
                 elif latest_rsi > 70 and not macd_bullish:
                     signal = "🔴 VENDI"
-                    st.session_state['scanner_alerts'].append({
+                    st.session_state.scanner_alerts.append({
                         'pair': pair, 'type': '🔴 VENDI', 'price': f"{df['close'].iloc[-1]:.5f}",
                         'rsi': f"{latest_rsi:.1f}"
                     })
                 
-                # **DENTRO il loop FOR pair in ALL_PAIRS:**
-                st.session_state['scanner_data'][pair] = {
+                st.session_state.scanner_data[pair] = {
                     'price': f"{df['close'].iloc[-1]:.5f}",
                     'rsi': f"{latest_rsi:.1f}",
                     'signal': signal,
-                    'last_scan': datetime.now().strftime("%H:%M:%S")  # ✅ ORA SCANSIONE
+                    'last_scan': datetime.now().strftime("%H:%M:%S")
                 }
-                
             except:
-                st.session_state['scanner_data'][pair] = {'price': '❌', 'rsi': '❌', 'signal': 'ERROR'}
+                st.session_state.scanner_data[pair] = {'price': '❌', 'rsi': '❌', 'signal': 'ERROR'}
         
-        st.session_state['scanner_last_update'] = current_time
-        spinner_placeholder.success("✅ Scanner aggiornato!")
-
-    # **MOSTRA TABELLA SCANNER SENZA INDICE NUMERICO**
+        st.session_state.scanner_last_update = current_time
+        placeholder.success("✅ Scanner aggiornato!")
+    
+    # ✅ TABELLA SCANNER
     st.subheader("🔍 **SCANNER 10 VALUTE**")
-    if st.session_state.get('scanner_data'):
-        scanner_df = pd.DataFrame(st.session_state['scanner_data']).T
+    if st.session_state.scanner_
+        scanner_df = pd.DataFrame(st.session_state.scanner_data).T
         scanner_df.reset_index(inplace=True)
         scanner_df.rename(columns={'index': 'PAIR'}, inplace=True)
-        scanner_df = scanner_df[['PAIR', 'price', 'rsi', 'signal', 'last_scan']]  # ✅ + last_scan
+        scanner_df = scanner_df[['PAIR', 'price', 'rsi', 'signal', 'last_scan']]
         st.dataframe(scanner_df, use_container_width=True, height=400, hide_index=True)
-        
-    Iq = st.session_state['iq']
-
- # **POPUP ALERT SCANNER** (dopo st.dataframe(scanner_df))
-if st.session_state.get('scanner_alerts'):
-    for alert in st.session_state['scanner_alerts']:
-        col1, col2 = st.columns([3,1])
-        with col1:
-            if alert['type'] == '🟢 COMPRA':
+    
+    # ✅ ALERT POPUP
+    if st.session_state.scanner_alerts:
+        for alert in st.session_state.scanner_alerts:
+            col1, col2 = st.columns([3,1])
+            with col1:
+                color = "#00ff88" if "COMPRA" in alert['type'] else "#ff4444"
                 st.markdown(f"""
-                <div style='background: linear-gradient(45deg, #00ff88, #00cc66); 
+                <div style='background: linear-gradient(45deg, {color}, {color}); 
                 padding: 25px; border-radius: 20px; border: 4px solid #00ff00; 
                 text-align: center; font-size: 24px; font-weight: bold; color: black;'>
                     🚀 **{alert['type']} {alert['pair'].upper()}**
@@ -282,27 +283,11 @@ if st.session_state.get('scanner_alerts'):
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
-            else:  # SELL
-                if alert['type'] == '🔴 VENDI':
-                    st.markdown(f"""
-                    <div style='background: linear-gradient(45deg, #ff4444, #cc0000); 
-                    padding: 25px; border-radius: 20px; border: 4px solid #ff0000; 
-                    text-align: center; font-size: 24px; font-weight: bold; color: white;'>
-                        🔻 **{alert['type']} {alert['pair'].upper()}**
-                        <div style='font-size: 28px; margin-top: 10px;'>
-                            💰 {alert['price']} | 📊 RSI: {alert['rsi']}
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-        
-        with col2:
-            if st.button("✅ OK", key=f"alert_{alert['pair']}_{len(st.session_state.get('scanner_alerts',[]))}"):  # ✅ AGGIUNGI :
-                # Rimuovi alert specifico
-                st.session_state['scanner_alerts'] = [a for a in st.session_state['scanner_alerts'] 
-                                                   if a['pair'] != alert['pair']]
-                st.rerun()
-                
-    st.markdown("---")
+            with col2:
+                if st.button("✅ OK", key=f"alert_{alert['pair']}"):
+                    st.session_state.scanner_alerts = [a for a in st.session_state.scanner_alerts if a['pair'] != alert['pair']]
+                    st.rerun()
+        st.markdown("---")
 
     # **LIVE STATUS - ROBUSTO**
     st.subheader("📈 LIVE STATUS")
