@@ -240,7 +240,7 @@ if st.session_state.get('connected', False):
         st.session_state['scanner_last_update'] = 0
     
     # Scanner ogni 60s
-    current_time = time.time()
+    current_time = time_module.time()
     if current_time - st.session_state['scanner_last_update'] > 60:
         # ✅ Spinner che si chiude
         spinner_placeholder = st.empty()
