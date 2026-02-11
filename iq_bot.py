@@ -235,10 +235,12 @@ if st.session_state.get('connected', False):
                         'rsi': f"{latest_rsi:.1f}"
                     })
                 
+                # **DENTRO il loop FOR pair in ALL_PAIRS:**
                 st.session_state['scanner_data'][pair] = {
                     'price': f"{df['close'].iloc[-1]:.5f}",
                     'rsi': f"{latest_rsi:.1f}",
-                    'signal': signal
+                    'signal': signal,
+                    'last_scan': datetime.now().strftime("%H:%M:%S")  # ✅ ORA SCANSIONE
                 }
                 
             except:
@@ -253,8 +255,8 @@ if st.session_state.get('connected', False):
         scanner_df = pd.DataFrame(st.session_state['scanner_data']).T
         scanner_df.reset_index(inplace=True)
         scanner_df.rename(columns={'index': 'PAIR'}, inplace=True)
-        scanner_df = scanner_df[['PAIR', 'price', 'rsi', 'signal']]
-        st.dataframe(scanner_df, use_container_width=True, height=400, hide_index=True)  # ✅ hide_index=True
+        scanner_df = scanner_df[['PAIR', 'price', 'rsi', 'signal', 'last_scan']]  # ✅ + last_scan
+        st.dataframe(scanner_df, use_container_width=True, height=400, hide_index=True)
         
     Iq = st.session_state['iq']
 
