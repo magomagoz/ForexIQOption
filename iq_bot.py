@@ -157,25 +157,33 @@ with st.sidebar:
             </div>
             """, unsafe_allow_html=True)
        
-        # **TEST ALERT BUTTON** (aggiungi in FONDO sidebar dopo st.markdown("---"))
+        # **TEST COMPLETO (Popup + Telegram)** - FONDO sidebar
         with st.sidebar:
             st.markdown("---")
             #st.markdown("### 🧪 **TEST & DEBUG**")
             
-            if st.button("🔔 **TEST ALERT POPUP**", key="test_alert", help="Verifica popup funzionante"):
-                # Simula alert EURUSD BUY + GBPUSD SELL
+            if st.button("🚀 **TEST COMPLETO**", 
+                         key="test_full", help="Simula alert + Telegram"):
+                
+                # 1. SIMULA 2 ALERT POPUP
                 test_alerts = [
                     {'pair': 'EURUSD', 'type': '🟢 BUY', 'price': '1.08542', 'rsi': '28.4'},
                     {'pair': 'GBPUSD', 'type': '🔴 SELL', 'price': '1.26580', 'rsi': '72.1'}
                 ]
                 st.session_state['scanner_alerts'] = test_alerts
-                st.success("✅ TEST ALERT attivato! Controlla popup sotto Scanner!")
+                
+                # 2. INVIA 2 MESSAGGI TELEGRAM
+                send_telegram_signal("🟢 COMPRA", "EURUSD", 1.08542, 28.4, 0.00015)
+                send_telegram_signal("🔴 VENDI", "GBPUSD", 1.26580, 72.1, -0.00023)
+                
+                st.success("✅ **TEST COMPLETO OK!**\n🔔 ALERT\n📱 MESSAGGIO TELEGRAM!")
+                st.balloons()
                 st.rerun()
             
-            # ✅ Pulsante per pulire alert (bonus)
-            if st.button("🗑️ **PULISCI ALERT**", key="clear_alerts", help="Rimuovi tutti gli alert"):
+            # Bonus: pulisci
+            if st.button("🗑️ **PULISCI ALERT**", key="clear_all"):
                 st.session_state['scanner_alerts'] = []
-                st.success("✅ Alert puliti!")
+                st.success("✅ Tutto pulito!")
                 st.rerun()
 
 # **SCANNER MULTI-VALUTE ogni 60s + GRAFICO SINGOLO separato**
