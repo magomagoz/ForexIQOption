@@ -284,11 +284,14 @@ if st.session_state.get('connected', False):
         st.session_state['scanner_last_update'] = current_time
         spinner_placeholder.success("✅ Scanner aggiornato!")  # ✅ Chiude spinner
 
-    # **MOSTRA TABELLA SCANNER**
+    # **MOSTRA TABELLA SCANNER CON COLONNA VALUTE**
     st.subheader("🔍 **SCANNER 10 VALUTE**")
     if st.session_state.get('scanner_data'):
         scanner_df = pd.DataFrame(st.session_state['scanner_data']).T
-        st.dataframe(scanner_df, use_container_width=True, height=400, hide_index=True)
+        scanner_df.reset_index(inplace=True)  # ✅ RIATTIVA INDICE (nomi valute)
+        scanner_df.rename(columns={'index': 'PAIR'}, inplace=True)  # ✅ Rinomina
+        scanner_df = scanner_df[['PAIR', 'price', 'rsi', 'signal']]  # ✅ Ordine colonne
+        st.dataframe(scanner_df, use_container_width=True, height=400)
         
     Iq = st.session_state['iq']
 
@@ -327,11 +330,22 @@ if st.session_state.get('connected', False):
         df['from'] = pd.to_datetime(df['from'], unit='s')
         df.set_index('from', inplace=True)
         
-        # INDICATORI
+        # INDICATORI + BOLLINGER
         df['RSI'] = ta.rsi(df['close'], length=14)
+        
+        # ✅ BANDE BOLLINGER (20 periodi, 2 deviazioni)
+        bbands = ta.bbands(df['close'], length=20, std=2.0)
+        df['BBU'] = bbands['BBU_20_2.0']  # Banda superiore
+        df['BBM'] = bbands['BBM_20_2.0']  # Media mobile
+        df['BBL'] = bbands['BBL_20_2.0']  # Banda inferiore
+        
         macd = ta.macd(df['close'])
         df['MACD'] = macd['MACD_12_26_9']
         df['MACD_signal'] = macd['MACDs_12_26_9']
+        
+        # SEGNALI (invariati)
+        df['prev_MACD'] = df['MACD'].shift(1)
+        df['prev_signal'] = df['MACD_signal'].shift(1)
         
         # SEGNALI
         df['prev_MACD'] = df['MACD'].shift(1)
@@ -392,7 +406,7 @@ if st.session_state.get('connected', False):
         df_last_hour = df.tail(60).copy()
         fig = make_subplots(
             rows=3, cols=1,
-            subplot_titles=(f'💹 PREZZO', 'RSI', 'MACD'),
+            subplot_titles=(f'💹 TREND PREZZO CON BB', 'INDICATORE RSI', 'INDICATORE MACD'),
             row_heights=[0.5, 0.175, 0.175],
             vertical_spacing=0.05,
             shared_xaxes=True
@@ -404,6 +418,30 @@ if st.session_state.get('connected', False):
             high=df_last_hour['max'], low=df_last_hour['min'], 
             close=df_last_hour['close'], increasing_line_color='#00ff88', 
             decreasing_line_color='#ff4444'), row=1, col=1)
+
+            # ✅ BANDE BOLLINGER sul grafico candele
+            fig.add_trace(go.Scatter(
+                x=df_last_hour.index, y=df_last_hour['BBU'], 
+                line=dict(color='#00ccff', width=1.5), 
+                name='BBU', opacity=0.7), row=1, col=1
+            )
+            fig.add_trace(go.Scatter(
+                x=df_last_hour.index, y=df_last_hour['BBM'], 
+                line=dict(color='#ffaa00', width=2), 
+                name='BBM', opacity=0.8), row=1, col=1
+            )
+            fig.add_trace(go.Scatter(
+                x=df_last_hour.index, y=df_last_hour['BBL'], 
+                line=dict(color='#00ccff', width=1.5), 
+                name='BBL', opacity=0.7, fill='tonexty',
+                fillcolor='rgba(0, 204, 255, 0.15)',  # ✅ Area celestina tra BBM-BBL
+                showlegend=False), row=1, col=1
+            )
+            
+            # Legenda Bollinger
+            fig.add_annotation(x=0.02, y=0.98, xref="paper", yref="paper", 
+                               text="💙 BBANDS", showarrow=False, font=dict(size=12),
+                               bgcolor="rgba(0,204,255,0.2)", bordercolor="#00ccff")
         
         # RSI + LIVELLI
         fig.add_trace(go.Scatter(x=df_last_hour.index, y=df_last_hour['RSI'], 
