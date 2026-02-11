@@ -19,9 +19,9 @@ def send_telegram_signal(signal_type, pair, price, rsi, macd):
     timestamp = datetime.now().strftime("%H:%M:%S")
     
     message = f"""
-*SENTINEL AI*
+🚀 *SENTINEL AI* 🚀
 
-*🚀 {signal_type} - {pair.upper()}*
+*{signal_type} - {pair.upper()}*
 💰 *Prezzo Entrata:* `{price:.5f}`
 📊 *RSI:* `{rsi:.1f}`
 🔥 *MACD:* `{macd:.5f}`
@@ -252,7 +252,7 @@ if st.session_state.get('connected', False):
         
         for pair in ALL_PAIRS:
             try:
-                candles = Iq.get_candles(pair, 60, 50, time.time())
+                candles = Iq.get_candles(pair, 60, 50, time_module.time())
                 df = pd.DataFrame(candles)
                 df['from'] = pd.to_datetime(df['from'], unit='s')
                 df.set_index('from', inplace=True)
@@ -322,7 +322,7 @@ if st.session_state.get('connected', False):
     
     try:
         # CARICA DATI COPPIA SCELTA (SOLO 1 try!)
-        candles = Iq.get_candles(pair, 60, 150, time.time())
+        candles = Iq.get_candles(pair, 60, 150, time_module.time())
         df = pd.DataFrame(candles)
         df['from'] = pd.to_datetime(df['from'], unit='s')
         df.set_index('from', inplace=True)
@@ -434,20 +434,19 @@ if st.session_state.get('connected', False):
     except Exception as e:
         st.error(f"❌ Dati {pair}: {e}")
 
-    # **CHECK ESITI dopo 1 minuto**
     # **CHECK ESITI dopo 1 minuto - CORRETTO**
     if 'signal_history' in st.session_state:
         current_time = time_module.time()
         for i, signal in enumerate(st.session_state['signal_history']):
             if signal['outcome'] == '⏳ PENDENTE':
-                # ✅ USA time.time() invece di datetime
+                # ✅ USA time_module.time() invece di datetime
                 signal_timestamp = datetime.strptime(signal['time'], '%H:%M:%S').timestamp()
                 time_diff = current_time - signal_timestamp
                 
                 if time_diff >= 60:  # 1 minuto passato
                     try:
                         Iq = st.session_state['iq']
-                        candles = Iq.get_candles(signal['pair'], 60, 2, time.time())
+                        candles = Iq.get_candles(signal['pair'], 60, 2, time_module.time())
                         latest_price = pd.DataFrame(candles)['close'].iloc[-1]
                         entry_price = float(signal['price_entry'])
                         
