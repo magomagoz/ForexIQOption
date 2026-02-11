@@ -159,7 +159,7 @@ with st.sidebar:
         
         st.markdown("---")
         
-# **POPUP con ❌ INTEGRATO e TELEGRAM**
+# **POPUP con TASTO CHIUDI FUNZIONANTE**
 if st.session_state.get('connected', False) and 'df' in st.session_state:
     df = st.session_state['df']
     pair = st.session_state.get('pair', 'EURUSD')
@@ -171,7 +171,7 @@ if st.session_state.get('connected', False) and 'df' in st.session_state:
         buy_signals = df[df['BUY_SIGNAL'] == True].tail(1)
         sell_signals = df[df['SELL_SIGNAL'] == True].tail(1)
         
-        # **POPUP BUY con ❌ DENTRO**
+        # **POPUP BUY**
         if not buy_signals.empty:
             latest_buy = buy_signals.iloc[-1]
             st.markdown(f"""
@@ -180,22 +180,21 @@ if st.session_state.get('connected', False) and 'df' in st.session_state:
             border: 5px solid #00ff00; z-index: 1000; font-size: 28px; font-weight: bold;
             box-shadow: 0 20px 50px rgba(102,204,0,0.7); text-align: center; color: black; 
             min-width: 450px;'>
-                <button onclick="document.getElementById('buy_popup').style.display='none'; 
-                                window.parent.document.getElementById('close_buy_popup').click();"
-                style='position: absolute; top: 12px; right: 15px; background: rgba(255,68,68,0.8); 
-                       border: none; border-radius: 50%; width: 45px; height: 45px; font-size: 24px; 
-                       color: white; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3);'>
-                ❌</button>
                 <div style='font-size: 36px; margin-bottom: 15px;'>🚀 **BUY {pair.upper()}**</div>
                 <div><b>💰 Prezzo Entrata:</b> <span style='color: #00ff00; font-size: 32px;'>{latest_buy['close']:.5f}</span></div>
                 <div style='font-size: 34px; color: #00ff00; margin-top: 15px;'>**ESITO FRA 1 MINUTO!**</div>
             </div>
             """, unsafe_allow_html=True)
             
-            # TELEGRAM
+            col1, col2, col3 = st.columns([1,2,1])
+            with col2:
+                if st.button("❌ **CHIUDI**", key="close_popup_buy", help="Chiudi popup"):
+                    st.session_state['hide_popup'] = True
+                    st.rerun()
+            
             send_telegram_signal("🟢 COMPRA", pair, latest_buy['close'], latest_buy['RSI'], latest_buy['MACD'])
         
-        # **POPUP SELL con ❌ DENTRO**
+        # **POPUP SELL**  
         elif not sell_signals.empty:
             latest_sell = sell_signals.iloc[-1]
             st.markdown(f"""
@@ -204,24 +203,21 @@ if st.session_state.get('connected', False) and 'df' in st.session_state:
             border: 5px solid #ff0000; z-index: 1000; font-size: 28px; font-weight: bold;
             box-shadow: 0 20px 50px rgba(255,0,0,0.7); text-align: center; color: white; 
             min-width: 450px;'>
-                <button onclick="document.getElementById('sell_popup').style.display='none'; 
-                                window.parent.document.getElementById('close_sell_popup').click();"
-                style='position: absolute; top: 12px; right: 15px; background: rgba(255,255,255,0.9); 
-                       border: none; border-radius: 50%; width: 45px; height: 45px; font-size: 24px; 
-                       color: #ff4444; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3);'>
-                ❌</button>
                 <div style='font-size: 36px; margin-bottom: 15px;'>🔻 **SELL {pair.upper()}**</div>
                 <div><b>💰 Prezzo Entrata:</b> <span style='color: #ffaaaa; font-size: 32px;'>{latest_sell['close']:.5f}</span></div>
                 <div style='font-size: 34px; color: #ffaaaa; margin-top: 15px;'>**ESITO FRA 1 MINUTO!**</div>
             </div>
             """, unsafe_allow_html=True)
             
-            # TELEGRAM
+            col1, col2, col3 = st.columns([1,2,1])
+            with col2:
+                if st.button("❌ **CHIUDI**", key="close_popup_sell", help="Chiudi popup"):
+                    st.session_state['hide_popup'] = True
+                    st.rerun()
+            
             send_telegram_signal("🔴 VENDI", pair, latest_sell['close'], latest_sell['RSI'], latest_sell['MACD'])
 
 # **SCANNER MULTI-VALUTE ogni 60s + GRAFICO SINGOLO separato**
-
-# **ALL_PAIRS** (aggiungi PRIMA dello scanner)
 ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"]
 
 # **SCANNER BACKGROUND** (corretto)
