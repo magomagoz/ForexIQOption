@@ -305,21 +305,31 @@ if st.session_state.get('scanner_alerts'):
                 st.rerun()
                 
     st.markdown("---")
+
+    # **LIVE STATUS - ROBUSTO**
     st.subheader("📈 LIVE STATUS")
-    if st.session_state.get('connected', False) and 'df' in st.session_state:
-        df = st.session_state['df'].iloc[-1] if len(st.session_state['df']) > 0 else None
+    if (st.session_state.get('connected', False) and 
+        'df' in st.session_state and 
+        len(st.session_state['df']) > 0):
         
-    if df is not None:
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric("💰 PREZZO", f"{df['close']:.5f}", delta=None)
-        with col2:
-            st.metric("📊 RSI", f"{df['RSI']:.1f}", delta=None)
-        with col3:
-            st.metric("🔥 MACD", f"{df['MACD']:.5f}", delta=None)
-        with col4:
-            trend = "🟢 CRESCITA" if df['MACD'] > df['MACD_signal'] else "🔴 CALO"
-            st.metric("⚡ TREND", trend, delta=None)
+        df = st.session_state['df'].iloc[-1]  # Ultima riga
+        
+        # ✅ VERIFICA colonne esistono
+        if 'close' in df and 'RSI' in df and 'MACD' in df and 'MACD_signal' in df:
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("💰 PREZZO", f"{df['close']:.5f}", delta=None)
+            with col2:
+                st.metric("📊 RSI", f"{df['RSI']:.1f}", delta=None)
+            with col3:
+                st.metric("🔥 MACD", f"{df['MACD']:.5f}", delta=None)
+            with col4:
+                trend = "🟢 CRESCITA" if df['MACD'] > df['MACD_signal'] else "🔴 CALO"
+                st.metric("⚡ TREND", trend, delta=None)
+        else:
+            st.warning("⏳ Caricamento dati grafico...")
+    else:
+        st.info("🔌 Connettiti e seleziona una coppia per vedere Live Status")
 
 st.markdown("---")
 
