@@ -437,7 +437,7 @@ if st.session_state.get('connected', False):
     # **CHECK ESITI dopo 1 minuto**
     # **CHECK ESITI dopo 1 minuto - CORRETTO**
     if 'signal_history' in st.session_state:
-        current_time = time.time()
+        current_time = time_module.time()
         for i, signal in enumerate(st.session_state['signal_history']):
             if signal['outcome'] == '⏳ PENDENTE':
                 # ✅ USA time.time() invece di datetime
