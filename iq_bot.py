@@ -44,9 +44,13 @@ def send_telegram_signal(signal_type, pair, price, rsi, macd):
 
 st.set_page_config(page_title="Sentinel AI", page_icon="🚀", layout="wide")
 
-# ✅ COUNTER per refresh automatico ogni 60s
-if 'refresh_counter' not in st.session_state:
-    st.session_state.refresh_counter = 0
+# ✅ REFRESH REALE ogni 60s
+if 'last_refresh' not in st.session_state:
+    st.session_state.last_refresh = 0
+
+if time_module.time() - st.session_state.last_refresh > 60:
+    st.session_state.last_refresh = time_module.time()
+    st.rerun()
 
 st.session_state.refresh_counter += 1
 if st.session_state.refresh_counter % 60 == 0:  # Ogni 60 iterazioni
@@ -165,34 +169,26 @@ with st.sidebar:
             </div>
             """, unsafe_allow_html=True)
        
-        # **TEST COMPLETO (Popup + Telegram)** - FONDO sidebar
-        with st.sidebar:
-            st.markdown("---")
-            #st.markdown("### 🧪 **TEST & DEBUG**")
-            
-            if st.button("🚀 **TEST COMPLETO**", 
-                         key="test_full", help="Simula alert + Telegram"):
-                
-                # 1. SIMULA 2 ALERT POPUP
-                test_alerts = [
-                    {'pair': 'EURUSD', 'type': '🟢 BUY', 'price': '1.08542', 'rsi': '28.4'},
-                    {'pair': 'GBPUSD', 'type': '🔴 SELL', 'price': '1.26580', 'rsi': '72.1'}
-                ]
-                st.session_state['scanner_alerts'] = test_alerts
-                
-                # 2. INVIA 2 MESSAGGI TELEGRAM
-                send_telegram_signal("🟢 COMPRA", "EURUSD", 1.08542, 28.4, 0.00015)
-                send_telegram_signal("🔴 VENDI", "GBPUSD", 1.26580, 72.1, -0.00023)
-                
-                st.success("✅ **TEST COMPLETO OK!**\n🔔 ALERT\n📱 MESSAGGIO TELEGRAM!")
-                st.balloons()
-                st.rerun()
-            
-            # Bonus: pulisci
-            if st.button("🗑️ **PULISCI ALERT**", key="clear_all"):
-                st.session_state['scanner_alerts'] = []
-                st.success("✅ Tutto pulito!")
-                st.rerun()
+        # **TEST COMPLETO** - FONDO sidebar (FUORI dal blocco sessioni)
+        st.markdown("---")
+        st.markdown("### 🧪 **TEST & DEBUG**")
+        
+        if st.button("🚀 **TEST COMPLETO** (Popup+Telegram)", key="test_full"):
+            test_alerts = [
+                {'pair': 'EURUSD', 'type': '🟢 COMPRA', 'price': '1.08542', 'rsi': '28.4'},
+                {'pair': 'GBPUSD', 'type': '🔴 VENDI', 'price': '1.26580', 'rsi': '72.1'}
+            ]
+            st.session_state['scanner_alerts'] = test_alerts
+            send_telegram_signal("🟢 COMPRA", "EURUSD", 1.08542, 28.4, 0.00015)
+            send_telegram_signal("🔴 VENDI", "GBPUSD", 1.26580, 72.1, -0.00023)
+            st.success("✅ TEST OK! Popup+Telegram!")
+            st.balloons()
+            st.rerun()
+        
+        if st.button("🗑️ **PULISCI**", key="clear_all"):
+            st.session_state['scanner_alerts'] = []
+            st.success("✅ Pulito!")
+            st.rerun()
 
 # **SCANNER MULTI-VALUTE ogni 60s + GRAFICO SINGOLO separato**
 ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"]
@@ -201,7 +197,9 @@ ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD
 if st.session_state.get('connected', False):
     if 'scanner_data' not in st.session_state:
         st.session_state['scanner_data'] = {}
-        st.session_state['scanner_last_update'] = 0
+        if st.session_state.get('scanner_last_update', 0) > 0:
+            last_scan = datetime.fromtimestamp(st.session_state['scanner_last_update']).strftime("%H:%M:%S")
+            st.caption(f"🕐 Scanner ultimo update: **{last_scan}**")
         st.session_state['scanner_alerts'] = []  # ✅ Nuovi alert scanner
     
     current_time = time_module.time()
