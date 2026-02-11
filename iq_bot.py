@@ -495,7 +495,7 @@ if st.session_state.get('connected', False):
                     except:
                         st.session_state['signal_history'][i]['outcome'] = '❓ ERRORE'
  
-    # **CRONOLOGIA SEGNALI IN FONDO**
+    # **CRONOLOGIA SEGNALI IN FONDO - NUMERAZIONE DA 1**
     st.markdown("---")
     st.subheader("📋 CRONOLOGIA SEGNALI")
     
@@ -504,6 +504,11 @@ if st.session_state.get('connected', False):
         # ORDINA colonne
         cols = ['time', 'pair', 'type', 'price_entry', 'rsi', 'macd', 'outcome']
         signals_df = signals_df[cols]
-        st.dataframe(signals_df, use_container_width=True, height=350)
+        
+        # ✅ RESET INDEX DA 1 (non da 0)
+        signals_df.reset_index(drop=True, inplace=True)
+        signals_df.index += 1  # Inizia da 1 invece di 0
+        
+        st.dataframe(signals_df, use_container_width=True, height=350, hide_index=False)
     else:
         st.info("⏳ Nessun segnale generato")
