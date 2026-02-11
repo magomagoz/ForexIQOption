@@ -276,16 +276,16 @@ if st.session_state.get('scanner_alerts'):
                 """, unsafe_allow_html=True)
             else:  # SELL
                 if alert['type'] == '🔴 VENDI':
-                st.markdown(f"""
-                <div style='background: linear-gradient(45deg, #ff4444, #cc0000); 
-                padding: 25px; border-radius: 20px; border: 4px solid #ff0000; 
-                text-align: center; font-size: 24px; font-weight: bold; color: white;'>
-                    🔻 **{alert['type']} {alert['pair'].upper()}**
-                    <div style='font-size: 28px; margin-top: 10px;'>
-                        💰 {alert['price']} | 📊 RSI: {alert['rsi']}
+                    st.markdown(f"""
+                    <div style='background: linear-gradient(45deg, #ff4444, #cc0000); 
+                    padding: 25px; border-radius: 20px; border: 4px solid #ff0000; 
+                    text-align: center; font-size: 24px; font-weight: bold; color: white;'>
+                        🔻 **{alert['type']} {alert['pair'].upper()}**
+                        <div style='font-size: 28px; margin-top: 10px;'>
+                            💰 {alert['price']} | 📊 RSI: {alert['rsi']}
+                        </div>
                     </div>
-                </div>
-                """, unsafe_allow_html=True)
+                    """, unsafe_allow_html=True)
         
         with col2:
             if st.button("✅ OK", key=f"alert_{alert['pair']}_{len(st.session_state.get('scanner_alerts',[]))}"):  # ✅ AGGIUNGI :
