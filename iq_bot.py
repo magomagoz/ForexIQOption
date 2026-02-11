@@ -225,13 +225,13 @@ if st.session_state.get('connected', False):
                 if latest_rsi < 30 and macd_bullish:
                     signal = "🟢 COMPRA"
                     st.session_state['scanner_alerts'].append({
-                        'pair': pair, 'type': '🟢 BUY', 'price': f"{df['close'].iloc[-1]:.5f}",
+                        'pair': pair, 'type': '🟢 COMPRA', 'price': f"{df['close'].iloc[-1]:.5f}",
                         'rsi': f"{latest_rsi:.1f}"
                     })
                 elif latest_rsi > 70 and not macd_bullish:
                     signal = "🔴 VENDI"
                     st.session_state['scanner_alerts'].append({
-                        'pair': pair, 'type': '🔴 SELL', 'price': f"{df['close'].iloc[-1]:.5f}",
+                        'pair': pair, 'type': '🔴 VENDI', 'price': f"{df['close'].iloc[-1]:.5f}",
                         'rsi': f"{latest_rsi:.1f}"
                     })
                 
@@ -263,7 +263,7 @@ if st.session_state.get('scanner_alerts'):
     for alert in st.session_state['scanner_alerts']:
         col1, col2 = st.columns([3,1])
         with col1:
-            if alert['type'] == '🟢 BUY':
+            if alert['type'] == '🟢 COMPRA':
                 st.markdown(f"""
                 <div style='background: linear-gradient(45deg, #00ff88, #00cc66); 
                 padding: 25px; border-radius: 20px; border: 4px solid #00ff00; 
@@ -275,6 +275,7 @@ if st.session_state.get('scanner_alerts'):
                 </div>
                 """, unsafe_allow_html=True)
             else:  # SELL
+                if alert['type'] == '🔴 VENDI':
                 st.markdown(f"""
                 <div style='background: linear-gradient(45deg, #ff4444, #cc0000); 
                 padding: 25px; border-radius: 20px; border: 4px solid #ff0000; 
@@ -307,7 +308,7 @@ if st.session_state.get('scanner_alerts'):
         with col3:
             st.metric("🔥 MACD", f"{df['MACD']:.5f}", delta=None)
         with col4:
-            trend = "🟢 BULL" if df['MACD'] > df['MACD_signal'] else "🔴 BEAR"
+            trend = "🟢 CRESCITA" if df['MACD'] > df['MACD_signal'] else "🔴 CALO"
             st.metric("⚡ TREND", trend, delta=None)
 
 st.markdown("---")
@@ -478,7 +479,7 @@ if st.session_state.get('connected', False):
     if 'signal_history' in st.session_state:
         current_time = time_module.time()
         for i, signal in enumerate(st.session_state['signal_history']):
-            if signal['outcome'] == '⏳ PENDENTE':
+            if signal['outcome'] == '⏳ ATTESA ESITO':
                 # ✅ USA time_module.time() invece di datetime
                 signal_timestamp = datetime.strptime(signal['time'], '%H:%M:%S').timestamp()
                 time_diff = current_time - signal_timestamp
@@ -492,9 +493,9 @@ if st.session_state.get('connected', False):
                         
                         # CALCOLA ESITO
                         if signal['type'] == '🟢 BUY':
-                            outcome = "✅ WIN" if latest_price > entry_price else "❌ LOSS"
+                            outcome = "✅ VINTO" if latest_price > entry_price else "❌ PERSO"
                         else:  # SELL
-                            outcome = "✅ WIN" if latest_price < entry_price else "❌ LOSS"
+                            outcome = "✅ VINTO" if latest_price < entry_price else "❌ PERSO"
                         
                         st.session_state['signal_history'][i]['outcome'] = outcome
                         st.session_state['signal_history'][i]['price_exit'] = f"{latest_price:.5f}"
@@ -509,7 +510,7 @@ if st.session_state.get('connected', False):
     if 'signal_history' in st.session_state and st.session_state['signal_history']:
         signals_df = pd.DataFrame(st.session_state['signal_history'])
         # ORDINA colonne
-        cols = ['time', 'pair', 'type', 'price_entry', 'rsi', 'macd', 'outcome']
+        cols = ['Ora', 'Valuta', 'Azione', 'Prezzo di entrata', 'RSI', 'MACD', 'Esito']
         signals_df = signals_df[cols]
         
         # ✅ RESET INDEX DA 1 (non da 0)
