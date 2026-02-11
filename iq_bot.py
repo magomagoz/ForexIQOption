@@ -497,23 +497,6 @@ if st.session_state.get('connected', False):
                     except:
                         st.session_state['signal_history'][i]['outcome'] = '❓ ERRORE'
  
-    st.subheader("📋 **CRONOLOGIA SEGNALI**")
-    if 'signal_history' in st.session_state and st.session_state['signal_history']:
-        signals_df = pd.DataFrame(st.session_state['signal_history'])
-        signals_df = signals_df.rename(columns={
-            'time': 'Ora', 'pair': 'Valuta', 'type': 'Azione',
-            'price_entry': 'Prezzo Entrata', 'rsi': 'RSI', 
-            'macd': 'MACD', 'outcome': 'Esito'
-        })
-        signals_df.index += 1
-        signals_df.index.name = 'N°'
-        st.dataframe(signals_df, use_container_width=True, height=350)
-    else:
-        st.info("⏳ **Aspettando segnali scanner...**")
-
-    
-    
-    
     # **CRONOLOGIA SEGNALI - COLONNE CORRETTE**
     st.markdown("---")
     st.subheader("📋 CRONOLOGIA SEGNALI")
