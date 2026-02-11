@@ -159,6 +159,27 @@ with st.sidebar:
         
         st.markdown("---")
 
+        # **TEST ALERT BUTTON** (aggiungi in FONDO sidebar dopo st.markdown("---"))
+        with st.sidebar:
+            st.markdown("---")
+            st.markdown("### 🧪 **TEST & DEBUG**")
+            
+            if st.button("🔔 **TEST ALERT POPUP**", key="test_alert", help="Verifica popup funzionante"):
+                # Simula alert EURUSD BUY + GBPUSD SELL
+                test_alerts = [
+                    {'pair': 'EURUSD', 'type': '🟢 BUY', 'price': '1.08542', 'rsi': '28.4'},
+                    {'pair': 'GBPUSD', 'type': '🔴 SELL', 'price': '1.26580', 'rsi': '72.1'}
+                ]
+                st.session_state['scanner_alerts'] = test_alerts
+                st.success("✅ TEST ALERT attivato! Controlla popup sotto Scanner!")
+                st.rerun()
+            
+            # ✅ Pulsante per pulire alert (bonus)
+            if st.button("🗑️ **PULISCI ALERT**", key="clear_alerts", help="Rimuovi tutti gli alert"):
+                st.session_state['scanner_alerts'] = []
+                st.success("✅ Alert puliti!")
+                st.rerun()
+
 # **SCANNER MULTI-VALUTE ogni 60s + GRAFICO SINGOLO separato**
 ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"]
 
