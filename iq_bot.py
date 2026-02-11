@@ -265,7 +265,8 @@ if st.session_state.get('scanner_alerts'):
                 st.session_state['scanner_alerts'] = [a for a in st.session_state['scanner_alerts'] 
                                                    if a['pair'] != alert['pair']]
                 st.rerun()
-
+                
+    st.markdown("---")
     st.subheader("📈 LIVE STATUS")
     if st.session_state.get('connected', False) and 'df' in st.session_state:
         df = st.session_state['df'].iloc[-1] if len(st.session_state['df']) > 0 else None
