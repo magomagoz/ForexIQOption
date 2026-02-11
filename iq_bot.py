@@ -171,9 +171,9 @@ with st.sidebar:
        
         # **TEST COMPLETO** - FONDO sidebar (FUORI dal blocco sessioni)
         st.markdown("---")
-        st.markdown("### 🧪 **TEST & DEBUG**")
+        #st.markdown("### 🧪 **TEST & DEBUG**")
         
-        if st.button("🚀 **TEST COMPLETO** (Popup+Telegram)", key="test_full"):
+        if st.button("🚀 **TEST COMPLETO**", key="test_full"):
             test_alerts = [
                 {'pair': 'EURUSD', 'type': '🟢 COMPRA', 'price': '1.08542', 'rsi': '28.4'},
                 {'pair': 'GBPUSD', 'type': '🔴 VENDI', 'price': '1.26580', 'rsi': '72.1'}
@@ -185,7 +185,7 @@ with st.sidebar:
             st.balloons()
             st.rerun()
         
-        if st.button("🗑️ **PULISCI**", key="clear_all"):
+        if st.button("🗑️ **RESET**", key="clear_all"):
             st.session_state['scanner_alerts'] = []
             st.success("✅ Pulito!")
             st.rerun()
