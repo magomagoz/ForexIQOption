@@ -241,7 +241,7 @@ if st.session_state.get('connected', False):
                 st.session_state.scanner_data[pair] = {
                     'price': f"{df['close'].iloc[-1]:.5f}",
                     'rsi': f"{latest_rsi:.1f}",
-                    'signal': signal)
+                    'signal': 'signal'
                 }
             except:
                 st.session_state.scanner_data[pair] = {'price': '❌', 'rsi': '❌', 'signal': 'ERROR'}
