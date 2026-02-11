@@ -158,84 +158,26 @@ with st.sidebar:
             """, unsafe_allow_html=True)
         
         st.markdown("---")
-        
-# **POPUP con TASTO CHIUDI FUNZIONANTE**
-if st.session_state.get('connected', False) and 'df' in st.session_state:
-    df = st.session_state['df']
-    pair = st.session_state.get('pair', 'EURUSD')
-    
-    # NON MOSTRA se chiuso manualmente
-    if st.session_state.get('hide_popup', False):
-        pass
-    else:
-        buy_signals = df[df['BUY_SIGNAL'] == True].tail(1)
-        sell_signals = df[df['SELL_SIGNAL'] == True].tail(1)
-        
-        # **POPUP BUY**
-        if not buy_signals.empty:
-            latest_buy = buy_signals.iloc[-1]
-            st.markdown(f"""
-            <div id="buy_popup" style='position: fixed; top: 35%; left: 50%; transform: translate(-50%, -50%);
-            background: linear-gradient(45deg, #00ff88, #00cc66); padding: 35px; border-radius: 25px;
-            border: 5px solid #00ff00; z-index: 1000; font-size: 28px; font-weight: bold;
-            box-shadow: 0 20px 50px rgba(102,204,0,0.7); text-align: center; color: black; 
-            min-width: 450px;'>
-                <div style='font-size: 36px; margin-bottom: 15px;'>🚀 **BUY {pair.upper()}**</div>
-                <div><b>💰 Prezzo Entrata:</b> <span style='color: #00ff00; font-size: 32px;'>{latest_buy['close']:.5f}</span></div>
-                <div style='font-size: 34px; color: #00ff00; margin-top: 15px;'>**ESITO FRA 1 MINUTO!**</div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            col1, col2, col3 = st.columns([1,2,1])
-            with col2:
-                if st.button("❌ **CHIUDI**", key="close_popup_buy", help="Chiudi popup"):
-                    st.session_state['hide_popup'] = True
-                    st.rerun()
-            
-            send_telegram_signal("🟢 COMPRA", pair, latest_buy['close'], latest_buy['RSI'], latest_buy['MACD'])
-        
-        # **POPUP SELL**  
-        elif not sell_signals.empty:
-            latest_sell = sell_signals.iloc[-1]
-            st.markdown(f"""
-            <div id="sell_popup" style='position: fixed; top: 35%; left: 50%; transform: translate(-50%, -50%);
-            background: linear-gradient(45deg, #ff4444, #cc0000); padding: 35px; border-radius: 25px;
-            border: 5px solid #ff0000; z-index: 1000; font-size: 28px; font-weight: bold;
-            box-shadow: 0 20px 50px rgba(255,0,0,0.7); text-align: center; color: white; 
-            min-width: 450px;'>
-                <div style='font-size: 36px; margin-bottom: 15px;'>🔻 **SELL {pair.upper()}**</div>
-                <div><b>💰 Prezzo Entrata:</b> <span style='color: #ffaaaa; font-size: 32px;'>{latest_sell['close']:.5f}</span></div>
-                <div style='font-size: 34px; color: #ffaaaa; margin-top: 15px;'>**ESITO FRA 1 MINUTO!**</div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            col1, col2, col3 = st.columns([1,2,1])
-            with col2:
-                if st.button("❌ **CHIUDI**", key="close_popup_sell", help="Chiudi popup"):
-                    st.session_state['hide_popup'] = True
-                    st.rerun()
-            
-            send_telegram_signal("🔴 VENDI", pair, latest_sell['close'], latest_sell['RSI'], latest_sell['MACD'])
 
 # **SCANNER MULTI-VALUTE ogni 60s + GRAFICO SINGOLO separato**
 ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"]
 
-# **SCANNER BACKGROUND** (corretto)
+# **SCANNER BACKGROUND CON POPUP ALERT**
 if st.session_state.get('connected', False):
     if 'scanner_data' not in st.session_state:
         st.session_state['scanner_data'] = {}
         st.session_state['scanner_last_update'] = 0
+        st.session_state['scanner_alerts'] = []  # ✅ Nuovi alert scanner
     
-    # Scanner ogni 60s
     current_time = time_module.time()
     if current_time - st.session_state['scanner_last_update'] > 60:
-        # ✅ Spinner che si chiude
         spinner_placeholder = st.empty()
         with spinner_placeholder.container():
             st.spinner("🔍 Scanning globale...")
         
         Iq = st.session_state['iq']
         st.session_state['scanner_data'] = {}
+        st.session_state['scanner_alerts'] = []  # ✅ Reset alert
         
         for pair in ALL_PAIRS:
             try:
@@ -252,12 +194,19 @@ if st.session_state.get('connected', False):
                 latest_rsi = df['RSI'].iloc[-1]
                 macd_bullish = df['MACD'].iloc[-1] > df['MACD_signal'].iloc[-1]
                 
+                signal = "⚪ ATTESA"
                 if latest_rsi < 30 and macd_bullish:
                     signal = "🟢 COMPRA"
+                    st.session_state['scanner_alerts'].append({
+                        'pair': pair, 'type': '🟢 BUY', 'price': f"{df['close'].iloc[-1]:.5f}",
+                        'rsi': f"{latest_rsi:.1f}"
+                    })
                 elif latest_rsi > 70 and not macd_bullish:
                     signal = "🔴 VENDI"
-                else:
-                    signal = "⚪ ATTESA"
+                    st.session_state['scanner_alerts'].append({
+                        'pair': pair, 'type': '🔴 SELL', 'price': f"{df['close'].iloc[-1]:.5f}",
+                        'rsi': f"{latest_rsi:.1f}"
+                    })
                 
                 st.session_state['scanner_data'][pair] = {
                     'price': f"{df['close'].iloc[-1]:.5f}",
@@ -265,11 +214,15 @@ if st.session_state.get('connected', False):
                     'signal': signal
                 }
                 
-            except Exception as e:
+            except:
                 st.session_state['scanner_data'][pair] = {'price': '❌', 'rsi': '❌', 'signal': 'ERROR'}
         
         st.session_state['scanner_last_update'] = current_time
-        spinner_placeholder.success("✅ Scanner aggiornato!")  # ✅ Chiude spinner
+        spinner_placeholder.success("✅ Scanner aggiornato!")
+
+            send_telegram_signal("🟢 COMPRA", pair, latest_buy['close'], latest_buy['RSI'], latest_buy['MACD'])
+            
+            send_telegram_signal("🔴 VENDI", pair, latest_sell['close'], latest_sell['RSI'], latest_sell['MACD'])
 
     # **MOSTRA TABELLA SCANNER SENZA INDICE NUMERICO**
     st.subheader("🔍 **SCANNER 10 VALUTE**")
@@ -281,6 +234,41 @@ if st.session_state.get('connected', False):
         st.dataframe(scanner_df, use_container_width=True, height=400, hide_index=True)  # ✅ hide_index=True
         
     Iq = st.session_state['iq']
+
+ # **POPUP ALERT SCANNER** (dopo st.dataframe(scanner_df))
+if st.session_state.get('scanner_alerts'):
+    for alert in st.session_state['scanner_alerts']:
+        col1, col2 = st.columns([3,1])
+        with col1:
+            if alert['type'] == '🟢 BUY':
+                st.markdown(f"""
+                <div style='background: linear-gradient(45deg, #00ff88, #00cc66); 
+                padding: 25px; border-radius: 20px; border: 4px solid #00ff00; 
+                text-align: center; font-size: 24px; font-weight: bold; color: black;'>
+                    🚀 **{alert['type']} {alert['pair'].upper()}**
+                    <div style='font-size: 28px; margin-top: 10px;'>
+                        💰 {alert['price']} | 📊 RSI: {alert['rsi']}
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+            else:  # SELL
+                st.markdown(f"""
+                <div style='background: linear-gradient(45deg, #ff4444, #cc0000); 
+                padding: 25px; border-radius: 20px; border: 4px solid #ff0000; 
+                text-align: center; font-size: 24px; font-weight: bold; color: white;'>
+                    🔻 **{alert['type']} {alert['pair'].upper()}**
+                    <div style='font-size: 28px; margin-top: 10px;'>
+                        💰 {alert['price']} | 📊 RSI: {alert['rsi']}
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+        
+        with col2:
+            if st.button("✅ OK", key=f"alert_{alert['pair']}_{time_module.time()}"):
+                # Rimuovi alert specifico
+                st.session_state['scanner_alerts'] = [a for a in st.session_state['scanner_alerts'] 
+                                                   if a['pair'] != alert['pair'] or a['type'] != alert['type']]
+                st.rerun()
 
     # ❌ Sostituisci con:
     st.subheader("📈 LIVE STATUS")
