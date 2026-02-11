@@ -26,7 +26,6 @@ def send_telegram_signal(signal_type, pair, price, rsi, macd):
 📊 *RSI:* `{rsi:.1f}`
 🔥 *MACD:* `{macd:.5f}`
 ⏰ *Ora:* {timestamp}
-
 {'🟢 Esito 1m!' if signal_type == 'BUY' else '🔴 ESITO 1m!'}
 """
     
@@ -437,7 +436,7 @@ if st.session_state.get('connected', False):
         )
             
         # Legenda Bollinger
-        fig.add_annotation(x=0.02, y=0.98, xref="paper", yref="paper", text="💙 BBANDS", showarrow=False, font=dict(size=12), bgcolor="rgba(0,204,255,0.2)", bordercolor="#00ccff")
+        fig.add_annotation(x=0.02, y=0.98, xref="paper", yref="paper", showarrow=False, font=dict(size=12), bgcolor="rgba(0,204,255,0.2)", bordercolor="#00ccff")
         
         # RSI + LIVELLI
         fig.add_trace(go.Scatter(x=df_last_hour.index, y=df_last_hour['RSI'], 
