@@ -44,14 +44,6 @@ def send_telegram_signal(signal_type, pair, price, rsi, macd):
 
 st.set_page_config(page_title="Sentinel AI", page_icon="🚀", layout="wide")
 
-# ✅ REFRESH REALE ogni 60s
-if 'last_refresh' not in st.session_state:
-    st.session_state.last_refresh = 0
-
-if time_module.time() - st.session_state.last_refresh > 60:
-    st.session_state.last_refresh = time_module.time()
-    st.rerun()
-
 #st.session_state.refresh_counter += 1
 #if st.session_state.refresh_counter % 60 == 0:  # Ogni 60 iterazioni
     #st.rerun()
