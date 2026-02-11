@@ -260,11 +260,10 @@ if st.session_state.get('scanner_alerts'):
                 """, unsafe_allow_html=True)
         
         with col2:
-            if st.button("✅ OK", key=f"alert_{alert['pair']}_{len(st.session_state.get('scanner_alerts',[]))}")
-
+            if st.button("✅ OK", key=f"alert_{alert['pair']}_{len(st.session_state.get('scanner_alerts',[]))}"):  # ✅ AGGIUNGI :
                 # Rimuovi alert specifico
                 st.session_state['scanner_alerts'] = [a for a in st.session_state['scanner_alerts'] 
-                                                   if a['pair'] != alert['pair'] or a['type'] != alert['type']]
+                                                   if a['pair'] != alert['pair']]
                 st.rerun()
 
 # ❌ Sostituisci con:
