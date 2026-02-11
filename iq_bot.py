@@ -126,7 +126,7 @@ with st.sidebar:
         
         # Sessioni con orari CET (Italia)
         sessioni = {
-            "🦘 SYDNEY": {"inizio": time(23,0), "fine": time(8,0)},
+            "🇦🇺 SYDNEY": {"inizio": time(23,0), "fine": time(8,0)},
             "🇯🇵 TOKYO": {"inizio": time(1,0), "fine": time(10,0)}, 
             "🇬🇧 LONDRA": {"inizio": time(9,0), "fine": time(18,0)},
             "🇺🇸 NEW YORK": {"inizio": time(14,0), "fine": time(23,0)}
@@ -262,7 +262,7 @@ if st.session_state.get('connected', False):
         placeholder.success("✅ Scanner aggiornato!")
     
     # ✅ TABELLA
-    st.subheader("🔍 **SCANNER 10 VALUTE**")
+    st.subheader("🔍 **SCANNER FOREX**")
     if st.session_state['scanner_data']:
         scanner_df = pd.DataFrame(st.session_state['scanner_data']).T
         scanner_df.reset_index(inplace=True)
@@ -388,11 +388,11 @@ if st.session_state.get('connected', False):
             signal = {
                 'time': new_buys.index[-1].strftime('%H:%M:%S'),
                 'pair': pair,  # ✅ VALUTA AGGIUNTA
-                'type': '🟢 BUY',
+                'type': '🟢 COMPRA',
                 'price_entry': f"{new_buys['close'].iloc[-1]:.5f}",
                 'rsi': f"{new_buys['RSI'].iloc[-1]:.1f}",
                 'macd': f"{new_buys['MACD'].iloc[-1]:.5f}",
-                'outcome': '⏳ PENDENTE'  # ✅ ESITO INIZIALE
+                'outcome': '⏳ ATTESA ESITO'  # ✅ ESITO INIZIALE
             }
             if 'signal_history' not in st.session_state:
                 st.session_state['signal_history'] = []
@@ -406,7 +406,7 @@ if st.session_state.get('connected', False):
             signal = {
                 'time': new_sells.index[-1].strftime('%H:%M:%S'),
                 'pair': pair,  # ✅ VALUTA AGGIUNTA
-                'type': '🔴 SELL',
+                'type': '🔴 VENDI',
                 'price_entry': f"{new_sells['close'].iloc[-1]:.5f}",
                 'rsi': f"{new_sells['RSI'].iloc[-1]:.1f}",
                 'macd': f"{new_sells['MACD'].iloc[-1]:.5f}",
@@ -499,7 +499,7 @@ if st.session_state.get('connected', False):
                         entry_price = float(signal['price_entry'])
                         
                         # CALCOLA ESITO
-                        if signal['type'] == '🟢 BUY':
+                        if signal['type'] == '🟢 COMPRA':
                             outcome = "✅ VINTO" if latest_price > entry_price else "❌ PERSO"
                         else:  # SELL
                             outcome = "✅ VINTO" if latest_price < entry_price else "❌ PERSO"
@@ -510,19 +510,22 @@ if st.session_state.get('connected', False):
                     except:
                         st.session_state['signal_history'][i]['outcome'] = '❓ ERRORE'
  
-    # **CRONOLOGIA SEGNALI IN FONDO - NUMERAZIONE DA 1**
+    # **CRONOLOGIA SEGNALI - COLONNE CORRETTE**
     st.markdown("---")
     st.subheader("📋 CRONOLOGIA SEGNALI")
     
     if 'signal_history' in st.session_state and st.session_state['signal_history']:
         signals_df = pd.DataFrame(st.session_state['signal_history'])
-        # ORDINA colonne
-        cols = ['Ora', 'Valuta', 'Azione', 'Prezzo di entrata', 'RSI', 'MACD', 'Esito']
-        signals_df = signals_df[cols]
         
-        # ✅ RESET INDEX DA 1 (non da 0)
+        # ✅ COLONNE REALI dal signal dict
+        cols = ['time', 'pair', 'type', 'price_entry', 'rsi', 'macd', 'outcome']
+        
+        # ✅ RINOMINA per visualizzazione
+        signals_df.columns = ['Ora', 'Valuta', 'Azione', 'Prezzo Entrata', 'RSI', 'MACD', 'Esito']
+        
+        # ✅ NUMERAZIONE DA 1
         signals_df.reset_index(drop=True, inplace=True)
-        signals_df.index += 1  # Inizia da 1 invece di 0
+        signals_df.index += 1
         
         st.dataframe(signals_df, use_container_width=True, height=350, hide_index=False)
     else:
