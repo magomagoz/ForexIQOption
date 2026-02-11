@@ -81,7 +81,8 @@ with st.sidebar:
    
     # **CONFIG TRADING + TASTO ESCI se CONNESSO**
     else:
-        st.success(f"🟢 Connesso: {st.session_state['email']}")
+        #st.success(f"🟢 Connesso: {st.session_state['email']}")
+        st.success(f"🟢 Connesso")
         
         st.header("📊 Trading Desk")
         st.session_state['pair'] = st.selectbox(
@@ -241,7 +242,7 @@ if st.session_state.get('connected', False):
                 st.session_state.scanner_data[pair] = {
                     'price': f"{df['close'].iloc[-1]:.5f}",
                     'rsi': f"{latest_rsi:.1f}",
-                    'signal': 'signal'
+                    'signal': f"{signal}
                 }
             except:
                 st.session_state.scanner_data[pair] = {'price': '❌', 'rsi': '❌', 'signal': 'ERROR'}
