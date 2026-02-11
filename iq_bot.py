@@ -19,7 +19,7 @@ def send_telegram_signal(signal_type, pair, price, rsi, macd):
     timestamp = datetime.now().strftime("%H:%M:%S")
     
     message = f"""
-🚀 *SENTINEL AI* 🚀
+#🚀 *SENTINEL AI* 🚀
 
 *{signal_type} - {pair.upper()}*
 💰 *Prezzo Entrata:* `{price:.5f}`
