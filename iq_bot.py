@@ -333,11 +333,20 @@ if st.session_state.get('connected', False):
         # INDICATORI + BOLLINGER
         df['RSI'] = ta.rsi(df['close'], length=14)
         
-        # ✅ BANDE BOLLINGER (20 periodi, 2 deviazioni)
+        # ✅ BANDE BOLLINGER - NOMI FLESSIBILI (NO ERRORE)
         bbands = ta.bbands(df['close'], length=20, std=2.0)
-        df['BBU'] = bbands['BBU_20_2.0']  # Banda superiore
-        df['BBM'] = bbands['BBM_20_2.0']  # Media mobile
-        df['BBL'] = bbands['BBL_20_2.0']  # Banda inferiore
+        
+        # Trova colonne Bollinger automaticamente
+        bb_cols = [col for col in bbands.columns if 'BB' in col]
+        if len(bb_cols) >= 3:
+            df['BBU'] = bbands[bb_cols[0]]  # Prima colonna BB = Upper
+            df['BBM'] = bbands[bb_cols[1]]  # Seconda = Middle  
+            df['BBL'] = bbands[bb_cols[2]]  # Terza = Lower
+        else:
+            # Fallback manuale
+            df['BBU'] = df['close'].rolling(20).mean() + (df['close'].rolling(20).std() * 2)
+            df['BBM'] = df['close'].rolling(20).mean()
+            df['BBL'] = df['close'].rolling(20).mean() - (df['close'].rolling(20).std() * 2)
         
         macd = ta.macd(df['close'])
         df['MACD'] = macd['MACD_12_26_9']
