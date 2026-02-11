@@ -371,7 +371,7 @@ if st.session_state.get('connected', False):
         scanner_df = pd.DataFrame(st.session_state.scanner_data).T
         scanner_df.reset_index(inplace=True)
         scanner_df.rename(columns={'index': 'PAIR'}, inplace=True)
-        scanner_df = scanner_df[['PAIR', 'price', 'rsi', 'signal']]
+        scanner_df = scanner_df[['Valuta', 'Prezzo', 'RSI', 'Esito']]
         st.dataframe(scanner_df, use_container_width=True, height=400, hide_index=True)
         
     # ✅ TRADES LIVE
@@ -383,7 +383,7 @@ if st.session_state.get('connected', False):
     # 🔍 CHECK ESITI TRADES (SEZIONE 7)
     if st.session_state.trades_executed:
         for trade in st.session_state.trades_executed:
-            if trade['status'] == '⏳ PENDING':
+            if trade['status'] == '⏳ ATTESA ESITO':
                 try:
                     result = Iq.check_win_v3(trade['id'])
                     if result and result.get('win') is not None:
