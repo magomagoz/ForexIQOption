@@ -241,8 +241,7 @@ if st.session_state.get('connected', False):
                 st.session_state.scanner_data[pair] = {
                     'price': f"{df['close'].iloc[-1]:.5f}",
                     'rsi': f"{latest_rsi:.1f}",
-                    'signal': signal,
-                    'last_scan': datetime.now().strftime("%H:%M:%S")
+                    'signal': signal)
                 }
             except:
                 st.session_state.scanner_data[pair] = {'price': '❌', 'rsi': '❌', 'signal': 'ERROR'}
@@ -251,7 +250,7 @@ if st.session_state.get('connected', False):
         placeholder.success("✅ Scanner aggiornato!")
     
     # ✅ TABELLA SCANNER
-    st.subheader("🔍 **SCANNER 10 VALUTE**")
+    st.subheader("🔍 **SCANNER FOREX**")
     if st.session_state.scanner_data:
         scanner_df = pd.DataFrame(st.session_state.scanner_data).T
         scanner_df.reset_index(inplace=True)
@@ -498,8 +497,6 @@ if st.session_state.get('connected', False):
                     except:
                         st.session_state['signal_history'][i]['outcome'] = '❓ ERRORE'
  
-
-    
     st.subheader("📋 **CRONOLOGIA SEGNALI**")
     if 'signal_history' in st.session_state and st.session_state['signal_history']:
         signals_df = pd.DataFrame(st.session_state['signal_history'])
