@@ -160,7 +160,7 @@ with st.sidebar:
         # **TEST ALERT BUTTON** (aggiungi in FONDO sidebar dopo st.markdown("---"))
         with st.sidebar:
             st.markdown("---")
-            st.markdown("### 🧪 **TEST & DEBUG**")
+            #st.markdown("### 🧪 **TEST & DEBUG**")
             
             if st.button("🔔 **TEST ALERT POPUP**", key="test_alert", help="Verifica popup funzionante"):
                 # Simula alert EURUSD BUY + GBPUSD SELL
