@@ -227,8 +227,8 @@ if st.session_state.get('connected', False):
     if st.session_state.scanner:
     
     # ✅ STATUS SCANNER
-    last_scan = datetime.fromtimestamp(st.session_state.scanner_last_update).strftime("%H:%M:%S")
-    st.markdown(f"🕐 **Scanner ultimo update: {last_scan}**")
+        last_scan = datetime.fromtimestamp(st.session_state.scanner_last_update).strftime("%H:%M:%S")
+        st.markdown(f"🕐 **Scanner ultimo update: {last_scan}**")
     
     # ✅ SCANNER OGNI 60s
     current_time = time_module.time()
