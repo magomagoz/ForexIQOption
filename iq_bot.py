@@ -183,7 +183,6 @@ with st.sidebar:
             st.success("✅ Pulito!")
             st.rerun()
 
-# **SCANNER COMPLETO** (sostituisci dalle righe 170-350)
 ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"]
 
 if st.session_state.get('connected', False):
@@ -197,7 +196,7 @@ if st.session_state.get('connected', False):
     
     # ✅ STATUS SCANNER
     last_scan = datetime.fromtimestamp(st.session_state.scanner_last_update).strftime("%H:%M:%S")
-    st.caption(f"🕐 Scanner ultimo update: **{last_scan}**")
+    st.markdown(f"🕐 **Scanner ultimo update: {last_scan}**")
     
     # ✅ SCANNER OGNI 60s
     current_time = time_module.time()
@@ -213,6 +212,9 @@ if st.session_state.get('connected', False):
         for pair in ALL_PAIRS:
             try:
                 candles = Iq.get_candles(pair, 60, 50, time_module.time())
+                if not candles:  # ✅ Controllo dati vuoti
+                    raise ValueError("Nessun dato candele")
+                    
                 df = pd.DataFrame(candles)
                 df['from'] = pd.to_datetime(df['from'], unit='s')
                 df.set_index('from', inplace=True)
@@ -229,30 +231,41 @@ if st.session_state.get('connected', False):
                 if latest_rsi < st.session_state['rsi_buy'] and macd_bullish:
                     signal = "🟢 COMPRA"
                     st.session_state.scanner_alerts.append({
-                        'pair': pair, 'type': '🟢 COMPRA', 'price': f"{df['close'].iloc[-1]:.5f}",
+                        'pair': pair, 
+                        'type': '🟢 COMPRA', 
+                        'price': f"{df['close'].iloc[-1]:.5f}",
                         'rsi': f"{latest_rsi:.1f}"
                     })
                 elif latest_rsi > st.session_state['rsi_sell'] and not macd_bullish:
                     signal = "🔴 VENDI"
                     st.session_state.scanner_alerts.append({
-                        'pair': pair, 'type': '🔴 VENDI', 'price': f"{df['close'].iloc[-1]:.5f}",
+                        'pair': pair, 
+                        'type': '🔴 VENDI', 
+                        'price': f"{df['close'].iloc[-1]:.5f}",
                         'rsi': f"{latest_rsi:.1f}"
                     })
                 
+                # ✅ CORRETTO: sintassi fix
                 st.session_state.scanner_data[pair] = {
                     'price': f"{df['close'].iloc[-1]:.5f}",
                     'rsi': f"{latest_rsi:.1f}",
-                    'signal': f"{signal}
+                    'signal': signal  # ✅ Ora corretto
                 }
-            except:
-                st.session_state.scanner_data[pair] = {'price': '❌', 'rsi': '❌', 'signal': 'ERROR'}
+                
+            except Exception as e:
+                st.session_state.scanner_data[pair] = {
+                    'price': '❌', 
+                    'rsi': '❌', 
+                    'signal': f'ERROR: {str(e)[:20]}...'
+                }
         
         st.session_state.scanner_last_update = current_time
         placeholder.success("✅ Scanner aggiornato!")
+        st.rerun()  # ✅ Refresh interfaccia
     
     # ✅ TABELLA SCANNER
     st.subheader("🔍 **SCANNER FOREX**")
-    if st.session_state.scanner_data:
+    if st.session_state.scanner_
         scanner_df = pd.DataFrame(st.session_state.scanner_data).T
         scanner_df.reset_index(inplace=True)
         scanner_df.rename(columns={'index': 'PAIR'}, inplace=True)
