@@ -105,11 +105,11 @@ with st.sidebar:
             st.success("👋 Disconnesso!")
             st.rerun()
 
-    # ✅ Toggle per attivare/disattivare scanner
-    st.session_state.scanner = st.toggle(
-        "🔍 **Attiva Scanner Forex**", 
-        value=st.session_state.get('scanner', False)
-    )
+        # ✅ Toggle per attivare/disattivare scanner
+        st.session_state.scanner = st.toggle(
+            "🔍 **Attiva Scanner Forex**", 
+            value=st.session_state.get('scanner', False)
+        )
     
     # **SESSIONI MERCATO FOREX** (SENZA import nella sidebar)
     if st.session_state.get('connected', False):
@@ -239,7 +239,7 @@ if st.session_state.get('connected', False):
                 latest_rsi = df['RSI'].iloc[-1]
                 macd_bullish = df['MACD'].iloc[-1] > df['MACD_signal'].iloc[-1]
                 
-                signal = "⚪ ATTESA"
+                signal = "⚪ SCANNING"
                 if latest_rsi < st.session_state['rsi_buy'] and macd_bullish:
                     signal = "🟢 COMPRA"
                     st.session_state.scanner_alerts.append({
@@ -324,7 +324,7 @@ if st.session_state.get('connected', False):
             with col3:
                 st.metric("🔥 MACD", f"{df['MACD']:.5f}", delta=None)
             with col4:
-                trend = "🟢 CRESCITA" if df['MACD'] > df['MACD_signal'] else "🔴 CALO"
+                trend = "📈 UP" if df['MACD'] > df['MACD_signal'] else "📉 DOWN"
                 st.metric("⚡ TREND", trend, delta=None)
         else:
             st.warning("⏳ Caricamento dati grafico...")
