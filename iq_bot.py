@@ -284,14 +284,14 @@ if st.session_state.get('connected', False):
         st.session_state['scanner_last_update'] = current_time
         spinner_placeholder.success("✅ Scanner aggiornato!")  # ✅ Chiude spinner
 
-    # **MOSTRA TABELLA SCANNER CON COLONNA VALUTE**
+    # **MOSTRA TABELLA SCANNER SENZA INDICE NUMERICO**
     st.subheader("🔍 **SCANNER 10 VALUTE**")
     if st.session_state.get('scanner_data'):
         scanner_df = pd.DataFrame(st.session_state['scanner_data']).T
-        scanner_df.reset_index(inplace=True)  # ✅ RIATTIVA INDICE (nomi valute)
-        scanner_df.rename(columns={'index': 'PAIR'}, inplace=True)  # ✅ Rinomina
-        scanner_df = scanner_df[['PAIR', 'price', 'rsi', 'signal']]  # ✅ Ordine colonne
-        st.dataframe(scanner_df, use_container_width=True, height=400)
+        scanner_df.reset_index(inplace=True)
+        scanner_df.rename(columns={'index': 'PAIR'}, inplace=True)
+        scanner_df = scanner_df[['PAIR', 'price', 'rsi', 'signal']]
+        st.dataframe(scanner_df, use_container_width=True, height=400, hide_index=True)  # ✅ hide_index=True
         
     Iq = st.session_state['iq']
 
@@ -419,24 +419,21 @@ if st.session_state.get('connected', False):
             close=df_last_hour['close'], increasing_line_color='#00ff88', 
             decreasing_line_color='#ff4444'), row=1, col=1)
 
-        # ✅ BANDE BOLLINGER sul grafico candele
+        # ✅ BANDE BOLLINGER CORRETTE
         fig.add_trace(go.Scatter(
             x=df_last_hour.index, y=df_last_hour['BBU'], 
-            line=dict(color='#00ccff', width=1.5), 
-            name='BBU', opacity=0.7), row=1, col=1
-        )
+            line=dict(color='#00ccff', width=1.5), name='BBU', opacity=0.7), row=1, col=1
+        ))
         fig.add_trace(go.Scatter(
             x=df_last_hour.index, y=df_last_hour['BBM'], 
-            line=dict(color='#ffaa00', width=2), 
-            name='BBM', opacity=0.8), row=1, col=1
-        )
+            line=dict(color='#ffaa00', width=2), name='BBM'), row=1, col=1
+        ))
         fig.add_trace(go.Scatter(
             x=df_last_hour.index, y=df_last_hour['BBL'], 
-            line=dict(color='#00ccff', width=1.5), 
-            name='BBL', opacity=0.7, fill='tonexty',
-            fillcolor='rgba(0, 204, 255, 0.15)',  # ✅ Area celestina tra BBM-BBL
+            line=dict(color='#00ccff', width=1.5), fill='tonexty',
+            fillcolor='rgba(0, 204, 255, 0.15)',  # ✅ Celestino tra BBL-BBM
             showlegend=False), row=1, col=1
-        )
+        ))
             
         # Legenda Bollinger
         fig.add_annotation(x=0.02, y=0.98, xref="paper", yref="paper", text="💙 BBANDS", showarrow=False, font=dict(size=12), bgcolor="rgba(0,204,255,0.2)", bordercolor="#00ccff")
