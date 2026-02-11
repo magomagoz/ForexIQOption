@@ -217,6 +217,14 @@ if st.session_state.get('connected', False):
         st.session_state.scanner = st.toggle("🔍 **Attiva Scanner**", value=st.session_state.scanner)
     with col2:
         auto_trade = st.toggle("🤖 **Trade Automatici 1m**", value=False)
+
+    # ✅ PARAMETRI
+    col1, col2, col3 = st.columns(3)
+    with col1: st.session_state.rsi_buy = st.number_input("RSI Buy", value=30, min_value=10, max_value=40)
+    with col2: st.session_state.rsi_sell = st.number_input("RSI Sell", value=70, min_value=60, max_value=90)
+    with col3: st.session_state.amount = st.number_input("Importo €", value=1, min_value=1, max_value=100)
+    
+    if st.session_state.scanner:
     
     # ✅ STATUS SCANNER
     last_scan = datetime.fromtimestamp(st.session_state.scanner_last_update).strftime("%H:%M:%S")
@@ -227,11 +235,11 @@ if st.session_state.get('connected', False):
     if current_time - st.session_state.scanner_last_update > 60:
         placeholder = st.empty()
         with placeholder.container():
-            st.spinner("🔍 Scanning 10 valute...")
+            st.spinner("🔍 Scanning FOREX...")
         
-        Iq = st.session_state['iq']
         st.session_state.scanner_data = {}
         st.session_state.scanner_alerts = []
+        trades_this_scan = 0
         
         for pair in ALL_PAIRS:
             try:
@@ -250,52 +258,93 @@ if st.session_state.get('connected', False):
                 
                 latest_rsi = df['RSI'].iloc[-1]
                 macd_bullish = df['MACD'].iloc[-1] > df['MACD_signal'].iloc[-1]
+
+                current_price = df['close'].iloc[-1]
                 
-                signal = "⚪ SCANNING"
-                if latest_rsi < st.session_state['rsi_buy'] and macd_bullish:
-                    signal = "🟢 COMPRA"
-                    st.session_state.scanner_alerts.append({
-                        'pair': pair, 
-                        'type': '🟢 COMPRA', 
-                        'price': f"{df['close'].iloc[-1]:.5f}",
-                        'rsi': f"{latest_rsi:.1f}"
-                    })
-                elif latest_rsi > st.session_state['rsi_sell'] and not macd_bullish:
-                    signal = "🔴 VENDI"
-                    st.session_state.scanner_alerts.append({
-                        'pair': pair, 
-                        'type': '🔴 VENDI', 
-                        'price': f"{df['close'].iloc[-1]:.5f}",
-                        'rsi': f"{latest_rsi:.1f}"
-                    })
+                signal = "⚪ ATTESA"
                 
-                # ✅ CORRETTO: sintassi fix
+                # 🟢 TRADE AUTOMATICO CALL 1m
+                if auto_trade and latest_rsi < st.session_state.rsi_buy and macd_bullish:
+                    result = Iq.buy(
+                        amount=st.session_state.amount,
+                        asset=pair,
+                        action="call",
+                        duration=1,  # 1 MINUTO
+                        price=current_price
+                    )
+                        
+                    trade_info = {
+                        'time': datetime.now().strftime("%H:%M:%S"),
+                        'pair': pair,
+                        'type': '🟢 CALL',
+                        'amount': st.session_state.amount,
+                        'price': f"{current_price:.5f}",
+                        'id': result.get('id', 'N/A'),
+                        'status': '⏳ PENDING'
+                    }
+                    st.session_state.trades_executed.append(trade_info)
+                    st.session_state.scanner_alerts.append(trade_info)
+                    trades_this_scan += 1
+                    signal = "🟢🔼 COMPRA AUTO"
+                    
+                # 🔴 TRADE AUTOMATICO PUT 1m  
+                elif auto_trade and latest_rsi > st.session_state.rsi_sell and not macd_bullish:
+                    result = Iq.buy(
+                        amount=st.session_state.amount,
+                        asset=pair,
+                        action="put",
+                        duration=1,  # 1 MINUTO
+                        price=current_price
+                    )
+                        
+                    trade_info = {
+                        'time': datetime.now().strftime("%H:%M:%S"),
+                        'pair': pair,
+                        'type': '🔴 PUT',
+                        'amount': st.session_state.amount,
+                        'price': f"{current_price:.5f}",
+                        'id': result.get('id', 'N/A'),
+                        'status': '⏳ PENDING'
+                    }
+                    st.session_state.trades_executed.append(trade_info)
+                    st.session_state.scanner_alerts.append(trade_info)
+                    trades_this_scan += 1
+                    signal = "🔴🔽 VENDI AUTO"
+                    
+                # 📊 SALVA DATI
                 st.session_state.scanner_data[pair] = {
-                    'price': f"{df['close'].iloc[-1]:.5f}",
+                    'price': f"{current_price:.5f}",
                     'rsi': f"{latest_rsi:.1f}",
-                    'signal': signal  # ✅ Ora corretto
+                    'signal': signal
                 }
-                
+                    
             except Exception as e:
                 st.session_state.scanner_data[pair] = {
-                    'price': '❌', 
-                    'rsi': '❌', 
-                    'signal': f'ERROR: {str(e)[:20]}...'
+                    'price': '❌', 'rsi': '❌', 'signal': f'ERROR'
                 }
-        
+            
         st.session_state.scanner_last_update = current_time
-        placeholder.success("✅ Scanner aggiornato!")
-        st.rerun()  # ✅ Refresh interfaccia
-    
+        placeholder.success(f"✅ Scanner aggiornato! {trades_this_scan} trade eseguiti")
+        st.rerun()
+        
     # ✅ TABELLA SCANNER
     st.subheader("🔍 **SCANNER FOREX**")
-    if st.session_state.scanner:
+    if st.session_state.scanner_
         scanner_df = pd.DataFrame(st.session_state.scanner_data).T
         scanner_df.reset_index(inplace=True)
         scanner_df.rename(columns={'index': 'PAIR'}, inplace=True)
         scanner_df = scanner_df[['PAIR', 'price', 'rsi', 'signal']]
         st.dataframe(scanner_df, use_container_width=True, height=400, hide_index=True)
-    
+        
+    # ✅ TRADES LIVE
+    if st.session_state.trades_executed:
+        st.subheader("📊 **TRADES IN CORSO**")
+        trades_df = pd.DataFrame(st.session_state.trades_executed)
+        st.dataframe(trades_df, use_container_width=True)
+            
+        # 💰 PROFITTO TOTALE
+        st.metric("💵 Profitto Totale", f"€{st.session_state.total_profit:.2f}")
+                
     # ✅ ALERT POPUP
     if st.session_state.scanner_alerts:
         for alert in st.session_state.scanner_alerts:
