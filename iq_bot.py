@@ -266,22 +266,21 @@ if st.session_state.get('scanner_alerts'):
                                                    if a['pair'] != alert['pair']]
                 st.rerun()
 
-# ❌ Sostituisci con:
-st.subheader("📈 LIVE STATUS")
-if st.session_state.get('connected', False) and 'df' in st.session_state:
-    df = st.session_state['df'].iloc[-1] if len(st.session_state['df']) > 0 else None
+    st.subheader("📈 LIVE STATUS")
+    if st.session_state.get('connected', False) and 'df' in st.session_state:
+        df = st.session_state['df'].iloc[-1] if len(st.session_state['df']) > 0 else None
         
     if df is not None:
         col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.metric("💰 PREZZO", f"{df['close']:.5f}", delta=None)
-    with col2:
-        st.metric("📊 RSI", f"{df['RSI']:.1f}", delta=None)
-    with col3:
-        st.metric("🔥 MACD", f"{df['MACD']:.5f}", delta=None)
-    with col4:
-        trend = "🟢 BULL" if df['MACD'] > df['MACD_signal'] else "🔴 BEAR"
-        st.metric("⚡ TREND", trend, delta=None)
+        with col1:
+            st.metric("💰 PREZZO", f"{df['close']:.5f}", delta=None)
+        with col2:
+            st.metric("📊 RSI", f"{df['RSI']:.1f}", delta=None)
+        with col3:
+            st.metric("🔥 MACD", f"{df['MACD']:.5f}", delta=None)
+        with col4:
+            trend = "🟢 BULL" if df['MACD'] > df['MACD_signal'] else "🔴 BEAR"
+            st.metric("⚡ TREND", trend, delta=None)
 
 st.markdown("---")
 
