@@ -188,25 +188,52 @@ with st.sidebar:
 
 ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"]
 
+# ✅ SEZIONE 1: INIZIALIZZAZIONE SESSION STATE
 if st.session_state.get('connected', False):
-    # ✅ INIZIALIZZAZIONE COMPLETA (aggiungi questa riga!)
-    if 'scanner' not in st.session_state:
-        st.session_state.scanner = False  # ← SOLUZIONE!
-    if 'scanner_data' not in st.session_state:
-        st.session_state.scanner_data = {}
-    if 'scanner_last_update' not in st.session_state:
-        st.session_state.scanner_last_update = 0
-    if 'scanner_alerts' not in st.session_state:
-        st.session_state.scanner_alerts = []
-    if 'rsi_buy' not in st.session_state:
-        st.session_state.rsi_buy = 30  # ← Anche questi!
-    if 'rsi_sell' not in st.session_state:
-        st.session_state.rsi_sell = 70
-    if 'amount' not in st.session_state: st.session_state.amount = 1
-    if 'trades_executed' not in st.session_state: st.session_state.trades_executed = []
-    if 'total_profit' not in st.session_state: st.session_state.total_profit = 0
+    # Inizializzazioni complete
+    init_keys = [
+        'scanner', 'scanner_data', 'scanner_last_update', 'scanner_alerts',
+        'rsi_buy', 'rsi_sell', 'amount', 'trades_executed', 'total_profit',
+        'current_balance', 'initial_balance', 'auto_trade'
+    ]
+    
+    for key in init_keys:
+        if key not in st.session_state:
+            if key == 'scanner': st.session_state[key] = False
+            elif key == 'scanner_data': st.session_state[key] = {}
+            elif key == 'scanner_last_update': st.session_state[key] = 0
+            elif key == 'scanner_alerts': st.session_state[key] = []
+            elif key == 'rsi_buy': st.session_state[key] = 30
+            elif key == 'rsi_sell': st.session_state[key] = 70
+            elif key == 'amount': st.session_state[key] = 1
+            elif key == 'trades_executed': st.session_state[key] = []
+            elif key == 'total_profit': st.session_state[key] = 0.0
+            elif key == 'current_balance': st.session_state[key] = 10000.0
+            elif key == 'initial_balance': st.session_state[key] = 10000.0
+            elif key == 'auto_trade': st.session_state[key] = False
 
     Iq = st.session_state['iq']
+
+    # 💰 BALANCE LIVE PRACTICE (SEZIONE 2)
+    try:
+        Iq.change_balance("PRACTICE")
+        st.session_state.current_balance = float(Iq.get_balance())
+        
+        if 'initial_balance' not in st.session_state or st.session_state.initial_balance == 0:
+            st.session_state.initial_balance = st.session_state.current_balance
+            
+        profit = st.session_state.current_balance - st.session_state.initial_balance
+        st.session_state.total_profit = profit
+        
+        col1, col2, col3 = st.columns(3)
+        col1.metric("💰 Balance Practice", f"€{st.session_state.current_balance:.2f}")
+        col2.metric("📈 Profitto", f"€{profit:.2f}", 
+                   delta=f"{(profit/st.session_state.initial_balance)*100:.1f}%")
+        col3.metric("🎯 Winrate", "0%", delta="0%")
+        
+    except Exception as e:
+        st.error(f"❌ Errore balance: {str(e)}")
+        st.session_state.current_balance = st.session_state.get('current_balance', 10000.0)
 
     # ✅ TOGGLE SCANNER + TRADE AUTO
     col1, col2 = st.columns(2)
@@ -215,114 +242,128 @@ if st.session_state.get('connected', False):
     with col2:
         auto_trade = st.toggle("🤖 **Trade Automatici 1m**", value=False)
 
-    # ✅ PARAMETRI
     col1, col2, col3 = st.columns(3)
-    with col1: st.session_state.rsi_buy = st.number_input("RSI Buy", value=30, min_value=10, max_value=40)
-    with col2: st.session_state.rsi_sell = st.number_input("RSI Sell", value=70, min_value=60, max_value=90)
-    with col3: st.session_state.amount = st.number_input("Importo €", value=1, min_value=1, max_value=100)
+    with col1: 
+        st.session_state.rsi_buy = st.number_input("🟢 RSI Buy", value=30, min_value=10, max_value=40)
+    with col2: 
+        st.session_state.rsi_sell = st.number_input("🔴 RSI Sell", value=70, min_value=60, max_value=90)
+    with col3: 
+        st.session_state.amount = st.number_input("💵 Importo €", value=1, min_value=1, max_value=100)
     
+    # 🔄 SCANNER + TRADING (SEZIONE 4)
     if st.session_state.scanner:
-    
-    # ✅ STATUS SCANNER
         last_scan = datetime.fromtimestamp(st.session_state.scanner_last_update).strftime("%H:%M:%S")
-        st.markdown(f"🕐 **Scanner ultimo update: {last_scan}**")
-    
-    # ✅ SCANNER OGNI 60s
-    current_time = time_module.time()
-    if current_time - st.session_state.scanner_last_update > 60:
-        placeholder = st.empty()
-        with placeholder.container():
-            st.spinner("🔍 Scanning FOREX...")
+        st.markdown(f"🕐 **Ultimo update**: {last_scan}")
         
-        st.session_state.scanner_data = {}
-        st.session_state.scanner_alerts = []
-        trades_this_scan = 0
-        
-        for pair in ALL_PAIRS:
-            try:
-                candles = Iq.get_candles(pair, 60, 50, time_module.time())
-                if not candles:  # ✅ Controllo dati vuoti
-                    raise ValueError("Nessun dato candele")
-                    
-                df = pd.DataFrame(candles)
-                df['from'] = pd.to_datetime(df['from'], unit='s')
-                df.set_index('from', inplace=True)
-                
-                df['RSI'] = ta.rsi(df['close'], length=14)
-                macd = ta.macd(df['close'])
-                df['MACD'] = macd['MACD_12_26_9']
-                df['MACD_signal'] = macd['MACDs_12_26_9']
-                
-                latest_rsi = df['RSI'].iloc[-1]
-                macd_bullish = df['MACD'].iloc[-1] > df['MACD_signal'].iloc[-1]
+        current_time = time_module.time()
+        if current_time - st.session_state.scanner_last_update > 60:
+            placeholder = st.empty()
+            with placeholder.container():
+                st.spinner("🔍 Scanning 10 coppie + Trading...")
 
-                current_price = df['close'].iloc[-1]
-                
-                signal = "⚪ ATTESA"
-                
-                # 🟢 TRADE AUTOMATICO CALL 1m
-                if auto_trade and latest_rsi < st.session_state.rsi_buy and macd_bullish:
-                    result = Iq.buy(
-                        amount=st.session_state.amount,
-                        asset=pair,
-                        action="call",
-                        duration=1,  # 1 MINUTO
-                        price=current_price
-                    )
+            st.session_state.scanner_data = {}
+            st.session_state.scanner_alerts = []
+            trades_this_scan = 0
+
+            for pair in ALL_PAIRS:
+                try:
+                    # 📊 Candele 1m
+                    candles = Iq.get_candles(pair, 60, 50, time_module.time())
+                    if not candles or len(candles) < 30:
+                        raise ValueError("Dati insufficienti")
+
+                    df = pd.DataFrame(candles)
+                    df['from'] = pd.to_datetime(df['from'], unit='s')
+                    df.set_index('from', inplace=True)
+
+                    # 🔧 Indicatori tecnici
+                    df['RSI'] = ta.rsi(df['close'], length=14)
+                    macd = ta.macd(df['close'])
+                    df['MACD'] = macd['MACD_12_26_9']
+                    df['MACD_signal'] = macd['MACDs_12_26_9']
+
+                    latest_rsi = float(df['RSI'].iloc[-1])
+                    macd_bullish = float(df['MACD'].iloc[-1]) > float(df['MACD_signal'].iloc[-1])
+                    current_price = float(df['close'].iloc[-1])
+
+                    signal = "⚪ ATTESA"
+
+                    # 🟢 TRADE CALL AUTOMATICO 1m
+                    if (st.session_state.auto_trade and 
+                        latest_rsi < st.session_state.rsi_buy and 
+                        macd_bullish):
                         
-                    trade_info = {
-                        'time': datetime.now().strftime("%H:%M:%S"),
-                        'pair': pair,
-                        'type': '🟢 CALL',
-                        'amount': st.session_state.amount,
-                        'price': f"{current_price:.5f}",
-                        'id': result.get('id', 'N/A'),
-                        'status': '⏳ PENDING'
-                    }
-                    st.session_state.trades_executed.append(trade_info)
-                    st.session_state.scanner_alerts.append(trade_info)
-                    trades_this_scan += 1
-                    signal = "🟢🔼 COMPRA AUTO"
-                    
-                # 🔴 TRADE AUTOMATICO PUT 1m  
-                elif auto_trade and latest_rsi > st.session_state.rsi_sell and not macd_bullish:
-                    result = Iq.buy(
-                        amount=st.session_state.amount,
-                        asset=pair,
-                        action="put",
-                        duration=1,  # 1 MINUTO
-                        price=current_price
-                    )
+                        result = Iq.buy(
+                            amount=st.session_state.amount,
+                            asset=pair,
+                            action="call",
+                            duration=1,  # 1 MINUTO
+                            price=current_price
+                        )
+
+                        trade_id = result.get('id', f"{pair}_{int(time_module.time())}")
+                        trade_info = {
+                            'time': datetime.now().strftime("%H:%M:%S"),
+                            'pair': pair,
+                            'type': '🟢 CALL',
+                            'amount': st.session_state.amount,
+                            'price': f"{current_price:.5f}",
+                            'id': trade_id,
+                            'status': '⏳ PENDING'
+                        }
                         
-                    trade_info = {
-                        'time': datetime.now().strftime("%H:%M:%S"),
-                        'pair': pair,
-                        'type': '🔴 PUT',
-                        'amount': st.session_state.amount,
+                        st.session_state.trades_executed.append(trade_info)
+                        st.session_state.scanner_alerts.append(trade_info)
+                        trades_this_scan += 1
+                        signal = "🟢🔼 COMPRA AUTO"
+
+                    # 🔴 TRADE PUT AUTOMATICO 1m
+                    elif (st.session_state.auto_trade and 
+                          latest_rsi > st.session_state.rsi_sell and 
+                          not macd_bullish):
+                        
+                        result = Iq.buy(
+                            amount=st.session_state.amount,
+                            asset=pair,
+                            action="put",
+                            duration=1,  # 1 MINUTO
+                            price=current_price
+                        )
+
+                        trade_id = result.get('id', f"{pair}_{int(time_module.time())}")
+                        trade_info = {
+                            'time': datetime.now().strftime("%H:%M:%S"),
+                            'pair': pair,
+                            'type': '🔴 PUT',
+                            'amount': st.session_state.amount,
+                            'price': f"{current_price:.5f}",
+                            'id': trade_id,
+                            'status': '⏳ PENDING'
+                        }
+                        
+                        st.session_state.trades_executed.append(trade_info)
+                        st.session_state.scanner_alerts.append(trade_info)
+                        trades_this_scan += 1
+                        signal = "🔴🔽 VENDI AUTO"
+
+                    # 📊 Salva dati scanner
+                    st.session_state.scanner_data[pair] = {
                         'price': f"{current_price:.5f}",
-                        'id': result.get('id', 'N/A'),
-                        'status': '⏳ PENDING'
+                        'rsi': f"{latest_rsi:.1f}",
+                        'signal': signal
                     }
-                    st.session_state.trades_executed.append(trade_info)
-                    st.session_state.scanner_alerts.append(trade_info)
-                    trades_this_scan += 1
-                    signal = "🔴🔽 VENDI AUTO"
-                    
-                # 📊 SALVA DATI
-                st.session_state.scanner_data[pair] = {
-                    'price': f"{current_price:.5f}",
-                    'rsi': f"{latest_rsi:.1f}",
-                    'signal': signal
-                }
-                    
-            except Exception as e:
-                st.session_state.scanner_data[pair] = {
-                    'price': '❌', 'rsi': '❌', 'signal': f'ERROR'
-                }
-            
-        st.session_state.scanner_last_update = current_time
-        placeholder.success(f"✅ Scanner aggiornato! {trades_this_scan} trade eseguiti")
-        st.rerun()
+
+                except Exception as e:
+                    st.session_state.scanner_data[pair] = {
+                        'price': '❌', 
+                        'rsi': '❌', 
+                        'signal': 'ERROR'
+                    }
+
+            st.session_state.scanner_last_update = current_time
+            placeholder.success(f"✅ Update completato! {trades_this_scan} trade eseguiti")
+            st.rerun()
+
         
     # ✅ TABELLA SCANNER
     st.subheader("🔍 **SCANNER FOREX**")
@@ -338,7 +379,24 @@ if st.session_state.get('connected', False):
         st.subheader("📊 **TRADES IN CORSO**")
         trades_df = pd.DataFrame(st.session_state.trades_executed)
         st.dataframe(trades_df, use_container_width=True)
-            
+
+    # 🔍 CHECK ESITI TRADES (SEZIONE 7)
+    if st.session_state.trades_executed:
+        for trade in st.session_state.trades_executed:
+            if trade['status'] == '⏳ PENDING':
+                try:
+                    result = Iq.check_win_v3(trade['id'])
+                    if result and result.get('win') is not None:
+                        if result['win']:
+                            trade['status'] = '✅ VINTO'
+                            trade['payout'] = result.get('win_amount', st.session_state.amount * 0.8)
+                        else:
+                            trade['status'] = '❌ PERSO'
+                            trade['payout'] = -trade['amount']
+                except:
+                    pass
+        st.rerun()
+    
         # 💰 PROFITTO TOTALE
         st.metric("💵 Profitto Totale", f"€{st.session_state.total_profit:.2f}")
                 
