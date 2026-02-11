@@ -11,8 +11,8 @@ import requests
 from datetime import datetime, time
 
 # **CONFIG TELEGRAM** (metti nella sidebar)
-TELEGRAM_TOKEN = "8235666467:AAGCsvEhlrzl7bH537bJTjsSwQ3P3PMRW10"  # Il tuo token
-TELEGRAM_CHAT_ID = "7191509088"         # Il tuo Chat ID
+TELEGRAM_TOKEN = st.secrets["telegram_token"]
+TELEGRAM_CHAT_ID = st.secrets["telegram_chat_id"]
 
 def send_telegram_signal(signal_type, pair, price, rsi, macd):
     """Invia notifica Telegram completa"""
@@ -44,10 +44,6 @@ def send_telegram_signal(signal_type, pair, price, rsi, macd):
 
 st.set_page_config(page_title="Sentinel AI", page_icon="🚀", layout="wide")
 
-#st.session_state.refresh_counter += 1
-#if st.session_state.refresh_counter % 60 == 0:  # Ogni 60 iterazioni
-    #st.rerun()
-
 # Metti il tuo logo.png nella stessa cartella del file .py
 logo = Image.open("banner.png")  # 400x100px ideale
 st.image(logo, use_column_width=True, caption="IQ Signals PRO")
@@ -76,9 +72,13 @@ with st.sidebar:
                     st.rerun()
                 else:
                     st.error(f"❌ {reason}")
-            except Exception as e:
-                st.error(f"❌ {e}")
-    
+            
+            except ConnectionError:
+                st.error("❌ Connessione fallita")
+            
+            except ValueError as ve:
+                st.error(f"❌ Dati corrotti: {ve}")
+   
     # **CONFIG TRADING + TASTO ESCI se CONNESSO**
     else:
         st.success(f"🟢 Connesso: {st.session_state['email']}")
@@ -112,7 +112,7 @@ with st.sidebar:
         # Orari sessioni FOREX (CET = UTC+1)
         now_cet = datetime.now()
         ora_cet = now_cet.time()
-
+        
         # **SCANNER e BARRA** (usa time_module)
         current_time = time_module.time()  # ✅ Invece di time.time()
         
@@ -225,13 +225,13 @@ if st.session_state.get('connected', False):
                 macd_bullish = df['MACD'].iloc[-1] > df['MACD_signal'].iloc[-1]
                 
                 signal = "⚪ ATTESA"
-                if latest_rsi < 30 and macd_bullish:
+                if latest_rsi < st.session_state['rsi_buy'] and macd_bullish:
                     signal = "🟢 COMPRA"
                     st.session_state.scanner_alerts.append({
                         'pair': pair, 'type': '🟢 COMPRA', 'price': f"{df['close'].iloc[-1]:.5f}",
                         'rsi': f"{latest_rsi:.1f}"
                     })
-                elif latest_rsi > 70 and not macd_bullish:
+                elif latest_rsi > st.session_state['rsi_sell'] and not macd_bullish:
                     signal = "🔴 VENDI"
                     st.session_state.scanner_alerts.append({
                         'pair': pair, 'type': '🔴 VENDI', 'price': f"{df['close'].iloc[-1]:.5f}",
@@ -344,10 +344,6 @@ if st.session_state.get('connected', False):
         macd = ta.macd(df['close'])
         df['MACD'] = macd['MACD_12_26_9']
         df['MACD_signal'] = macd['MACDs_12_26_9']
-        
-        # SEGNALI (invariati)
-        df['prev_MACD'] = df['MACD'].shift(1)
-        df['prev_signal'] = df['MACD_signal'].shift(1)
         
         # SEGNALI
         df['prev_MACD'] = df['MACD'].shift(1)
@@ -477,13 +473,12 @@ if st.session_state.get('connected', False):
                 # ✅ USA time_module.time() invece di datetime
                 signal_timestamp = datetime.strptime(signal['time'], '%H:%M:%S').timestamp()
                 time_diff = current_time - signal_timestamp
-                
-                if time_diff >= 60:  # 1 minuto passato
+                                
+                if time_diff >= 60:
                     try:
-                        Iq = st.session_state['iq']
-                        candles = Iq.get_candles(signal['pair'], 60, 2, time_module.time())
-                        latest_price = pd.DataFrame(candles)['close'].iloc[-1]
-                        entry_price = float(signal['price_entry'])
+                        candles = Iq.get_candles(signal['pair'], 60, 3, time_module.time())  # 3 candele
+                        if len(candles) >= 2:
+                            latest_price = candles[-1]['close']
                         
                         # CALCOLA ESITO
                         if signal['type'] == '🟢 COMPRA':
