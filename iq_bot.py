@@ -416,42 +416,42 @@ if st.session_state.get('connected', False):
 
     st.markdown("---")
 
-# LIVE STATUS
-st.subheader("📈 LIVE STATUS")
-if (st.session_state.get('connected', False) and 
-    st.session_state.get('pair')):
-    
-    try:
-        Iq = st.session_state['iq']
-        pair = st.session_state['pair']
-        candles = Iq.get_candles(pair, 60, 50, time_module.time())
-        df_live = pd.DataFrame(candles)
-        df_live['from'] = pd.to_datetime(df_live['from'], unit='s')
-        df_live.set_index('from', inplace=True)
+    # LIVE STATUS
+    st.subheader("📈 LIVE STATUS")
+    if (st.session_state.get('connected', False) and 
+        st.session_state.get('pair')):
         
-        df_live['RSI'] = ta.rsi(df_live['close'], length=14)
-        macd = ta.macd(df_live['close'])
-        df_live['MACD'] = macd['MACD_12_26_9']
-        df_live['MACD_signal'] = macd['MACDs_12_26_9']
-        
-        latest = df_live.iloc[-1]
-        st.session_state['df_live'] = df_live
-        
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric("💰 PREZZO", f"{latest['close']:.5f}")
-        with col2:
-            st.metric("📊 RSI", f"{latest['RSI']:.1f}")
-        with col3:
-            st.metric("🔥 MACD", f"{latest['MACD']:.5f}")
-        with col4:
-            trend = "📈 UP" if latest['MACD'] > latest['MACD_signal'] else "📉 DOWN"
-            st.metric("⚡ TREND", trend)
+        try:
+            Iq = st.session_state['iq']
+            pair = st.session_state['pair']
+            candles = Iq.get_candles(pair, 60, 50, time_module.time())
+            df_live = pd.DataFrame(candles)
+            df_live['from'] = pd.to_datetime(df_live['from'], unit='s')
+            df_live.set_index('from', inplace=True)
             
-    except:
-        st.info("⏳ Caricamento dati live...")
-
-st.markdown("---")
+            df_live['RSI'] = ta.rsi(df_live['close'], length=14)
+            macd = ta.macd(df_live['close'])
+            df_live['MACD'] = macd['MACD_12_26_9']
+            df_live['MACD_signal'] = macd['MACDs_12_26_9']
+            
+            latest = df_live.iloc[-1]
+            st.session_state['df_live'] = df_live
+            
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("💰 PREZZO", f"{latest['close']:.5f}")
+            with col2:
+                st.metric("📊 RSI", f"{latest['RSI']:.1f}")
+            with col3:
+                st.metric("🔥 MACD", f"{latest['MACD']:.5f}")
+            with col4:
+                trend = "📈 UP" if latest['MACD'] > latest['MACD_signal'] else "📉 DOWN"
+                st.metric("⚡ TREND", trend)
+                
+        except:
+            st.info("⏳ Caricamento dati live...")
+    
+    st.markdown("---")
 
 # GRAFICO CENTRALE ✅ COMPLETO
 if st.session_state.get('connected', False):
@@ -561,9 +561,9 @@ if st.session_state.get('connected', False):
     else:
         st.info("⏳ Nessun segnale generato")
 
-# RESET BUTTON (FINE PAGINA)
-if st.button("🗑️ **RESET TUTTO**", key="clear_all"):
-    for key in list(st.session_state.keys()):
-        del st.session_state[key]
-    st.success("✅ RESET COMPLETO!")
-    st.rerun()
+    # RESET BUTTON (FINE PAGINA)
+    if st.button("🗑️ **RESET TUTTO**", key="clear_all"):
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        st.success("✅ RESET COMPLETO!")
+        st.rerun()
