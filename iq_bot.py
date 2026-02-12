@@ -549,7 +549,7 @@ if st.session_state.get('connected', False):
                 'price_entry': f"{new_sells['close'].iloc[-1]:.5f}",
                 'rsi': f"{new_sells['RSI'].iloc[-1]:.1f}",
                 'macd': f"{new_sells['MACD'].iloc[-1]:.5f}",
-                'outcome': '⏳ PENDENTE'  # ✅ ESITO INIZIALE
+                'outcome': '⏳ ATTESA ESITO'  # ✅ ESITO INIZIALE
             }
             if signal not in st.session_state['signal_history']:
                 st.session_state['signal_history'].insert(0, signal)
@@ -560,7 +560,7 @@ if st.session_state.get('connected', False):
         df_last_hour = df.tail(60).copy()
         fig = make_subplots(
             rows=3, cols=1,
-            subplot_titles=(f'💹 TREND PREZZO CON BB', 'INDICATORE RSI', 'INDICATORE MACD'),
+            subplot_titles=(f'💹 **TREND PREZZO CON BB**', '**INDICATORE RSI**', '**INDICATORE MACD**'),
             row_heights=[0.5, 0.175, 0.175],
             vertical_spacing=0.05,
             shared_xaxes=True
