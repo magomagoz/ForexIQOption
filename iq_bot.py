@@ -158,7 +158,17 @@ with st.sidebar:
             st.success("✅ TEST OK! Popup+Telegram!")
             st.balloons()
             st.rerun()
-            
+
+
+        # RESET BUTTON (FINE PAGINA)
+        if st.button("🗑️ **RESET COMPLETO**", key="clear_all"):
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+            st.success("✅ RESET COMPLETO!")
+            st.rerun()
+
+
+
 ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"]
 
 # INIZIALIZZAZIONE SESSION STATE
@@ -560,10 +570,3 @@ if st.session_state.get('connected', False):
         st.dataframe(signals_df, use_container_width=True, height=350, hide_index=False)
     else:
         st.info("⏳ Nessun segnale generato")
-
-    # RESET BUTTON (FINE PAGINA)
-    if st.button("🗑️ **RESET TUTTO**", key="clear_all"):
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
-        st.success("✅ RESET COMPLETO!")
-        st.rerun()
