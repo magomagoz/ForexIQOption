@@ -273,12 +273,20 @@ if st.session_state.get('connected', False):
                     df['MACD_signal'] = macd['MACDs_12_26_9']
     
                     latest_rsi = float(df['RSI'].iloc[-1])
+
+                    # ✅ MACD PIÙ SEMPLICE (funziona sempre)
+                    macd_current = float(df['MACD'].iloc[-1])
+                    macd_signal_current = float(df['MACD_signal'].iloc[-1])
+                    macd_current_prev = float(df['MACD'].iloc[-2])
+                    macd_signal_prev = float(df['MACD_signal'].iloc[-2])
+
+                    
                     macd_bullish = (float(df['MACD'].iloc[-1]) > float(df['MACD_signal'].iloc[-1])) and \
                                    (float(df['MACD'].iloc[-2]) <= float(df['MACD_signal'].iloc[-2]))
                     macd_bearish = (float(df['MACD'].iloc[-1]) < float(df['MACD_signal'].iloc[-1])) and \
                                    (float(df['MACD'].iloc[-2]) >= float(df['MACD_signal'].iloc[-2]))
                     current_price = float(df['close'].iloc[-1])
-    
+                    
                     signal = "⚪ ATTESA"
     
                     # TRADE CALL AUTOMATICO ✅ CORRETTO
