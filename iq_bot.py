@@ -185,8 +185,8 @@ if st.session_state.get('connected', False):
             elif key == 'scanner_data': st.session_state[key] = {}
             elif key == 'scanner_last_update': st.session_state[key] = 0
             elif key == 'scanner_alerts': st.session_state[key] = []
-            elif key == 'rsi_buy': st.session_state[key] = 30
-            elif key == 'rsi_sell': st.session_state[key] = 70
+            elif key == 'rsi_buy': st.session_state[key] = 40
+            elif key == 'rsi_sell': st.session_state[key] = 60
             elif key == 'amount': st.session_state[key] = 1
             elif key == 'trades_executed': st.session_state[key] = []
             elif key == 'total_profit': st.session_state[key] = 0.0
