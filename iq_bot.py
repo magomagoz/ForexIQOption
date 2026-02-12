@@ -50,7 +50,7 @@ st.image(logo, use_column_width=True, caption="IQ Signals PRO")
 
 # **SIDEBAR con tasto dinamico CONNETTI/ESCI**
 with st.sidebar:
-    st.header("⚙️ Trading IQ Option")
+    st.header("⚙️ **TRADING IQ OPTION**")
     
     # SOLO credenziali se NON connesso
     if not st.session_state.get('connected', False):
@@ -84,7 +84,7 @@ with st.sidebar:
         #st.success(f"🟢 Connesso: {st.session_state['email']}")
         st.success(f"🟢 Connesso")
         
-        st.header("📊 Trading Desk")
+        st.header("📊 **ANALIZZA LA VALUTA**")
         st.session_state['pair'] = st.selectbox(
             "Coppia", 
             ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"], 
@@ -94,7 +94,7 @@ with st.sidebar:
         #st.session_state['rsi_sell'] = st.slider("RSI Sell", 60, 80, 70)
 
             # ✅ TASTO ESCI (rosso)
-        if st.button("🔴 **ESCI**", type="secondary", use_container_width=True):
+        if st.button("🔴 **DISCONNETTI**", type="secondary", use_container_width=True):
             try:
                 st.session_state['iq'].close()  # Chiude connessione IQ Option
             except:
@@ -433,6 +433,8 @@ if st.session_state.get('connected', False):
                     st.session_state.scanner_alerts = [a for a in st.session_state.scanner_alerts if a['pair'] != alert['pair']]
                     st.rerun()
         st.markdown("---")
+
+    st.markdown("---")
 
     # **LIVE STATUS - ROBUSTO**
     st.subheader("📈 LIVE STATUS")
