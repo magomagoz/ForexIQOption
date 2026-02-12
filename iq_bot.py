@@ -230,7 +230,7 @@ if st.session_state.get('connected', False):
     with col2: 
         st.session_state.rsi_sell = st.number_input("🔴 RSI Sell", value=st.session_state.rsi_sell, min_value=55, max_value=90)
     with col3: 
-        st.session_state.amount = st.number_input("💵 Importo €", value=st.session_state.amount, min_value=1, max_value=1000)
+        st.session_state.amount = st.number_input("💵 Importo €", value=st.session_state.amount, min_value=100, max_value=1000)
 
     # SCANNER + TRADING
     if st.session_state.scanner:
