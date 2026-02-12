@@ -235,6 +235,8 @@ if st.session_state.get('connected', False):
         st.error(f"❌ Errore balance: {str(e)}")
         st.session_state.current_balance = st.session_state.get('current_balance', 10000.0)
 
+    st.markdown("---")
+
     # ✅ TOGGLE SCANNER + TRADE AUTO
     col1, col2 = st.columns(2)
     with col1:
@@ -249,7 +251,7 @@ if st.session_state.get('connected', False):
         st.session_state.rsi_sell = st.number_input("🔴 RSI Sell", value=70, min_value=55, max_value=90)
     with col3: 
         st.session_state.amount = st.number_input("💵 Importo €", value=100, min_value=1, max_value=1000)
-    
+
     # 🔄 SCANNER + TRADING (SEZIONE 4)
     if st.session_state.scanner:
         last_scan = datetime.fromtimestamp(st.session_state.scanner_last_update).strftime("%H:%M:%S")
@@ -364,7 +366,8 @@ if st.session_state.get('connected', False):
             placeholder.success(f"✅ Update completato! {trades_this_scan} trade eseguiti")
             st.rerun()
 
-        
+    st.markdown("---")
+     
     # ✅ TABELLA SCANNER
     st.subheader("🔍 **SCANNER FOREX**")
     if st.session_state.scanner:
