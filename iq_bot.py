@@ -368,13 +368,22 @@ if st.session_state.get('connected', False):
 
     st.markdown("---")
      
-    # ✅ TABELLA SCANNER
+    # ✅ TABELLA SCANNER CON TITOLI PERSONALIZZATI
     st.subheader("🔍 **SCANNER FOREX**")
-    if st.session_state.scanner:
+    if st.session_state.scanner_  # ✅ Condizione corretta
         scanner_df = pd.DataFrame(st.session_state.scanner_data).T
         scanner_df.reset_index(inplace=True)
         scanner_df.rename(columns={'index': 'PAIR'}, inplace=True)
         scanner_df = scanner_df[['PAIR', 'price', 'rsi', 'signal']]
+        
+        # 🎯 CAMBIA I TITOLI QUI
+        scanner_df.rename(columns={
+            'PAIR': '💱 COPPIA',
+            'price': '💰 PREZZO', 
+            'rsi': '📊 RSI',
+            'signal': '🚦 SEGNALE'
+        }, inplace=True)
+        
         st.dataframe(scanner_df, use_container_width=True, height=400, hide_index=True)
         
     # ✅ TRADES LIVE
