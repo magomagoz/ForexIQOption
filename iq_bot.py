@@ -560,7 +560,7 @@ if st.session_state.get('connected', False):
         df_last_hour = df.tail(60).copy()
         fig = make_subplots(
             rows=3, cols=1,
-            subplot_titles=(f'💹 **TREND PREZZO CON BB**', '**INDICATORE RSI**', '**INDICATORE MACD**'),
+            subplot_titles=(f'💹 TREND PREZZO CON BB', '📈 INDICATORE RSI', '📉 INDICATORE MACD'),
             row_heights=[0.5, 0.175, 0.175],
             vertical_spacing=0.05,
             shared_xaxes=True
