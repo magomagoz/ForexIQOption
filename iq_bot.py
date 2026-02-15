@@ -105,13 +105,6 @@ with st.sidebar:
    
     else:
         st.success(f"🟢 Connesso")
-        st.markdown("---")
-        st.subheader("📊 **ANALIZZA LA VALUTA**")
-        st.session_state['pair'] = st.selectbox(
-            "Coppia", 
-            ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"], 
-            index=0
-        )
 
         if st.button("🔴 **DISCONNETTI**", type="secondary", use_container_width=True):
             try:
@@ -122,6 +115,14 @@ with st.sidebar:
                 del st.session_state[key]
             st.success("👋 Disconnesso!")
             st.rerun()
+        
+        st.markdown("---")
+        st.subheader("📊 **ANALIZZA LA VALUTA**")
+        st.session_state['pair'] = st.selectbox(
+            "Coppia", 
+            ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"], 
+            index=0
+        )
     
     # **SESSIONI MERCATO FOREX**
     if st.session_state.get('connected', False):
