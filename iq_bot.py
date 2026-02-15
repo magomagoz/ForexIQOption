@@ -84,7 +84,7 @@ with st.sidebar:
         email = st.text_input("Email Practice", value="mago_magoz@libero.it")
         password = st.text_input("Password", type="password")
         
-        if st.button("🔗 **CONNETTI**", type="primary", use_container_width=True):
+        if st.button("🔌 **CONNETTI**", type="primary", use_container_width=True):
             try:
                 Iq = IQ_Option(email, password)
                 check, reason = Iq.connect()
@@ -176,7 +176,7 @@ with st.sidebar:
        
         st.markdown("---")
         
-        if st.button("🚀 **TEST SEGNALE TELEGRAM**", key="test_signal"):
+        if st.button("📱 **TEST SEGNALE TELEGRAM**", key="test_signal"):
             send_telegram_signal("BUY", "EURUSD", 1.08542, 28.4, 0.00015)
             if 'scanner_alerts' not in st.session_state:
                 st.session_state['scanner_alerts'] = []
