@@ -389,7 +389,7 @@ if st.session_state.get('connected', False):
         df_last_hour = df.tail(60).copy()
         fig = make_subplots(
             rows=3, cols=1,
-            subplot_titles=(f'💹 {pair.upper()} CON BOLLINGER', '📈 RSI (Livelli Segnali)', '📉 MACD CROSS'),
+            subplot_titles=(f'💹 {pair.upper()} CON BBANDS', '📈 RSI (Livelli Segnali)', '📉 MACD CROSS'),
             row_heights=[0.5, 0.25, 0.25],
             vertical_spacing=0.05,
             shared_xaxes=True
@@ -428,7 +428,7 @@ if st.session_state.get('connected', False):
                                line=dict(color='red', width=2), name='Signal'), row=3, col=1)
         fig.add_hline(y=0, line_dash="solid", line_color="white", line_width=1, row=3, col=1)
         
-        fig.update_layout(height=1000, showlegend=True, 
+        fig.update_layout(height=1000, showlegend=False, 
                          title=f"🎯 {pair.upper()} - SCANNER SEGNALI ATTIVO",
                          xaxis_rangeslider_visible=False, margin=dict(t=120))
         st.plotly_chart(fig, use_container_width=True)
