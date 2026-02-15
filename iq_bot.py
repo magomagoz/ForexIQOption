@@ -126,7 +126,7 @@ with st.sidebar:
     # **SESSIONI MERCATO FOREX**
     if st.session_state.get('connected', False):
         st.markdown("---")
-        st.header("🌍 **SESSIONI MERCATO**")
+        st.subheader("🌍 **SESSIONI MERCATO**")
         
         now_cet = datetime.now()
         ora_cet = now_cet.time()
