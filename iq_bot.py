@@ -53,6 +53,18 @@ def send_telegram_signal(signal_type, pair, price, rsi, macd):
     except:
         return None
 
+def play_trade_sound(sound_type="alert"):
+    """Suona notifica audio per trade - MULTI BROWSER"""
+    sounds = {
+        "buy": "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAo",
+        "sell": "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAo",
+        "win": "data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAo",
+        "lose": "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAo"
+    }
+    
+    sound_data = sounds.get(sound_type, sounds["alert"])
+    st.audio(sound_data, autoplay=True, sample_rate=8000, play_on_hover=False)
+
 st.set_page_config(page_title="Sentinel AI", page_icon="🚀", layout="wide")
 
 # Logo
@@ -170,6 +182,7 @@ with st.sidebar:
             ]
             st.success("✅ TEST TELEGRAM OK!")
             st.balloons()
+            play_trade_sound("buy")
             st.rerun()
 
         if st.button("🗑️ **RESET COMPLETO**", key="clear_all"):
@@ -206,7 +219,7 @@ if st.session_state.get('connected', False):
         balance = float(Iq.get_balance())
         col1, col2 = st.columns(2)
         col1.metric("💰 Balance Practice", f"€{balance:.2f}")
-        col2.metric("👀 Modalità", "🤖 **AUTO TRADES 1m**")
+        col2.metric("👀 Modalità", "🤖 **AUTO TRADES 1m + AUDIO**")
     except Exception as e:
         st.error(f"❌ Errore balance: {str(e)}")
 
@@ -221,7 +234,7 @@ if st.session_state.get('connected', False):
     with col2: 
         st.session_state.rsi_sell = st.number_input("🔴 RSI Sell", value=st.session_state.rsi_sell, min_value=65, max_value=80)
 
-    # ✅ SCANNER CON AUTO-TRADES 1m
+    # ✅ SCANNER CON AUTO-TRADES 1m + AUDIO
     if st.session_state.scanner:
         last_scan = datetime.fromtimestamp(st.session_state.scanner_last_update).strftime("%H:%M:%S") if st.session_state.scanner_last_update else "Mai"
         st.markdown(f"🕐 **Ultimo scan**: {last_scan}")
@@ -249,16 +262,19 @@ if st.session_state.get('connected', False):
                             entry_price = trade['entry_price']
                             
                             # CALCOLA RISULTATO (NO SPREAD)
-                            profit_pips = (exit_price - entry_price) * 10000
+                            profit_pips = (exit_price - entry_price) * 10000 if trade['direction'] == 'BUY' else (entry_price - exit_price) * 10000
                             win_amount = trade['amount'] * 0.85  # 85% payout
                             lose_amount = -trade['amount']
                             
-                            if profit_pips > 0:  # PREZZO APPREZZATO
+                            if profit_pips > 0:  # PREZZO APPREZZATO (BUY) / DEPREZZATO (SELL)
                                 result = f"✅ VITTORIA €{win_amount:.2f}"
-                                color = "#00ff88"
+                                st.success(f"🎉 VITTORIA {pair.upper()}! +€{win_amount:.2f} ({profit_pips:.1f} pips)")
+                                play_trade_sound("win")
+                                st.balloons()
                             else:
                                 result = f"❌ SCONFITTA -€{lose_amount:.2f}"
-                                color = "#ff4444"
+                                st.error(f"💥 SCONFITTA {pair.upper()}! -€{lose_amount:.2f} ({profit_pips:.1f} pips)")
+                                play_trade_sound("lose")
                             
                             # REGISTRA RISULTATO NELLO STORICO
                             trade_result = {
@@ -267,7 +283,8 @@ if st.session_state.get('connected', False):
                                 'entry': f"{entry_price:.5f}",
                                 'exit': f"{exit_price:.5f}",
                                 'pips': f"{profit_pips:.1f}",
-                                'result': result
+                                'result': result,
+                                'direction': trade['direction']
                             }
                             st.session_state.signal_history.append(trade_result)
                             send_telegram_signal("TRADE_RESULT", pair, exit_price, profit_pips, 0)
@@ -335,6 +352,11 @@ if st.session_state.get('connected', False):
                         st.session_state.scanner_alerts.append(signal_info)
                         signals_this_scan += 1
                         signal = "🟢🚨 TRADE APERTO"
+                        
+                        # 🔊 AUDIO + VISIVO + TELEGRAM
+                        st.success(f"🚀 TRADE BUY {pair.upper()} APERTO @ {current_price:.5f}")
+                        play_trade_sound("buy")
+                        st.balloons()
                         send_telegram_signal("BUY_TRADE", pair, current_price, latest_rsi, macd_current)
                         
                     # ✅ AUTO-TRADE SELL
@@ -361,6 +383,11 @@ if st.session_state.get('connected', False):
                         st.session_state.scanner_alerts.append(signal_info)
                         signals_this_scan += 1
                         signal = "🔴🚨 TRADE APERTO"
+                        
+                        # 🔊 AUDIO + VISIVO + TELEGRAM
+                        st.error(f"🔻 TRADE SELL {pair.upper()} APERTO @ {current_price:.5f}")
+                        play_trade_sound("sell")
+                        st.balloons()
                         send_telegram_signal("SELL_TRADE", pair, current_price, latest_rsi, macd_current)
                     
                     st.session_state.scanner_data[pair] = {
@@ -394,7 +421,8 @@ if st.session_state.get('connected', False):
                 'PAIR': pair,
                 'ENTRY': f"€{trade['amount']} @ {trade['entry_price']:.5f}",
                 '⏱️': f"{int(current_time - trade['entry_time'])}s",
-                'STATUS': '⏳ APERTO'
+                'STATUS': '⏳ APERTO',
+                'DIR': trade['direction']
             }
             for pair, trade in st.session_state['active_trades'].items()
         ])
@@ -446,6 +474,74 @@ if st.session_state.get('connected', False):
                 if st.button("👁️ VISTO", key=f"alert_{alert['pair']}_{int(time_module.time())}"):
                     st.session_state.scanner_alerts = [a for a in st.session_state.scanner_alerts if a['pair'] != alert['pair']]
                     st.rerun()
+
+# GRAFICO CENTRALE REALTIME
+if st.session_state.get('connected', False):
+    Iq = st.session_state['iq']
+    pair = st.session_state.get('pair', 'EURUSD')
+    rsi_buy = st.session_state.get('rsi_buy', 28)
+    rsi_sell = st.session_state.get('rsi_sell', 72)
+    
+    st.subheader(f"📊 GRAFICO REALTIME - {pair.upper()}")
+    
+    try:
+        candles = Iq.get_candles(pair, 60, 150, time_module.time())
+        df = pd.DataFrame(candles)
+        df['from'] = pd.to_datetime(df['from'], unit='s')
+        df.set_index('from', inplace=True)
+        
+        # INDICATORI OTTIMIZZATI 1m
+        df['RSI'] = ta.rsi(df['close'], length=7)
+        bbands = ta.bbands(df['close'], length=20, std=2.0)
+        
+        bb_cols = [col for col in bbands.columns if 'BB' in col]
+        if len(bb_cols) >= 3:
+            df['BBU'] = bbands[bb_cols[0]]
+            df['BBM'] = bbands[bb_cols[1]] 
+            df['BBL'] = bbands[bb_cols[2]]
+        
+        macd = ta.macd(df['close'], fast=8, slow=17, signal=9)
+        df['MACD'] = macd['MACD_8_17_9']
+        df['MACD_signal'] = macd['MACDs_8_17_9']
+        
+        st.session_state['df'] = df
+        
+        # GRAFICO
+        df_last_hour = df.tail(60).copy()
+        fig = make_subplots(
+            rows=3, cols=1,
+            subplot_titles=(f'💹 {pair.upper()} CON BBANDS', '📈 RSI (1m Scalping)', '📉 MACD 8-17-9'),
+            row_heights=[0.5, 0.25, 0.25],
+            vertical_spacing=0.05,
+            shared_xaxes=True
+        )
+        
+        fig.add_trace(go.Candlestick(
+            x=df_last_hour.index, open=df_last_hour['open'], 
+            high=df_last_hour['max'], low=df_last_hour['min'], 
+            close=df_last_hour['close'], 
+            increasing_line_color='#00ff88', decreasing_line_color='#ff4444'), row=1, col=1)
+
+        fig.add_trace(go.Scatter(x=df_last_hour.index, y=df_last_hour['BBU'], 
+                               line=dict(color='#00ccff', width=1.5), name='BBU', opacity=0.7), row=1, col=1)
+        fig.add_trace(go.Scatter(x=df_last_hour.index, y=df_last_hour['BBM'], 
+                               line=dict(color='#ffaa00', width=2), name='BBM'), row=1, col=1)
+        fig.add_trace(go.Scatter(x=df_last_hour.index, y=df_last_hour['BBL'], 
+                               line=dict(color='#00ccff', width=1.5), fill='tonexty',
+                               fillcolor='rgba(0, 204, 255, 0.15)', showlegend=False), row=1, col=1)
+        
+        fig.add_trace(go.Scatter(x=df_last_hour.index, y=df_last_hour['RSI'], 
+                               line=dict(color='purple', width=2), name='RSI'), row=2, col=1)
+        fig.add_hline(y=rsi_buy, line_dash="solid", line_color="#00ff00", line_width=3, 
+                     annotation_text=f"BUY {rsi_buy}", row=2, col=1)
+        fig.add_hline(y=rsi_sell, line_dash="solid", line_color="#ff0000", line_width=3, 
+                     annotation_text=f"SELL {rsi_sell}", row=2, col=1)
+        fig.add_hline(y=50, line_dash="dot", line_color="gray", row=2, col=1)
+        
+        fig.add_trace(go.Scatter(x=df_last_hour.index, y=df_last_hour['MACD'], 
+                               line=dict(color='orange', width=2.5), name='MACD'), row=3, col=1)
+        fig.add_trace(go.Scatter(x=df_last_hour.index,
+
 
 # GRAFICO CENTRALE REALTIME
 if st.session_state.get('connected', False):
