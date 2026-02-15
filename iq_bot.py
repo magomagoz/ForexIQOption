@@ -53,6 +53,20 @@ def send_telegram_signal(signal_type, pair, price, rsi, macd):
     except:
         return None
 
+def play_trade_sound(sound_type="alert"):
+    """Suona notifica audio per trade"""
+    # URL suoni gratuiti (funziona ovunque)
+    sounds = {
+        "buy": "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav",
+        "sell": "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav", 
+        "win": "https://www.soundjay.com/misc/sounds/ching-15.wav",
+        "lose": "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAo"
+    }
+    
+    sound_url = sounds.get(sound_type, sounds["alert"])
+    st.audio(sound_url, autoplay=True, sample_rate=44100)
+
+
 st.set_page_config(page_title="Sentinel AI", page_icon="🚀", layout="wide")
 
 # Logo
@@ -256,10 +270,15 @@ if st.session_state.get('connected', False):
                             if profit_pips > 0:  # PREZZO APPREZZATO
                                 result = f"✅ VITTORIA €{win_amount:.2f}"
                                 color = "#00ff88"
+                                play_trade_sound("win")
+                                st.success(f"🎉 VITTORIA {pair}! +€{win_amount:.2f}")
+
                             else:
                                 result = f"❌ SCONFITTA -€{lose_amount:.2f}"
                                 color = "#ff4444"
-                            
+                                play_trade_sound("lose")  # ❌ Suono sconfitta
+                                st.error(f"💥 SCONFITTA {pair}! -€{lose_amount:.2f}")
+                                                        
                             # REGISTRA RISULTATO NELLO STORICO
                             trade_result = {
                                 'time': datetime.now().strftime("%H:%M:%S"),
@@ -319,7 +338,7 @@ if st.session_state.get('connected', False):
                         trade_info = {
                             'entry_price': current_price,
                             'entry_time': current_time,
-                            'amount': 10.0,
+                            'amount': 100.0,
                             'direction': 'BUY'
                         }
                         st.session_state['active_trades'][pair] = trade_info
@@ -330,13 +349,16 @@ if st.session_state.get('connected', False):
                             'type': '🟢 TRADE BUY APERTO',
                             'price': f"{current_price:.5f}",
                             'rsi': f"{latest_rsi:.1f}",
-                            'amount': '€10'
+                            'amount': '€100'
                         }
                         st.session_state.scanner_alerts.append(signal_info)
                         signals_this_scan += 1
                         signal = "🟢🚨 TRADE APERTO"
-                        send_telegram_signal("BUY_TRADE", pair, current_price, latest_rsi, macd_current)
                         
+                        play_trade_sound("buy")
+                        send_telegram_signal("BUY_TRADE", pair, current_price, latest_rsi, macd_current)
+                        st.ballons()
+                    
                     # ✅ AUTO-TRADE SELL
                     elif (latest_rsi > st.session_state.rsi_sell and 
                           macd_bearish_cross and 
@@ -345,7 +367,7 @@ if st.session_state.get('connected', False):
                         trade_info = {
                             'entry_price': current_price,
                             'entry_time': current_time,
-                            'amount': 10.0,
+                            'amount': 100.0,
                             'direction': 'SELL'
                         }
                         st.session_state['active_trades'][pair] = trade_info
@@ -356,12 +378,15 @@ if st.session_state.get('connected', False):
                             'type': '🔴 TRADE SELL APERTO',
                             'price': f"{current_price:.5f}",
                             'rsi': f"{latest_rsi:.1f}",
-                            'amount': '€10'
+                            'amount': '€100'
                         }
                         st.session_state.scanner_alerts.append(signal_info)
                         signals_this_scan += 1
                         signal = "🔴🚨 TRADE APERTO"
+
+                        play_trade_sound("sell")
                         send_telegram_signal("SELL_TRADE", pair, current_price, latest_rsi, macd_current)
+                        st.ballons()
                     
                     st.session_state.scanner_data[pair] = {
                         'price': f"{current_price:.5f}",
