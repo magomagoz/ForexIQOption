@@ -117,7 +117,7 @@ with st.sidebar:
             st.rerun()
         
         st.markdown("---")
-        st.subheader("📊 **ANALIZZA LA VALUTA**")
+        st.subheader("📊 **SELEZIONE VALUTA**")
         st.session_state['pair'] = st.selectbox(
             "Coppia", 
             ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"], 
