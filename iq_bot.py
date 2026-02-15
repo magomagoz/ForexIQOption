@@ -314,7 +314,7 @@ if st.session_state.get('connected', False):
     
     # TABELLA SCANNER OTTIMIZZATA
     st.subheader("🔍 **SCANNER FOREX LIVE**")
-    if st.session_state.scanner_
+    if st.session_state.scanner:
         scanner_df = pd.DataFrame(st.session_state.scanner_data).T
         scanner_df.reset_index(inplace=True)
         scanner_df.rename(columns={'index': 'PAIR'}, inplace=True)
