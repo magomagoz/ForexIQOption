@@ -9,7 +9,7 @@ from PIL import Image
 import requests
 from datetime import datetime, time
 
-# **CONFIG TELEGRAM** (metti nella sidebar)
+# **CONFIG TELEGRAM** 
 TELEGRAM_TOKEN = st.secrets["TELEGRAM_TOKEN"]
 TELEGRAM_CHAT_ID = st.secrets["TELEGRAM_CHAT_ID"]
 
@@ -18,14 +18,14 @@ def send_telegram_signal(signal_type, pair, price, rsi, macd):
     timestamp = datetime.now().strftime("%H:%M:%S")
     
     message = f"""
-🚀 *SENTINEL AI* 🚀
+🚀 *SENTINEL AI - SEGNALE* 🚀
 
 *{signal_type} - {pair.upper()}*
 💰 *Prezzo Entrata:* `{price:.5f}`
 📊 *RSI:* `{rsi:.1f}`
 🔥 *MACD:* `{macd:.5f}`
 ⏰ *Ora:* {timestamp}
-{'🟢 Esito 1m!' if signal_type == 'BUY' else '🔴 ESITO 1m!'}
+⚠️ *MANUALE - Entra Ora!*
 """
     
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
@@ -50,7 +50,7 @@ try:
 except:
     st.image("https://via.placeholder.com/800x100/0066cc/white?text=SENTINEL+AI", use_column_width=True)
     
-    # **SIDEBAR con tasto dinamico CONNETTI/ESCI**
+# **SIDEBAR con tasto dinamico CONNETTI/ESCI**
 with st.sidebar:
     st.header("⚙️ **TRADING IQ OPTION**")
     
@@ -148,26 +148,20 @@ with st.sidebar:
        
         st.markdown("---")
         
-        if st.button("🚀 **TEST COMPLETO**", key="test_full"):
+        if st.button("🚀 **TEST SEGNALE TELEGRAM**", key="test_signal"):
             send_telegram_signal("BUY", "EURUSD", 1.08542, 28.4, 0.00015)
-            send_telegram_signal("SELL", "GBPUSD", 1.26580, 72.1, -0.00023)
             st.session_state['scanner_alerts'] = [
-                {'pair': 'EURUSD', 'type': '🟢 COMPRA', 'price': '1.08542', 'rsi': '28.4'},
-                {'pair': 'GBPUSD', 'type': '🔴 VENDI', 'price': '1.26580', 'rsi': '72.1'}
+                {'pair': 'EURUSD', 'type': '🟢 COMPRA', 'price': '1.08542', 'rsi': '28.4', 'macd': '0.00015'}
             ]
-            st.success("✅ TEST OK! Popup+Telegram!")
+            st.success("✅ TEST TELEGRAM OK!")
             st.balloons()
             st.rerun()
 
-
-        # RESET BUTTON (FINE PAGINA)
         if st.button("🗑️ **RESET COMPLETO**", key="clear_all"):
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             st.success("✅ RESET COMPLETO!")
             st.rerun()
-
-
 
 ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"]
 
@@ -175,8 +169,7 @@ ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD
 if st.session_state.get('connected', False):
     init_keys = [
         'scanner', 'scanner_data', 'scanner_last_update', 'scanner_alerts',
-        'rsi_buy', 'rsi_sell', 'amount', 'trades_executed', 'total_profit',
-        'current_balance', 'initial_balance', 'auto_trade'
+        'rsi_buy', 'rsi_sell', 'signal_history'
     ]
     
     for key in init_keys:
@@ -185,77 +178,53 @@ if st.session_state.get('connected', False):
             elif key == 'scanner_data': st.session_state[key] = {}
             elif key == 'scanner_last_update': st.session_state[key] = 0
             elif key == 'scanner_alerts': st.session_state[key] = []
-            elif key == 'rsi_buy': st.session_state[key] = 40
-            elif key == 'rsi_sell': st.session_state[key] = 60
-            elif key == 'amount': st.session_state[key] = 1
-            elif key == 'trades_executed': st.session_state[key] = []
-            elif key == 'total_profit': st.session_state[key] = 0.0
-            elif key == 'current_balance': st.session_state[key] = 10000.0
-            elif key == 'initial_balance': st.session_state[key] = 10000.0
-            elif key == 'auto_trade': st.session_state[key] = False
+            elif key == 'rsi_buy': st.session_state[key] = 35  # Ottimizzato per Forex
+            elif key == 'rsi_sell': st.session_state[key] = 65
+            elif key == 'signal_history': st.session_state[key] = []
 
     Iq = st.session_state['iq']
 
-    # BALANCE LIVE PRACTICE
+    # BALANCE LIVE (SOLO VISUALIZZAZIONE)
     try:
         Iq.change_balance("PRACTICE")
-        st.session_state.current_balance = float(Iq.get_balance())
-        
-        if 'initial_balance' not in st.session_state or st.session_state.initial_balance == 0:
-            st.session_state.initial_balance = st.session_state.current_balance
-            
-        profit = st.session_state.current_balance - st.session_state.initial_balance
-        st.session_state.total_profit = profit
-        
-        col1, col2, col3 = st.columns(3)
-        col1.metric("💰 Balance Practice", f"€{st.session_state.current_balance:.2f}")
-        col2.metric("📈 Profitto", f"€{profit:.2f}", 
-                   delta=f"{(profit/st.session_state.initial_balance)*100:.1f}%")
-        
-        # WINRATE REALE ✅ CORRETTO
-        if st.session_state.trades_executed:
-            trades_df = pd.DataFrame(st.session_state.trades_executed)
-            won_trades = len(trades_df[trades_df['status'] == '✅ VINTO'])
-            total_trades = len(trades_df)
-            winrate = (won_trades / total_trades * 100) if total_trades > 0 else 0
-            col3.metric("🎯 Winrate", f"{winrate:.1f}%", delta=f"{won_trades}/{total_trades}")
-        else:
-            col3.metric("🎯 Winrate", "0%", delta="0/0")
-        
+        balance = float(Iq.get_balance())
+        col1, col2 = st.columns(2)
+        col1.metric("💰 Balance Practice", f"€{balance:.2f}")
+        col2.metric("👀 Modalità", "🚫 **SOLO SEGNALI**")
     except Exception as e:
         st.error(f"❌ Errore balance: {str(e)}")
 
     st.markdown("---")
 
-    # CONTROLLI SCANNER + TRADE AUTO
+    # CONTROLLI SCANNER (SOLO SEGNALI)
     col1, col2 = st.columns(2)
     with col1:
-        st.session_state.scanner = st.toggle("🔍 **Attiva Scanner**", value=st.session_state.scanner)
+        st.session_state.scanner = st.toggle("🔍 **Attiva Scanner Segnali**", value=st.session_state.scanner)
     with col2:
-        st.session_state.auto_trade = st.toggle("🤖 **Trade Automatici 1m**", value=st.session_state.auto_trade)
+        st.info("🤖 **Trade Auto DISABILITATO** - Solo Segnali!")
 
     col1, col2, col3 = st.columns(3)
     with col1: 
-        st.session_state.rsi_buy = st.number_input("🟢 RSI Buy", value=st.session_state.rsi_buy, min_value=10, max_value=45)
+        st.session_state.rsi_buy = st.number_input("🟢 RSI Buy", value=st.session_state.rsi_buy, min_value=20, max_value=45)
     with col2: 
-        st.session_state.rsi_sell = st.number_input("🔴 RSI Sell", value=st.session_state.rsi_sell, min_value=55, max_value=90)
+        st.session_state.rsi_sell = st.number_input("🔴 RSI Sell", value=st.session_state.rsi_sell, min_value=55, max_value=80)
     with col3: 
-        st.session_state.amount = st.number_input("💵 Importo €", value=st.session_state.amount, min_value=1, max_value=1000)
+        st.info("💵 **Importo manuale su IQ**")
 
-    # SCANNER + TRADING
+    # ✅ SCANNER SEGNALI (NO TRADING AUTOMATICO)
     if st.session_state.scanner:
         last_scan = datetime.fromtimestamp(st.session_state.scanner_last_update).strftime("%H:%M:%S") if st.session_state.scanner_last_update else "Mai"
-        st.markdown(f"🕐 **Ultimo update**: {last_scan}")
+        st.markdown(f"🕐 **Ultimo scan**: {last_scan}")
         
         current_time = time_module.time()
-        if current_time - st.session_state.scanner_last_update > 30:
+        if current_time - st.session_state.scanner_last_update > 25:  # Scan ogni 25s
             placeholder = st.empty()
             with placeholder.container():
-                st.spinner("🔍 Scanning 10 coppie + Trading...")
+                st.spinner("🔍 Scanning 10 coppie Forex...")
 
             st.session_state.scanner_data = {}
             st.session_state.scanner_alerts = []
-            trades_this_scan = 0
+            signals_this_scan = 0
     
             for pair in ALL_PAIRS:
                 try:
@@ -273,83 +242,53 @@ if st.session_state.get('connected', False):
                     df['MACD_signal'] = macd['MACDs_12_26_9']
     
                     latest_rsi = float(df['RSI'].iloc[-1])
-
-                    # ✅ MACD PIÙ SEMPLICE (funziona sempre)
+                    current_price = float(df['close'].iloc[-1])
+                    
+                    # 🎯 CONFERMA MACD CROSS (più affidabile)
                     macd_current = float(df['MACD'].iloc[-1])
                     macd_signal_current = float(df['MACD_signal'].iloc[-1])
                     macd_current_prev = float(df['MACD'].iloc[-2])
                     macd_signal_prev = float(df['MACD_signal'].iloc[-2])
 
-                    
-                    macd_bullish = (float(df['MACD'].iloc[-1]) > float(df['MACD_signal'].iloc[-1])) and \
-                                   (float(df['MACD'].iloc[-2]) <= float(df['MACD_signal'].iloc[-2]))
-                    macd_bearish = (float(df['MACD'].iloc[-1]) < float(df['MACD_signal'].iloc[-1])) and \
-                                   (float(df['MACD'].iloc[-2]) >= float(df['MACD_signal'].iloc[-2]))
-                    current_price = float(df['close'].iloc[-1])
+                    macd_bullish_cross = (macd_current > macd_signal_current) and (macd_current_prev <= macd_signal_prev)
+                    macd_bearish_cross = (macd_current < macd_signal_current) and (macd_current_prev >= macd_signal_prev)
                     
                     signal = "⚪ ATTESA"
-    
-                    # TRADE CALL AUTOMATICO ✅ CORRETTO
-                    if (st.session_state.auto_trade and 
-                        latest_rsi < st.session_state.rsi_buy and 
-                        macd_bullish):
-                        
-                        result = Iq.buy(
-                            amount=st.session_state.amount,
-                            asset=pair,
-                            action="call",
-                            duration=1
-                        )
-    
-                        trade_id = result.get('id', f"{pair}_{int(time_module.time())}")
-                        trade_info = {
+                    
+                    # ✅ SEGNALE BUY (SOLO NOTIFICA)
+                    if latest_rsi < st.session_state.rsi_buy and macd_bullish_cross:
+                        signal_info = {
                             'time': datetime.now().strftime("%H:%M:%S"),
                             'pair': pair,
-                            'type': '🟢 CALL',
-                            'amount': st.session_state.amount,
+                            'type': '🟢 COMPRA',
                             'price': f"{current_price:.5f}",
                             'rsi': f"{latest_rsi:.1f}",
-                            'macd': f"{df['MACD'].iloc[-1]:.5f}",
-                            'id': trade_id,
-                            'status': '⏳ PENDING'  # ✅ CORRETTO
+                            'macd': f"{macd_current:.5f}"
                         }
+                        st.session_state.scanner_alerts.append(signal_info)
+                        st.session_state.signal_history.append(signal_info)
+                        signals_this_scan += 1
+                        signal = "🟢🚨 SEGNALE COMPRA"
+                        # 📱 INVIA TELEGRAM
+                        send_telegram_signal("BUY", pair, current_price, latest_rsi, macd_current)
                         
-                        st.session_state.trades_executed.append(trade_info)
-                        st.session_state.scanner_alerts.append(trade_info)
-                        trades_this_scan += 1
-                        signal = "🟢🔼 COMPRA AUTO"
-                        send_telegram_signal("BUY", pair, current_price, latest_rsi, float(df['MACD'].iloc[-1]))
-    
-                    elif (st.session_state.auto_trade and 
-                          latest_rsi > st.session_state.rsi_sell and 
-                          macd_bearish):
-                        
-                        result = Iq.buy(
-                            amount=st.session_state.amount,
-                            asset=pair,
-                            action="put",
-                            duration=1
-                        )
-    
-                        trade_id = result.get('id', f"{pair}_{int(time_module.time())}")
-                        trade_info = {
+                    # ✅ SEGNALE SELL (SOLO NOTIFICA)
+                    elif latest_rsi > st.session_state.rsi_sell and macd_bearish_cross:
+                        signal_info = {
                             'time': datetime.now().strftime("%H:%M:%S"),
                             'pair': pair,
-                            'type': '🔴 PUT',
-                            'amount': st.session_state.amount,
+                            'type': '🔴 VENDI',
                             'price': f"{current_price:.5f}",
                             'rsi': f"{latest_rsi:.1f}",
-                            'macd': f"{df['MACD'].iloc[-1]:.5f}",
-                            'id': trade_id,
-                            'status': '⏳ PENDING'  # ✅ CORRETTO
+                            'macd': f"{macd_current:.5f}"
                         }
-                        
-                        st.session_state.trades_executed.append(trade_info)
-                        st.session_state.scanner_alerts.append(trade_info)
-                        trades_this_scan += 1
-                        signal = "🔴🔽 VENDI AUTO"
-                        send_telegram_signal("SELL", pair, current_price, latest_rsi, float(df['MACD'].iloc[-1]))
-    
+                        st.session_state.scanner_alerts.append(signal_info)
+                        st.session_state.signal_history.append(signal_info)
+                        signals_this_scan += 1
+                        signal = "🔴🚨 SEGNALE VENDI"
+                        # 📱 INVIA TELEGRAM
+                        send_telegram_signal("SELL", pair, current_price, latest_rsi, macd_current)
+                    
                     st.session_state.scanner_data[pair] = {
                         'price': f"{current_price:.5f}",
                         'rsi': f"{latest_rsi:.1f}",
@@ -362,21 +301,31 @@ if st.session_state.get('connected', False):
                     }
     
             st.session_state.scanner_last_update = current_time
-            placeholder.success(f"✅ Update completato! {trades_this_scan} trade eseguiti")
+            if signals_this_scan > 0:
+                placeholder.success(f"✅ Scan completato! {signals_this_scan} SEGNALI TELEGRAM INVIATI!")
+            else:
+                placeholder.success("✅ Scan completato! Nessun segnale")
             st.rerun()
         else:
-            next_scan = 30 - (current_time - st.session_state.scanner_last_update)
-            st.info(f"⏳ Scanner attivo - prossimo update tra {next_scan:.0f}s")
+            next_scan = 25 - (current_time - st.session_state.scanner_last_update)
+            st.info(f"⏳ Scanner attivo - prossimo scan tra {next_scan:.0f}s")
     
     st.markdown("---")
     
-    # TABELLA SCANNER
-    st.subheader("🔍 **SCANNER FOREX**")
-    if st.session_state.scanner and st.session_state.scanner:
+    # TABELLA SCANNER OTTIMIZZATA
+    st.subheader("🔍 **SCANNER FOREX LIVE**")
+    if st.session_state.scanner_
         scanner_df = pd.DataFrame(st.session_state.scanner_data).T
         scanner_df.reset_index(inplace=True)
         scanner_df.rename(columns={'index': 'PAIR'}, inplace=True)
         scanner_df = scanner_df[['PAIR', 'price', 'rsi', 'signal']]
+        
+        # 🎨 COLORI DINAMICI
+        def color_signal(val):
+            if '🟢🚨' in str(val): return 'background-color: #00ff88; color: black; font-weight: bold'
+            elif '🔴🚨' in str(val): return 'background-color: #ff4444; color: white; font-weight: bold'
+            elif '⚪' in str(val): return 'background-color: #f0f0f0'
+            else: return ''
         
         scanner_df.rename(columns={
             'PAIR': '💱 COPPIA',
@@ -385,41 +334,21 @@ if st.session_state.get('connected', False):
             'signal': '🚦 SEGNALE'
         }, inplace=True)
         
-        st.dataframe(scanner_df, use_container_width=True, height=400, hide_index=True)
+        st.dataframe(scanner_df.style.applymap(color_signal, subset=['🚦 SEGNALE']), 
+                    use_container_width=True, height=400, hide_index=True)
     
-    # TRADES LIVE
-    if st.session_state.trades_executed:
-        st.subheader("📊 **TRADES IN CORSO**")
-        trades_df = pd.DataFrame(st.session_state.trades_executed)
-        st.dataframe(trades_df, use_container_width=True)
-
-    # CHECK ESITI TRADES ✅ CORRETTO
-    if st.session_state.trades_executed:
-        Iq = st.session_state['iq']
-        for i, trade in enumerate(st.session_state.trades_executed):
-            if trade['status'] == '⏳ PENDING':
-                try:
-                    result = Iq.check_win_v3(trade['id'])
-                    if result and result.get('win') is not None:
-                        if result['win']:
-                            st.session_state.trades_executed[i]['status'] = '✅ VINTO'
-                            st.session_state.trades_executed[i]['payout'] = result.get('win_amount', trade['amount'] * 0.8)
-                        else:
-                            st.session_state.trades_executed[i]['status'] = '❌ PERSO'
-                            st.session_state.trades_executed[i]['payout'] = -trade['amount']
-                except:
-                    pass
-
-    # ALERT POPUP
+    # 🔥 ALERT POPUP PRIORITARI
     if st.session_state.get('scanner_alerts', []):
-        for alert in st.session_state.scanner_alerts:
+        st.markdown("---")
+        st.subheader("🚨 **SEGNALI ATTIVI**")
+        for alert in st.session_state.scanner_alerts[-3:]:  # Solo ultimi 3
             col1, col2 = st.columns([3,1])
             with col1:
-                color = "#00ff88" if "CALL" in alert['type'] or "COMPRA" in alert['type'] else "#ff4444"
+                color = "#00ff88" if "COMPRA" in alert['type'] else "#ff4444"
                 st.markdown(f"""
                 <div style='background: linear-gradient(45deg, {color}, {color}); 
-                padding: 25px; border-radius: 20px; border: 4px solid #00ff00; 
-                text-align: center; font-size: 24px; font-weight: bold; color: black;'>
+                padding: 25px; border-radius: 20px; border: 4px solid #ffffff; 
+                text-align: center; font-size: 24px; font-weight: bold; color: black; box-shadow: 0 10px 30px rgba(0,0,0,0.3);'>
                     🚀 **{alert['type']} {alert['pair'].upper()}**
                     <div style='font-size: 28px; margin-top: 10px;'>
                         💰 {alert['price']} | 📊 RSI: {alert['rsi']}
@@ -427,56 +356,16 @@ if st.session_state.get('connected', False):
                 </div>
                 """, unsafe_allow_html=True)
             with col2:
-                if st.button("✅ OK", key=f"alert_{alert['pair']}"):
+                if st.button("👁️ VISTO", key=f"alert_{alert['pair']}_{int(time_module.time())}"):
                     st.session_state.scanner_alerts = [a for a in st.session_state.scanner_alerts if a['pair'] != alert['pair']]
                     st.rerun()
-        st.markdown("---")
 
-    st.markdown("---")
-
-    # LIVE STATUS
-    st.subheader("📈 LIVE STATUS")
-    if (st.session_state.get('connected', False) and 
-        st.session_state.get('pair')):
-        
-        try:
-            Iq = st.session_state['iq']
-            pair = st.session_state['pair']
-            candles = Iq.get_candles(pair, 60, 50, time_module.time())
-            df_live = pd.DataFrame(candles)
-            df_live['from'] = pd.to_datetime(df_live['from'], unit='s')
-            df_live.set_index('from', inplace=True)
-            
-            df_live['RSI'] = ta.rsi(df_live['close'], length=14)
-            macd = ta.macd(df_live['close'])
-            df_live['MACD'] = macd['MACD_12_26_9']
-            df_live['MACD_signal'] = macd['MACDs_12_26_9']
-            
-            latest = df_live.iloc[-1]
-            st.session_state['df_live'] = df_live
-            
-            col1, col2, col3, col4 = st.columns(4)
-            with col1:
-                st.metric("💰 PREZZO", f"{latest['close']:.5f}")
-            with col2:
-                st.metric("📊 RSI", f"{latest['RSI']:.1f}")
-            with col3:
-                st.metric("🔥 MACD", f"{latest['MACD']:.5f}")
-            with col4:
-                trend = "📈 UP" if latest['MACD'] > latest['MACD_signal'] else "📉 DOWN"
-                st.metric("⚡ TREND", trend)
-                
-        except:
-            st.info("⏳ Caricamento dati live...")
-    
-    st.markdown("---")
-
-# GRAFICO CENTRALE ✅ COMPLETO
+# GRAFICO CENTRALE REALTIME
 if st.session_state.get('connected', False):
     Iq = st.session_state['iq']
     pair = st.session_state.get('pair', 'EURUSD')
-    rsi_buy = st.session_state.get('rsi_buy', 30)
-    rsi_sell = st.session_state.get('rsi_sell', 70)
+    rsi_buy = st.session_state.get('rsi_buy', 35)
+    rsi_sell = st.session_state.get('rsi_sell', 65)
     
     st.subheader(f"📊 GRAFICO REALTIME - {pair.upper()}")
     
@@ -486,7 +375,7 @@ if st.session_state.get('connected', False):
         df['from'] = pd.to_datetime(df['from'], unit='s')
         df.set_index('from', inplace=True)
         
-        # INDICATORI
+        # INDICATORI TECNICI
         df['RSI'] = ta.rsi(df['close'], length=14)
         bbands = ta.bbands(df['close'], length=20, std=2.0)
         
@@ -495,10 +384,6 @@ if st.session_state.get('connected', False):
             df['BBU'] = bbands[bb_cols[0]]
             df['BBM'] = bbands[bb_cols[1]] 
             df['BBL'] = bbands[bb_cols[2]]
-        else:
-            df['BBU'] = df['close'].rolling(20).mean() + (df['close'].rolling(20).std() * 2)
-            df['BBM'] = df['close'].rolling(20).mean()
-            df['BBL'] = df['close'].rolling(20).mean() - (df['close'].rolling(20).std() * 2)
         
         macd = ta.macd(df['close'])
         df['MACD'] = macd['MACD_12_26_9']
@@ -506,17 +391,17 @@ if st.session_state.get('connected', False):
         
         st.session_state['df'] = df
         
-        # GRAFICO
+        # GRAFICO PROFESSIONALE
         df_last_hour = df.tail(60).copy()
         fig = make_subplots(
             rows=3, cols=1,
-            subplot_titles=(f'💹 TREND PREZZO CON BB', '📈 RSI', '📉 MACD'),
-            row_heights=[0.5, 0.175, 0.175],
+            subplot_titles=(f'💹 {pair.upper()} CON BOLLINGER', '📈 RSI (Livelli Segnali)', '📉 MACD CROSS'),
+            row_heights=[0.5, 0.25, 0.25],
             vertical_spacing=0.05,
             shared_xaxes=True
         )
         
-        # CANDELE
+        # 🕯️ CANDELE
         fig.add_trace(go.Candlestick(
             x=df_last_hour.index, open=df_last_hour['open'], 
             high=df_last_hour['max'], low=df_last_hour['min'], 
@@ -524,7 +409,7 @@ if st.session_state.get('connected', False):
             increasing_line_color='#00ff88', decreasing_line_color='#ff4444'), 
             row=1, col=1)
 
-        # BOLLINGER
+        # 🎯 BOLLINGER BANDS
         fig.add_trace(go.Scatter(x=df_last_hour.index, y=df_last_hour['BBU'], 
                                line=dict(color='#00ccff', width=1.5), name='BBU', opacity=0.7), row=1, col=1)
         fig.add_trace(go.Scatter(x=df_last_hour.index, y=df_last_hour['BBM'], 
@@ -533,48 +418,38 @@ if st.session_state.get('connected', False):
                                line=dict(color='#00ccff', width=1.5), fill='tonexty',
                                fillcolor='rgba(0, 204, 255, 0.15)', showlegend=False), row=1, col=1)
         
-        # RSI
+        # 📊 RSI CON LIVELLI SEGNALE
         fig.add_trace(go.Scatter(x=df_last_hour.index, y=df_last_hour['RSI'], 
                                line=dict(color='purple', width=2)), row=2, col=1)
-        fig.add_hline(y=rsi_buy, line_dash="solid", line_color="#00ff00", line_width=3, row=2, col=1)
-        fig.add_hline(y=rsi_sell, line_dash="solid", line_color="#ff0000", line_width=3, row=2, col=1)
+        fig.add_hline(y=rsi_buy, line_dash="solid", line_color="#00ff00", line_width=3, 
+                     annotation_text=f"BUY {rsi_buy}", row=2, col=1)
+        fig.add_hline(y=rsi_sell, line_dash="solid", line_color="#ff0000", line_width=3, 
+                     annotation_text=f"SELL {rsi_sell}", row=2, col=1)
+        fig.add_hline(y=50, line_dash="dot", line_color="gray", row=2, col=1)
         
-        # MACD
+        # 🔥 MACD CON CROSS
         fig.add_trace(go.Scatter(x=df_last_hour.index, y=df_last_hour['MACD'], 
-                               line=dict(color='orange', width=2)), row=3, col=1)
+                               line=dict(color='orange', width=2.5), name='MACD'), row=3, col=1)
         fig.add_trace(go.Scatter(x=df_last_hour.index, y=df_last_hour['MACD_signal'], 
-                               line=dict(color='red', width=2)), row=3, col=1)
-        fig.add_hline(y=0, line_dash="dot", line_color="gray", row=3, col=1)
+                               line=dict(color='red', width=2), name='Signal'), row=3, col=1)
+        fig.add_hline(y=0, line_dash="solid", line_color="white", line_width=1, row=3, col=1)
         
-        # GRIGLIA
-        for i in range(0, len(df_last_hour), 5):
-            fig.add_vline(x=df_last_hour.index[i], line_dash="dot", line_color="gray", 
-                         opacity=0.3, row=1, col=1, layer="below")
-            fig.add_vline(x=df_last_hour.index[i], line_dash="dot", line_color="gray", 
-                         opacity=0.3, row=2, col=1, layer="below")
-            fig.add_vline(x=df_last_hour.index[i], line_dash="dot", line_color="gray", 
-                         opacity=0.3, row=3, col=1, layer="below")
-        
-        fig.update_layout(height=900, showlegend=False, title=f"🎯 {pair.upper()} - ULTIMA ORA", 
-                         xaxis_rangeslider_visible=False, margin=dict(t=100))
+        fig.update_layout(height=1000, showlegend=True, 
+                         title=f"🎯 {pair.upper()} - SCANNER SEGNALI ATTIVO",
+                         xaxis_rangeslider_visible=False, margin=dict(t=120))
         st.plotly_chart(fig, use_container_width=True)
         
     except Exception as e:
         st.error(f"❌ Grafico {pair}: {e}")
 
-    # CRONOLOGIA SEGNALI
+    # 📋 CRONOLOGIA SEGNALI (ULTIMI 50)
     st.markdown("---")
-    st.subheader("📋 CRONOLOGIA SEGNALI")
+    st.subheader("📋 **STORICO SEGNALI** (Ultimi 50)")
     
-    if 'signal_history' in st.session_state and st.session_state['signal_history']:
-        signals_df = pd.DataFrame(st.session_state['signal_history'])
-        cols = ['time', 'pair', 'type', 'price_entry', 'rsi', 'macd', 'outcome']
-        signals_df = signals_df[cols] if len(signals_df.columns) >= len(cols) else signals_df
-        
-        signals_df.columns = ['Ora', 'Valuta', 'Azione', 'Prezzo Entrata', 'RSI', 'MACD', 'Esito']
-        signals_df.reset_index(drop=True, inplace=True)
-        signals_df.index += 1
-        
-        st.dataframe(signals_df, use_container_width=True, height=350, hide_index=False)
+    if st.session_state.get('signal_history', []):
+        signals_df = pd.DataFrame(st.session_state['signal_history'][-50:])
+        if not signals_df.empty:
+            signals_df.columns = ['Ora', 'Valuta', 'Azione', 'Prezzo', 'RSI', 'MACD']
+            st.dataframe(signals_df, use_container_width=True, height=400, hide_index=True)
     else:
-        st.info("⏳ Nessun segnale generato")
+        st.info("⏳ Attendi i primi segnali... Scanner attivo!")
