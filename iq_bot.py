@@ -190,26 +190,20 @@ if st.session_state.get('connected', False):
         balance = float(Iq.get_balance())
         col1, col2 = st.columns(2)
         col1.metric("💰 Balance Practice", f"€{balance:.2f}")
-        col2.metric("👀 Modalità", "🚫 **SOLO SEGNALI**")
+        col2.metric("👀 Modalità", "🤖 **SOLO SEGNALI**")
     except Exception as e:
         st.error(f"❌ Errore balance: {str(e)}")
 
     st.markdown("---")
 
     # CONTROLLI SCANNER (SOLO SEGNALI)
+    st.session_state.scanner = st.toggle("🔍 **Attiva Scanner Segnali**", value=st.session_state.scanner)
+    
     col1, col2 = st.columns(2)
-    with col1:
-        st.session_state.scanner = st.toggle("🔍 **Attiva Scanner Segnali**", value=st.session_state.scanner)
-    with col2:
-        st.info("🤖 **Trade Auto DISABILITATO** - Solo Segnali!")
-
-    col1, col2, col3 = st.columns(3)
     with col1: 
         st.session_state.rsi_buy = st.number_input("🟢 RSI Buy", value=st.session_state.rsi_buy, min_value=20, max_value=45)
     with col2: 
         st.session_state.rsi_sell = st.number_input("🔴 RSI Sell", value=st.session_state.rsi_sell, min_value=55, max_value=80)
-    with col3: 
-        st.info("💵 **Importo manuale su IQ**")
 
     # ✅ SCANNER SEGNALI (NO TRADING AUTOMATICO)
     if st.session_state.scanner:
