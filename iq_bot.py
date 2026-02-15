@@ -105,7 +105,7 @@ with st.sidebar:
    
     else:
         st.success(f"🟢 Connesso")
-        
+        st.markdown("---")
         st.subheader("📊 **ANALIZZA LA VALUTA**")
         st.session_state['pair'] = st.selectbox(
             "Coppia", 
