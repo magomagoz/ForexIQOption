@@ -400,8 +400,8 @@ if st.session_state.get('connected', False):
             x=df_last_hour.index, open=df_last_hour['open'], 
             high=df_last_hour['max'], low=df_last_hour['min'], 
             close=df_last_hour['close'], 
-            increasing_line_color='#00ff88', decreasing_line_color='#ff4444'), 
-            row=1, col=1)
+            increasing_line_color='#00ff88', decreasing_line_color='#ff4444', 
+            name='CANDLE'), row=1, col=1)
 
         # 🎯 BOLLINGER BANDS
         fig.add_trace(go.Scatter(x=df_last_hour.index, y=df_last_hour['BBU'], 
@@ -414,7 +414,7 @@ if st.session_state.get('connected', False):
         
         # 📊 RSI CON LIVELLI SEGNALE
         fig.add_trace(go.Scatter(x=df_last_hour.index, y=df_last_hour['RSI'], 
-                               line=dict(color='purple', width=2)), row=2, col=1)
+                               line=dict(color='purple', width=2), name='RSI'), row=2, col=1)
         fig.add_hline(y=rsi_buy, line_dash="solid", line_color="#00ff00", line_width=3, 
                      annotation_text=f"BUY {rsi_buy}", row=2, col=1)
         fig.add_hline(y=rsi_sell, line_dash="solid", line_color="#ff0000", line_width=3, 
