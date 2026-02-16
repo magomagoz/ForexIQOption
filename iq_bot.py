@@ -115,6 +115,12 @@ with st.sidebar:
                 del st.session_state[key]
             st.success("👋 Disconnesso!")
             st.rerun()
+
+# Dopo Iq.connect()
+def check_connection():
+    if not st.session_state.get('iq').check_connect():
+        st.session_state['iq'].connect()  # Reconnect loop
+        st.rerun()
         
         st.markdown("---")
         st.subheader("📊 **SELEZIONE VALUTA**")
@@ -308,6 +314,13 @@ if st.session_state.get('connected', False):
                     if not candles or len(candles) < 30:
                         raise ValueError("Dati insufficienti")
     
+                        # Nel loop scanner, wrap try-except:
+                        try:
+                            candles = Iq.get_candles(...)
+                        except:
+                            check_connection()
+                            st.warning("Reconnecting...")
+                    
                     df = pd.DataFrame(candles)
                     df['from'] = pd.to_datetime(df['from'], unit='s')
                     df.set_index('from', inplace=True)
