@@ -299,7 +299,7 @@ if st.session_state.get('connected', False):
                                 'pips': f"{profit_pips:.1f}",
                                 'result': result
                             }
-                            st.session_state.signal_history.append(tr_result)
+                            st.session_state.signal_history.append(trade_result)
                             send_telegram_signal("TRADE_RESULT", pair, exit_price, profit_pips, 0)
                         trades_to_close.append(pair)
                     except Exception as e:
