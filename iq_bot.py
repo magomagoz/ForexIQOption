@@ -53,19 +53,35 @@ def send_telegram_signal(signal_type, pair, price, rsi, macd):
     except:
         return None
 
+def check_connection():
+    """Reconnect IQ se disconnesso"""
+    if st.session_state.get('connected', False):
+        try:
+            Iq = st.session_state['iq']
+            if not Iq.check_connect():
+                check, reason = Iq.connect()
+                if check:
+                    st.success("🔄 Reconnected!")
+                    return True
+                else:
+                    st.error(f"Reconnect fallito: {reason}")
+                    return False
+            return True
+        except Exception as e:
+            st.error(f"Check conn error: {e}")
+            return False
+    return False
+
 def play_trade_sound(sound_type="alert"):
     """Suona notifica audio per trade"""
-    # URL suoni gratuiti (funziona ovunque)
     sounds = {
         "buy": "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav",
         "sell": "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav", 
         "win": "https://www.soundjay.com/misc/sounds/ching-15.wav",
         "lose": "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAo"
     }
-    
     sound_url = sounds.get(sound_type, sounds["alert"])
     st.audio(sound_url, autoplay=True, sample_rate=44100)
-
 
 st.set_page_config(page_title="Sentinel AI", page_icon="🚀", layout="wide")
 
@@ -76,7 +92,7 @@ try:
 except:
     st.image("https://via.placeholder.com/800x100/0066cc/white?text=SENTINEL+AI", use_column_width=True)
     
-# **SIDEBAR con tasto dinamico CONNETTI/ESCI**
+# **SIDEBAR COMPLETO**
 with st.sidebar:
     st.header("⚙️ **TRADING IQ OPTION**")
     
@@ -102,10 +118,8 @@ with st.sidebar:
                     st.error(f"❌ {reason}")
             except Exception as e:
                 st.error(f"❌ Errore: {str(e)}")
-   
     else:
         st.success(f"🟢 Connesso")
-
         if st.button("🔴 **DISCONNETTI**", type="secondary", use_container_width=True):
             try:
                 st.session_state['iq'].close()
@@ -115,12 +129,6 @@ with st.sidebar:
                 del st.session_state[key]
             st.success("👋 Disconnesso!")
             st.rerun()
-
-# Dopo Iq.connect()
-def check_connection():
-    if not st.session_state.get('iq').check_connect():
-        st.session_state['iq'].connect()  # Reconnect loop
-        st.rerun()
         
         st.markdown("---")
         st.subheader("📊 **SELEZIONE VALUTA**")
@@ -129,12 +137,10 @@ def check_connection():
             ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"], 
             index=0
         )
-    
-    # **SESSIONI MERCATO FOREX**
-    if st.session_state.get('connected', False):
+        
+        # **SESSIONI MERCATO FOREX**
         st.markdown("---")
         st.subheader("🌍 **SESSIONI MERCATO**")
-        
         now_cet = datetime.now()
         ora_cet = now_cet.time()
         
@@ -147,7 +153,6 @@ def check_connection():
         
         for nome, orari in sessioni.items():
             inizio, fine = orari["inizio"], orari["fine"]
-            
             if inizio < fine:
                 aperto = inizio <= ora_cet <= fine
             else:
@@ -201,8 +206,9 @@ def check_connection():
 
 ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"]
 
-# INIZIALIZZAZIONE SESSION STATE COMPLETA
+# **MAIN CONTENT - SOLO SE CONNESSO**
 if st.session_state.get('connected', False):
+    # INIZIALIZZAZIONE SESSION STATE
     init_keys = [
         'scanner', 'scanner_data', 'scanner_last_update', 'scanner_alerts',
         'rsi_buy', 'rsi_sell', 'signal_history', 'active_trades'
@@ -214,14 +220,19 @@ if st.session_state.get('connected', False):
             elif key == 'scanner_data': st.session_state[key] = {}
             elif key == 'scanner_last_update': st.session_state[key] = 0
             elif key == 'scanner_alerts': st.session_state[key] = []
-            elif key == 'rsi_buy': st.session_state[key] = 28  # Ottimizzato scalping 1m
+            elif key == 'rsi_buy': st.session_state[key] = 28
             elif key == 'rsi_sell': st.session_state[key] = 72
             elif key == 'signal_history': st.session_state[key] = []
             elif key == 'active_trades': st.session_state[key] = {}
 
     Iq = st.session_state['iq']
+    
+    # CHECK CONNESSIONE
+    if not check_connection():
+        st.error("❌ Connessione persa. Riconnetti manualmente.")
+        st.stop()
 
-    # BALANCE LIVE (SOLO VISUALIZZAZIONE)
+    # BALANCE LIVE
     try:
         Iq.change_balance("PRACTICE")
         balance = float(Iq.get_balance())
@@ -232,6 +243,7 @@ if st.session_state.get('connected', False):
         st.error(f"❌ Errore balance: {str(e)}")
 
     st.markdown("---")
+    current_time = time_module.time()
 
     # CONTROLLI SCANNER
     st.session_state.scanner = st.toggle("🔍 **Attiva Scanner Auto-Trades**", value=st.session_state.scanner)
@@ -242,13 +254,12 @@ if st.session_state.get('connected', False):
     with col2: 
         st.session_state.rsi_sell = st.number_input("🔴 RSI Sell", value=st.session_state.rsi_sell, min_value=65, max_value=80)
 
-    # ✅ SCANNER CON AUTO-TRADES 1m
+    # SCANNER CON AUTO-TRADES 1m
     if st.session_state.scanner:
         last_scan = datetime.fromtimestamp(st.session_state.scanner_last_update).strftime("%H:%M:%S") if st.session_state.scanner_last_update else "Mai"
         st.markdown(f"🕐 **Ultimo scan**: {last_scan}")
         
-        current_time = time_module.time()
-        if current_time - st.session_state.scanner_last_update > 25:  # Scan ogni 25s
+        if current_time - st.session_state.scanner_last_update > 25:
             placeholder = st.empty()
             with placeholder.container():
                 st.spinner("🔍 Scanning 10 coppie Forex...")
@@ -257,36 +268,29 @@ if st.session_state.get('connected', False):
             st.session_state.scanner_alerts = []
             signals_this_scan = 0
     
-            # **CHECK TRADES SCADUTI (PRIMA del nuovo scan)**
+            # CHECK TRADES SCADUTI
             trades_to_close = []
             for pair, trade in st.session_state['active_trades'].items():
                 trade_age = current_time - trade['entry_time']
-                
-                if trade_age >= 60:  # 1 MINUTO SCADUTO
+                if trade_age >= 60:
                     try:
                         current_candles = Iq.get_candles(pair, 60, 2, time_module.time())
                         if current_candles:
                             exit_price = float(current_candles[-1]['close'])
                             entry_price = trade['entry_price']
-                            
-                            # CALCOLA RISULTATO (NO SPREAD)
                             profit_pips = (exit_price - entry_price) * 10000
-                            win_amount = trade['amount'] * 0.85  # 85% payout
+                            win_amount = trade['amount'] * 0.85
                             lose_amount = -trade['amount']
                             
-                            if profit_pips > 0:  # PREZZO APPREZZATO
+                            if profit_pips > 0:
                                 result = f"✅ VITTORIA €{win_amount:.2f}"
-                                color = "#00ff88"
                                 play_trade_sound("win")
                                 st.success(f"🎉 VITTORIA {pair}! +€{win_amount:.2f}")
-
                             else:
                                 result = f"❌ SCONFITTA -€{lose_amount:.2f}"
-                                color = "#ff4444"
-                                play_trade_sound("lose")  # ❌ Suono sconfitta
+                                play_trade_sound("lose")
                                 st.error(f"💥 SCONFITTA {pair}! -€{lose_amount:.2f}")
                                                         
-                            # REGISTRA RISULTATO NELLO STORICO
                             trade_result = {
                                 'time': datetime.now().strftime("%H:%M:%S"),
                                 'pair': pair,
@@ -295,45 +299,34 @@ if st.session_state.get('connected', False):
                                 'pips': f"{profit_pips:.1f}",
                                 'result': result
                             }
-                            st.session_state.signal_history.append(trade_result)
+                            st.session_state.signal_history.append(tr_result)
                             send_telegram_signal("TRADE_RESULT", pair, exit_price, profit_pips, 0)
-                            
                         trades_to_close.append(pair)
-                        
                     except Exception as e:
                         st.error(f"Errore chiusura {pair}: {e}")
             
-            # CHIUDE TRADES SCADUTI
             for pair in trades_to_close:
                 del st.session_state['active_trades'][pair]
-    
-            # **NUOVO SCAN PER APERTURE**
+
+            # NUOVO SCAN
             for pair in ALL_PAIRS:
                 try:
                     candles = Iq.get_candles(pair, 60, 50, time_module.time())
                     if not candles or len(candles) < 30:
-                        raise ValueError("Dati insufficienti")
-    
-                        # Nel loop scanner, wrap try-except:
-                        try:
-                            candles = Iq.get_candles(...)
-                        except:
-                            check_connection()
-                            st.warning("Reconnecting...")
+                        st.session_state.scanner_data[pair] = {'price': '❌', 'rsi': '❌', 'signal': 'Dati insufficienti'}
+                        continue
                     
                     df = pd.DataFrame(candles)
                     df['from'] = pd.to_datetime(df['from'], unit='s')
                     df.set_index('from', inplace=True)
     
-                    # OTTIMIZZATO PER 1m SCALPING
-                    df['RSI'] = ta.rsi(df['close'], length=7)  # Più veloce
+                    df['RSI'] = ta.rsi(df['close'], length=7)
                     macd = ta.macd(df['close'], fast=8, slow=17, signal=9)
                     df['MACD'] = macd['MACD_8_17_9']
                     df['MACD_signal'] = macd['MACDs_8_17_9']
     
                     latest_rsi = float(df['RSI'].iloc[-1])
                     current_price = float(df['close'].iloc[-1])
-                    
                     macd_current = float(df['MACD'].iloc[-1])
                     macd_signal_current = float(df['MACD_signal'].iloc[-1])
                     macd_current_prev = float(df['MACD'].iloc[-2])
@@ -344,7 +337,6 @@ if st.session_state.get('connected', False):
                     
                     signal = "⚪ ATTESA"
                     
-                    # ✅ AUTO-TRADE BUY (SOLO SE NON APERTO)
                     if (latest_rsi < st.session_state.rsi_buy and 
                         macd_bullish_cross and 
                         pair not in st.session_state['active_trades']):
@@ -368,10 +360,10 @@ if st.session_state.get('connected', False):
                         st.session_state.scanner_alerts.append(signal_info)
                         signals_this_scan += 1
                         signal = "🟢🚨 TRADE APERTO"
-                        
+                
                         play_trade_sound("buy")
                         send_telegram_signal("BUY_TRADE", pair, current_price, latest_rsi, macd_current)
-                        st.ballons()
+                        st.balloons()  # ← CORRETTO: balloons()
                     
                     # ✅ AUTO-TRADE SELL
                     elif (latest_rsi > st.session_state.rsi_sell and 
@@ -400,19 +392,20 @@ if st.session_state.get('connected', False):
 
                         play_trade_sound("sell")
                         send_telegram_signal("SELL_TRADE", pair, current_price, latest_rsi, macd_current)
-                        st.ballons()
+                        st.balloons()  # ← CORRETTO
                     
                     st.session_state.scanner_data[pair] = {
                         'price': f"{current_price:.5f}",
                         'rsi': f"{latest_rsi:.1f}",
                         'signal': signal
                     }
-    
+
                 except Exception as e:
-                    st.session_state.scanner_data[pair] = {
-                        'price': '❌', 'rsi': '❌', 'signal': 'ERROR'
-                    }
-    
+                    if "connect" in str(e).lower() or "timeout" in str(e).lower():
+                        if check_connection():
+                            st.rerun()  # ← Forza refresh dopo reconnect
+                    st.session_state.scanner_data[pair] = {'price': '❌', 'rsi': '❌', 'signal': f'ERROR: {str(e)[:20]}'}
+
             st.session_state.scanner_last_update = current_time
             if signals_this_scan > 0:
                 placeholder.success(f"✅ Scan completato! {signals_this_scan} TRADES APERTI!")
@@ -425,23 +418,23 @@ if st.session_state.get('connected', False):
     
     st.markdown("---")
     
-    # 🔥 DASHBOARD TRADES APERTI
-    if st.session_state['active_trades']:
+    # 🔥 DASHBOARD TRADES APERTI - CORRETTO
+    if st.session_state.get('active_trades', {}):
         st.subheader("🔥 **TRADES APERTI (1m)**")
         active_df = pd.DataFrame([
             {
-                'PAIR': pair,
-                'ENTRY': f"€{trade['amount']} @ {trade['entry_price']:.5f}",
+                'PAIR': trade_pair,  # ← CORRETTO: usa trade_pair invece di pair
+                'ENTRY': f"€{trade['amount']:.0f} @ {trade['entry_price']:.5f}",
                 '⏱️': f"{int(current_time - trade['entry_time'])}s",
                 'STATUS': '⏳ APERTO'
             }
-            for pair, trade in st.session_state['active_trades'].items()
+            for trade_pair, trade in st.session_state['active_trades'].items()  # ← trade_pair dalla comprehension
         ])
         st.dataframe(active_df, use_container_width=True, hide_index=True)
-    
-    # TABELLA SCANNER OTTIMIZZATA
+
+    # TABELLA SCANNER OTTIMIZZATA (invariata, OK)
     st.subheader("🔍 **SCANNER FOREX LIVE**")
-    if st.session_state.scanner:
+    if st.session_state.get('scanner', False) and st.session_state.get('scanner_data', {}):
         scanner_df = pd.DataFrame(st.session_state.scanner_data).T
         scanner_df.reset_index(inplace=True)
         scanner_df.rename(columns={'index': 'PAIR'}, inplace=True)
@@ -462,8 +455,8 @@ if st.session_state.get('connected', False):
         
         st.dataframe(scanner_df.style.applymap(color_signal, subset=['🚦 SEGNALE']), 
                     use_container_width=True, height=400, hide_index=True)
-    
-    # 🔥 ALERT POPUP PRIORITARI
+
+    # 🔥 ALERT POPUP PRIORITARI (OK)
     if st.session_state.get('scanner_alerts', []):
         st.markdown("---")
         st.subheader("🚨 **ULTIMI TRADES APERTI**")
