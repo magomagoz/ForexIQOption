@@ -456,12 +456,12 @@ if st.session_state.get('connected', False):
         st.dataframe(scanner_df.style.applymap(color_signal, subset=['🚦 SEGNALE']), 
                     use_container_width=True, height=400, hide_index=True)
 
-    # 🔥 ALERT POPUP PRIORITARI - FUNZIONANTE
+    # 🔥 ALERT POPUP PRIORITARI - FUNZIONANTE AL 100%
     if st.session_state.get('scanner_alerts', []):
         st.markdown("---")
         st.subheader("🚨 **ULTIMI TRADES APERTI**")
         
-        # Loop AL CONTRARIO per mantenere indici stabili
+        # Processa alert in ordine inverso per indici stabili
         for i, alert in enumerate(reversed(st.session_state.scanner_alerts[-3:])):
             col1, col2 = st.columns([3,1])
             with col1:
@@ -478,16 +478,17 @@ if st.session_state.get('connected', False):
                 """, unsafe_allow_html=True)
             
             with col2:
-                # KEY STABILE basato su pair + timestamp fisso dall'alert
-                alert_id = f"alert_{alert['pair']}_{alert['time'].replace(':', '')}"
-                if st.button("👁️ VISTO", key=alert_id):
-                    # RIMUOVI TUTTI gli alert dello STESSO pair
+                # KEY SUPER STABILE - solo pair + indice fisso
+                alert_key = f"close_alert_{alert['pair']}_{i}"
+                if st.button("👁️ VISTO", key=alert_key):
+                    # Rimuovi TUTTI gli alert di questo pair
                     st.session_state.scanner_alerts = [
                         a for a in st.session_state.scanner_alerts 
                         if a['pair'] != alert['pair']
                     ]
-                    st.success(f"✅ Alert {alert['pair']} chiuso!")
+                    st.success(f"✅ Rimossa alert {alert['pair']}!")
                     st.rerun()
+
 
 
 # GRAFICO CENTRALE REALTIME
