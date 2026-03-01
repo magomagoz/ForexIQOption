@@ -254,93 +254,103 @@ if st.session_state.get('connected', False):
     with col2: 
         st.session_state.rsi_sell = st.number_input("🔴 RSI Sell", value=st.session_state.rsi_sell, min_value=65, max_value=80)
 
-    # SCANNER CON AUTO-TRADES 1m
-    if st.session_state.scanner:
-        last_scan = datetime.fromtimestamp(st.session_state.scanner_last_update).strftime("%H:%M:%S") if st.session_state.scanner_last_update else "Mai"
-        st.markdown(f"🕐 **Ultimo scan**: {last_scan}")
-        
-        if current_time - st.session_state.scanner_last_update > 25:
-            placeholder = st.empty()
-            with placeholder.container():
-                st.spinner("🔍 Scanning 10 coppie Forex...")
-
-            st.session_state.scanner_data = {}
-            st.session_state.scanner_alerts = []
-            signals_this_scan = 0
+# SCANNER CON AUTO-TRADES 1m MIGLIORATO
+if st.session_state.scanner:
+    last_scan = datetime.fromtimestamp(st.session_state.scanner_last_update).strftime("%H:%M:%S") if st.session_state.scanner_last_update else "Mai"
+    st.markdown(f"🕐 **Ultimo scan**: {last_scan}")
     
-            # CHECK TRADES SCADUTI
-            trades_to_close = []
-            for pair, trade in st.session_state['active_trades'].items():
-                trade_age = current_time - trade['entry_time']
-                if trade_age >= 60:
-                    try:
-                        current_candles = Iq.get_candles(pair, 60, 2, time_module.time())
-                        if current_candles:
-                            exit_price = float(current_candles[-1]['close'])
-                            entry_price = trade['entry_price']
-                            profit_pips = (exit_price - entry_price) * 10000
-                            win_amount = trade['amount'] * 0.85
-                            lose_amount = -trade['amount']
-                            
-                            if profit_pips > 0:
-                                result = f"✅ VITTORIA €{win_amount:.2f}"
-                                play_trade_sound("win")
-                                st.success(f"🎉 VITTORIA {pair}! +€{win_amount:.2f}")
-                            else:
-                                result = f"❌ SCONFITTA -€{lose_amount:.2f}"
-                                play_trade_sound("lose")
-                                st.error(f"💥 SCONFITTA {pair}! -€{lose_amount:.2f}")
-                                                        
-                            trade_result = {
-                                'time': datetime.now().strftime("%H:%M:%S"),
-                                'pair': pair,
-                                'entry': f"{entry_price:.5f}",
-                                'exit': f"{exit_price:.5f}",
-                                'pips': f"{profit_pips:.1f}",
-                                'result': result
-                            }
-                            st.session_state.signal_history.append(trade_result)
-                            send_telegram_signal("TRADE_RESULT", pair, exit_price, profit_pips, 0)
-                        trades_to_close.append(pair)
-                    except Exception as e:
-                        st.error(f"Errore chiusura {pair}: {e}")
-            
-            for pair in trades_to_close:
-                del st.session_state['active_trades'][pair]
+    # 🔄 SCAN OGNI 7 SECONDI (più reattivo)
+    if current_time - st.session_state.scanner_last_update > 7:
+        # Placeholder per feedback live
+        placeholder = st.empty()
+        with placeholder.container():
+            st.info("🔍 Scanning 10 coppie Forex... (7s ciclo)")
 
-            # NUOVO SCAN
-            for pair in ALL_PAIRS:
+        st.session_state.scanner_data = {}
+        st.session_state.scanner_alerts = []
+        signals_this_scan = 0
+
+        # CHECK TRADES SCADUTI (invariato)
+        trades_to_close = []
+        for pair, trade in st.session_state['active_trades'].items():
+            trade_age = current_time - trade['entry_time']
+            if trade_age >= 60:
                 try:
-                    candles = Iq.get_candles(pair, 60, 50, time_module.time())
-                    if not candles or len(candles) < 30:
-                        st.session_state.scanner_data[pair] = {'price': '❌', 'rsi': '❌', 'signal': 'Dati insufficienti'}
-                        continue
-                    
-                    df = pd.DataFrame(candles)
-                    df['from'] = pd.to_datetime(df['from'], unit='s')
-                    df.set_index('from', inplace=True)
-    
-                    df['RSI'] = ta.rsi(df['close'], length=7)
-                    macd = ta.macd(df['close'], fast=8, slow=17, signal=9)
-                    df['MACD'] = macd['MACD_8_17_9']
-                    df['MACD_signal'] = macd['MACDs_8_17_9']
-    
-                    latest_rsi = float(df['RSI'].iloc[-1])
-                    current_price = float(df['close'].iloc[-1])
-                    macd_current = float(df['MACD'].iloc[-1])
-                    macd_signal_current = float(df['MACD_signal'].iloc[-1])
-                    macd_current_prev = float(df['MACD'].iloc[-2])
-                    macd_signal_prev = float(df['MACD_signal'].iloc[-2])
-
-                    macd_bullish_cross = (macd_current > macd_signal_current) and (macd_current_prev <= macd_signal_prev)
-                    macd_bearish_cross = (macd_current < macd_signal_current) and (macd_current_prev >= macd_signal_prev)
-                    
-                    signal = "⚪ ATTESA"
-                    
-                    if (latest_rsi < st.session_state.rsi_buy and 
-                        macd_bullish_cross and 
-                        pair not in st.session_state['active_trades']):
+                    current_candles = Iq.get_candles(pair, 60, 2, time_module.time())
+                    if current_candles:
+                        exit_price = float(current_candles[-1]['close'])
+                        entry_price = trade['entry_price']
+                        profit_pips = (exit_price - entry_price) * 10000 if trade['direction'] == 'BUY' else (entry_price - exit_price) * 10000
                         
+                        win_amount = trade['amount'] * 0.85
+                        lose_amount = -trade['amount']
+                        
+                        if profit_pips > 0:
+                            result = f"✅ VITTORIA €{win_amount:.2f}"
+                            play_trade_sound("win")
+                            st.success(f"🎉 VITTORIA {pair}! +€{win_amount:.2f}")
+                        else:
+                            result = f"❌ SCONFITTA -€{lose_amount:.2f}"
+                            play_trade_sound("lose")
+                            st.error(f"💥 SCONFITTA {pair}! -€{lose_amount:.2f}")
+                            
+                        trade_result = {
+                            'time': datetime.now().strftime("%H:%M:%S"),
+                            'pair': pair,
+                            'entry': f"{entry_price:.5f}",
+                            'exit': f"{exit_price:.5f}",
+                            'pips': f"{profit_pips:.1f}",
+                            'result': result
+                        }
+                        st.session_state.signal_history.append(trade_result)
+                        send_telegram_signal("TRADE_RESULT", pair, exit_price, profit_pips, 0)
+                    trades_to_close.append(pair)
+                except Exception as e:
+                    st.error(f"Errore chiusura {pair}: {e}")
+        
+        for pair in trades_to_close:
+            del st.session_state['active_trades'][pair]
+
+        # 🔥 NUOVO SCAN OTTIMIZZATO
+        for pair in ALL_PAIRS:
+            try:
+                candles = Iq.get_candles(pair, 60, 50, time_module.time())
+                if not candles or len(candles) < 30:
+                    st.session_state.scanner_data[pair] = {'price': '❌', 'rsi': '❌', 'signal': 'Dati insufficienti'}
+                    continue
+                
+                df = pd.DataFrame(candles)
+                df['from'] = pd.to_datetime(df['from'], unit='s')
+                df.set_index('from', inplace=True)
+
+                df['RSI'] = ta.rsi(df['close'], length=7)
+                macd = ta.macd(df['close'], fast=8, slow=17, signal=9)
+                df['MACD'] = macd['MACD_8_17_9']
+                df['MACD_signal'] = macd['MACDs_8_17_9']
+
+                latest_rsi = float(df['RSI'].iloc[-1])
+                current_price = float(df['close'].iloc[-1])
+                macd_current = float(df['MACD'].iloc[-1])
+                macd_signal_current = float(df['MACD_signal'].iloc[-1])
+                macd_current_prev = float(df['MACD'].iloc[-2])
+                macd_signal_prev = float(df['MACD_signal'].iloc[-2])
+
+                # 🎯 CONDIZIONI PIÙ FLESSIBILI
+                macd_bullish = macd_current > macd_signal_current  # Rimuovi cross, usa trend
+                macd_bearish = macd_current < macd_signal_current
+                rsi_buy_zone = latest_rsi < st.session_state.rsi_buy
+                rsi_sell_zone = latest_rsi > st.session_state.rsi_sell
+                
+                signal = "⚪ ATTESA"
+                
+                # 🟢 BUY - Condizioni separate + volume trend
+                if (rsi_buy_zone and macd_bullish and 
+                    pair not in st.session_state['active_trades']):
+                    
+                    # Check volume crescente (conferma momentum)
+                    volume_trend = df['volume'].iloc[-1] > df['volume'].iloc[-3]
+                    
+                    if volume_trend:
                         trade_info = {
                             'entry_price': current_price,
                             'entry_time': current_time,
@@ -363,13 +373,15 @@ if st.session_state.get('connected', False):
                 
                         play_trade_sound("buy")
                         send_telegram_signal("BUY_TRADE", pair, current_price, latest_rsi, macd_current)
-                        st.balloons()  # ← CORRETTO: balloons()
+                        st.balloons()
+                
+                # 🔴 SELL - Condizioni separate + volume trend  
+                elif (rsi_sell_zone and macd_bearish and 
+                      pair not in st.session_state['active_trades']):
+                      
+                    volume_trend = df['volume'].iloc[-1] > df['volume'].iloc[-3]
                     
-                    # ✅ AUTO-TRADE SELL
-                    elif (latest_rsi > st.session_state.rsi_sell and 
-                          macd_bearish_cross and 
-                          pair not in st.session_state['active_trades']):
-                          
+                    if volume_trend:
                         trade_info = {
                             'entry_price': current_price,
                             'entry_time': current_time,
@@ -392,31 +404,35 @@ if st.session_state.get('connected', False):
 
                         play_trade_sound("sell")
                         send_telegram_signal("SELL_TRADE", pair, current_price, latest_rsi, macd_current)
-                        st.balloons()  # ← CORRETTO
-                    
-                    st.session_state.scanner_data[pair] = {
-                        'price': f"{current_price:.5f}",
-                        'rsi': f"{latest_rsi:.1f}",
-                        'signal': signal
-                    }
+                        st.balloons()
+                
+                # 📊 AGGIUNGI ANCHE SEGNALI "PRE-BUY/SELL" per debug
+                elif rsi_buy_zone and macd_bullish:
+                    signal = "🟢 PRE-BUY (no volume)"
+                elif rsi_sell_zone and macd_bearish:
+                    signal = "🔴 PRE-SELL (no volume)"
+                
+                st.session_state.scanner_data[pair] = {
+                    'price': f"{current_price:.5f}",
+                    'rsi': f"{latest_rsi:.1f}",
+                    'signal': signal
+                }
 
-                except Exception as e:
-                    if "connect" in str(e).lower() or "timeout" in str(e).lower():
-                        if check_connection():
-                            st.rerun()  # ← Forza refresh dopo reconnect
-                    st.session_state.scanner_data[pair] = {'price': '❌', 'rsi': '❌', 'signal': f'ERROR: {str(e)[:20]}'}
+            except Exception as e:
+                st.session_state.scanner_data[pair] = {'price': '❌', 'rsi': '❌', 'signal': f'ERROR: {str(e)[:20]}'}
 
-            st.session_state.scanner_last_update = current_time
-            if signals_this_scan > 0:
-                placeholder.success(f"✅ Scan completato! {signals_this_scan} TRADES APERTI!")
-            else:
-                placeholder.success("✅ Scan completato!")
-            st.rerun()
+        st.session_state.scanner_last_update = current_time
+        
+        # ✅ FEEDBACK MIGLIORATO
+        if signals_this_scan > 0:
+            placeholder.success(f"✅ {signals_this_scan} TRADES APERTI! Prossimo scan: 7s")
         else:
-            next_scan = 25 - (current_time - st.session_state.scanner_last_update)
-            st.info(f"⏳ Scanner attivo - prossimo scan tra {next_scan:.0f}s")
-    
-    st.markdown("---")
+            placeholder.info("✅ Scan OK - Prossimo: 7s | Controlla PRE-BUY/SELL")
+            
+        # ❌ NO st.rerun() qui - lascia respirare l'app
+    else:
+        next_scan = 7 - (current_time - st.session_state.scanner_last_update)
+        st.info(f"⏳ Scanner attivo - prossimo scan tra {next_scan:.0f}s")
     
     # 🔥 DASHBOARD TRADES APERTI - CORRETTO
     if st.session_state.get('active_trades', {}):
