@@ -138,9 +138,28 @@ with st.sidebar:
             index=0
         )
         
-        # **SESSIONI MERCATO FOREX**
+        # **SESSIONI MERCATO LIVE** - AGGIORNAMENTO REALE
         st.markdown("---")
-        st.subheader("🌍 **SESSIONI MERCATO**")
+        st.subheader("🌍 **SESSIONI LIVE**")
+        
+        # Funzione per badge sessione
+        def session_badge(nome, aperto, ora_cet):
+            if aperto:
+                return f"""
+                <div style='padding: 12px; margin: 5px 0; border-radius: 12px; 
+                            background: linear-gradient(45deg, #00ff88, #00cc66); 
+                            color: black; text-align: center; font-weight: bold; font-size: 16px;'>
+                    {nome} | 🟢 APERTO | {ora_cet.strftime('%H:%M')}
+                </div>
+                """
+            else:
+                return f"""
+                <div style='padding: 12px; margin: 5px 0; border-radius: 12px; 
+                            background: #333; color: #aaa; text-align: center; font-weight: bold; font-size: 16px;'>
+                    {nome} | 🔴 CHIUSO | {ora_cet.strftime('%H:%M')}
+                </div>
+                """
+        
         now_cet = datetime.now()
         ora_cet = now_cet.time()
         
@@ -157,31 +176,19 @@ with st.sidebar:
                 aperto = inizio <= ora_cet <= fine
             else:
                 aperto = ora_cet >= inizio or ora_cet <= fine
-            
-            if aperto:
-                colore = "🟢 APERTO"
-                badge = "background: linear-gradient(45deg, #00ff88, #00cc66); color: black;"
-            else:
-                colore = "🔴 CHIUSO"
-                badge = "background: #333; color: #aaa;"
-            
-            st.markdown(f"""
-            <div style='padding: 12px; margin: 5px 0; border-radius: 12px; 
-                        {badge} text-align: center; font-weight: bold; font-size: 16px;'>
-                {nome} | {colore} | {ora_cet.strftime('%H:%M')}
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown(session_badge(nome, aperto, ora_cet), unsafe_allow_html=True)
         
-        # SOVRAPPOSIZIONI
+        # SOVRAPPOSIZIONI LIVE
         sovrapposizioni = []
         if time(9,0) <= ora_cet <= time(10,0): sovrapposizioni.append("🌍 Tokyo-Londra")
         if time(14,0) <= ora_cet <= time(18,0): sovrapposizioni.append("🚀 Londra-NY")
         
         if sovrapposizioni:
             st.markdown(f"""
-            <div style='padding: 10px; margin: 10px 0; background: linear-gradient(45deg, #ffaa00, #ff8800); 
-                        color: black; border-radius: 12px; text-align: center; font-weight: bold;'>
-                ⚡ SOVRAPPOSIZIONE: {' + '.join(sovrapposizioni)} (MAX VOLUME!)
+            <div style='padding: 15px; margin: 10px 0; background: linear-gradient(45deg, #ffaa00, #ff8800); 
+                        color: black; border-radius: 15px; text-align: center; font-weight: bold; font-size: 18px;'>
+                ⚡ **SOVRAPPOSIZIONE: {' + '.join(sovrapposizioni)}**<br>
+                💥 MAX VOLUME - TRADE ATTIVI!
             </div>
             """, unsafe_allow_html=True)
        
