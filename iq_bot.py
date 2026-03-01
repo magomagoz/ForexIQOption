@@ -331,6 +331,20 @@ if st.session_state.get('connected', False):
             else:
                 trade_allowed = True
 
+            # NELL'IF SCANNER - PRIMA del ciclo for pair in ALL_PAIRS:
+            ora_cet = datetime.now().time()
+            trading_sessions = (
+                time(8,0) <= ora_cet <= time(20,0)  # Londra + NY + sovrapposizioni
+                and not (time(17,0) <= ora_cet <= time(22,0))  # Evita fine NY debole
+            )
+            
+            if not trading_sessions:
+                placeholder.warning("⚠️ Fuori orario ottimale - Solo PRE-segnali")
+                # Continua scan ma no trades
+                trade_allowed = False
+            else:
+                trade_allowed = True
+
             # 🔥 NUOVO SCAN OTTIMIZZATO
             for pair in ALL_PAIRS:
                 try:
@@ -608,7 +622,7 @@ if st.session_state.get('connected', False):
         if time_since_last_refresh > 30:  # 30s refresh
             st.session_state['last_refresh'] = time_module.time()
             st.rerun()  # Refresh sidebar + tutto
-   
+
     # 📊 STATISTICHE LIVE
     st.markdown("---")
     st.subheader("📊 **STATISTICHE LIVE**")
