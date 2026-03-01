@@ -257,9 +257,9 @@ if st.session_state.get('connected', False):
     
     col1, col2 = st.columns(2)
     with col1: 
-        st.session_state.rsi_buy = st.number_input("🟢 RSI Buy", value=**40**, min_value=15, max_value=50)  # ← 40 invece di 28
+        st.session_state.rsi_buy = st.number_input("🟢 RSI Buy", value=40, min_value=15, max_value=50)  # ← 40 invece di 28
     with col2: 
-        st.session_state.rsi_sell = st.number_input("🔴 RSI Sell", value=**60**, min_value=50, max_value=85)  # ← 60 invece di 72
+        st.session_state.rsi_sell = st.number_input("🔴 RSI Sell", value=60, min_value=50, max_value=85)  # ← 60 invece di 72
 
     # SCANNER CON AUTO-TRADES 1m MIGLIORATO
     if st.session_state.scanner:
