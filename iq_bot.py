@@ -271,7 +271,7 @@ if st.session_state.get('connected', False):
             # Placeholder per feedback live
             placeholder = st.empty()
             with placeholder.container():
-                st.info("🔍 Scanning 10 coppie Forex... (7s ciclo)")
+                st.info("🔍 Scanning 10 coppie Forex...")
     
             st.session_state.scanner_data = {}
             st.session_state.scanner_alerts = []
