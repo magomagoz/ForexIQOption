@@ -218,7 +218,7 @@ if st.session_state.get('connected', False):
     # INIZIALIZZAZIONE SESSION STATE
     init_keys = [
         'scanner', 'scanner_data', 'scanner_last_update', 'scanner_alerts',
-        'rsi_buy', 'rsi_sell', 'signal_history', 'active_trades'
+        'rsi_buy', 'rsi_sell', 'signal_history', 'active_trades', 'last_refresh'
     ]
     
     for key in init_keys:
@@ -257,9 +257,9 @@ if st.session_state.get('connected', False):
     
     col1, col2 = st.columns(2)
     with col1: 
-        st.session_state.rsi_buy = st.number_input("🟢 RSI Buy", value=st.session_state.rsi_buy, min_value=20, max_value=35)
+        st.session_state.rsi_buy = st.number_input("🟢 RSI Buy", value=**40**, min_value=15, max_value=50)  # ← 40 invece di 28
     with col2: 
-        st.session_state.rsi_sell = st.number_input("🔴 RSI Sell", value=st.session_state.rsi_sell, min_value=65, max_value=80)
+        st.session_state.rsi_sell = st.number_input("🔴 RSI Sell", value=**60**, min_value=50, max_value=85)  # ← 60 invece di 72
 
     # SCANNER CON AUTO-TRADES 1m MIGLIORATO
     if st.session_state.scanner:
@@ -317,116 +317,115 @@ if st.session_state.get('connected', False):
             
             for pair in trades_to_close:
                 del st.session_state['active_trades'][pair]
-    
-            # 🔥 NUOVO SCAN OTTIMIZZATO
+
+            ora_cet = datetime.now().time()
+            trading_sessions = (
+                time(8,0) <= ora_cet <= time(20,0)  # Londra + NY + sovrapposizioni
+                and not (time(17,0) <= ora_cet <= time(22,0))  # Evita fine NY debole
+            )
+            
+            if not trading_sessions:
+                placeholder.warning("⚠️ Fuori orario ottimale - Solo PRE-segnali")
+                # Continua scan ma no trades
+                trade_allowed = False
+            else:
+                trade_allowed = True
+
+            # 🔥 SCANNER TEST MODE - SOSTITUISCI IL BLOCCO SCAN
             for pair in ALL_PAIRS:
                 try:
                     candles = Iq.get_candles(pair, 60, 50, time_module.time())
-                    if not candles or len(candles) < 30:
-                        st.session_state.scanner_data[pair] = {'price': '❌', 'rsi': '❌', 'signal': 'Dati insufficienti'}
+                    if not candles or len(candles) < 20:  # ← Meno candele richieste
+                        st.session_state.scanner_data[pair] = {'price': '❌', 'rsi': '❌', 'signal': 'Dati pochi'}
                         continue
                     
                     df = pd.DataFrame(candles)
                     df['from'] = pd.to_datetime(df['from'], unit='s')
                     df.set_index('from', inplace=True)
-    
+            
                     df['RSI'] = ta.rsi(df['close'], length=7)
                     macd = ta.macd(df['close'], fast=8, slow=17, signal=9)
                     df['MACD'] = macd['MACD_8_17_9']
                     df['MACD_signal'] = macd['MACDs_8_17_9']
-    
+            
                     latest_rsi = float(df['RSI'].iloc[-1])
                     current_price = float(df['close'].iloc[-1])
                     macd_current = float(df['MACD'].iloc[-1])
                     macd_signal_current = float(df['MACD_signal'].iloc[-1])
-                    macd_current_prev = float(df['MACD'].iloc[-2])
-                    macd_signal_prev = float(df['MACD_signal'].iloc[-2])
-    
-                    # 🎯 CONDIZIONI PIÙ FLESSIBILI
-                    macd_bullish = macd_current > macd_signal_current  # Rimuovi cross, usa trend
+            
+                    # 🎯 TEST ULTRA-AGGRESSIVO
+                    macd_bullish = macd_current > macd_signal_current
                     macd_bearish = macd_current < macd_signal_current
-                    rsi_buy_zone = latest_rsi < st.session_state.rsi_buy
-                    rsi_sell_zone = latest_rsi > st.session_state.rsi_sell
                     
-                    signal = "⚪ ATTESA"
+                    # LIMITI MOLTO LARGHI (usa input ma default ampi)
+                    rsi_buy_test = min(st.session_state.rsi_buy + 10, 45)  # Max 45
+                    rsi_sell_test = max(st.session_state.rsi_sell - 10, 55)  # Min 55
                     
-                    # 🟢 BUY - Condizioni separate + volume trend
+                    rsi_buy_zone = latest_rsi < rsi_buy_test
+                    rsi_sell_zone = latest_rsi > rsi_sell_test
+                    
+                    signal = f"⚪ RSI:{latest_rsi:.0f}"
+                    
+                    volume_ok = True
+                    if len(df) >= 3:
+                        volume_ok = df['volume'].iloc[-1] >= 0.7 * df['volume'].iloc.mean()  # Media 70%
+                    
+                    # 🟢 MASS BUY
                     if (rsi_buy_zone and macd_bullish and 
-                        pair not in st.session_state['active_trades']):
+                        pair not in st.session_state['active_trades'] and volume_ok):
                         
-                        # Check volume crescente (conferma momentum)
-                        volume_trend = df['volume'].iloc[-1] > df['volume'].iloc[-3]
+                        trade_info = {
+                            'entry_price': current_price, 'entry_time': current_time,
+                            'amount': 100.0, 'direction': 'BUY'
+                        }
+                        st.session_state['active_trades'][pair] = trade_info
                         
-                        if volume_trend:
-                            trade_info = {
-                                'entry_price': current_price,
-                                'entry_time': current_time,
-                                'amount': 100.0,
-                                'direction': 'BUY'
-                            }
-                            st.session_state['active_trades'][pair] = trade_info
-                            
-                            signal_info = {
-                                'time': datetime.now().strftime("%H:%M:%S"),
-                                'pair': pair,
-                                'type': '🟢 TRADE BUY APERTO',
-                                'price': f"{current_price:.5f}",
-                                'rsi': f"{latest_rsi:.1f}",
-                                'amount': '€100'
-                            }
-                            st.session_state.scanner_alerts.append(signal_info)
-                            signals_this_scan += 1
-                            signal = "🟢🚨 TRADE APERTO"
+                        signal_info = {
+                            'time': datetime.now().strftime("%H:%M:%S"), 'pair': pair,
+                            'type': '🟢 MASS BUY', 'price': f"{current_price:.5f}", 'rsi': f"{latest_rsi:.1f}"
+                        }
+                        st.session_state.scanner_alerts.append(signal_info)
+                        signals_this_scan += 1
+                        signal = "🟢🚀 TRADE MASSIVO"
+                        play_trade_sound("buy")
+                        send_telegram_signal("MASS_BUY", pair, current_price, latest_rsi, macd_current)
                     
-                            play_trade_sound("buy")
-                            send_telegram_signal("BUY_TRADE", pair, current_price, latest_rsi, macd_current)
-                            st.balloons()
-                    
-                    # 🔴 SELL - Condizioni separate + volume trend  
+                    # 🔴 MASS SELL
                     elif (rsi_sell_zone and macd_bearish and 
-                          pair not in st.session_state['active_trades']):
+                          pair not in st.session_state['active_trades'] and volume_ok):
                           
-                        volume_trend = df['volume'].iloc[-1] > df['volume'].iloc[-3]
+                        trade_info = {
+                            'entry_price': current_price, 'entry_time': current_time,
+                            'amount': 100.0, 'direction': 'SELL'
+                        }
+                        st.session_state['active_trades'][pair] = trade_info
                         
-                        if volume_trend:
-                            trade_info = {
-                                'entry_price': current_price,
-                                'entry_time': current_time,
-                                'amount': 100.0,
-                                'direction': 'SELL'
-                            }
-                            st.session_state['active_trades'][pair] = trade_info
-                            
-                            signal_info = {
-                                'time': datetime.now().strftime("%H:%M:%S"),
-                                'pair': pair,
-                                'type': '🔴 TRADE SELL APERTO',
-                                'price': f"{current_price:.5f}",
-                                'rsi': f"{latest_rsi:.1f}",
-                                'amount': '€100'
-                            }
-                            st.session_state.scanner_alerts.append(signal_info)
-                            signals_this_scan += 1
-                            signal = "🔴🚨 TRADE APERTO"
-    
-                            play_trade_sound("sell")
-                            send_telegram_signal("SELL_TRADE", pair, current_price, latest_rsi, macd_current)
-                            st.balloons()
+                        signal_info = {
+                            'time': datetime.now().strftime("%H:%M:%S"), 'pair': pair,
+                            'type': '🔴 MASS SELL', 'price': f"{current_price:.5f}", 'rsi': f"{latest_rsi:.1f}"
+                        }
+                        st.session_state.scanner_alerts.append(signal_info)
+                        signals_this_scan += 1
+                        signal = "🔴🚀 TRADE MASSIVO"
+                        play_trade_sound("sell")
+                        send_telegram_signal("MASS_SELL", pair, current_price, latest_rsi, macd_current)
                     
-                    # 📊 AGGIUNGI ANCHE SEGNALI "PRE-BUY/SELL" per debug
-                    elif rsi_buy_zone and macd_bullish:
-                        signal = "🟢 PRE-BUY (no volume)"
-                    elif rsi_sell_zone and macd_bearish:
-                        signal = "🔴 PRE-SELL (no volume)"
+                    # 📈 SEGNALI PRE-LIMITE
+                    elif latest_rsi < 48 and macd_bullish:
+                        signal = "🟢🔥 HOT BUY"
+                    elif latest_rsi > 52 and macd_bearish:
+                        signal = "🔴🔥 HOT SELL"
+                    elif abs(latest_rsi - 50) < 5:
+                        signal = "🟡 NEUTRO"
                     
                     st.session_state.scanner_data[pair] = {
                         'price': f"{current_price:.5f}",
                         'rsi': f"{latest_rsi:.1f}",
                         'signal': signal
                     }
-    
-                except Exception as e:
-                    st.session_state.scanner_data[pair] = {'price': '❌', 'rsi': '❌', 'signal': f'ERROR: {str(e)[:20]}'}
+            
+                except:
+                    st.session_state.scanner_data[pair] = {'price': '❌', 'rsi': '❌', 'signal': 'ERR'}
     
             st.session_state.scanner_last_update = current_time
             
@@ -512,8 +511,6 @@ if st.session_state.get('connected', False):
                     st.success(f"✅ Rimossa alert {alert['pair']}!")
                     st.rerun()
 
-
-
 # GRAFICO CENTRALE REALTIME
 if st.session_state.get('connected', False):
     Iq = st.session_state['iq']
@@ -591,6 +588,13 @@ if st.session_state.get('connected', False):
     except Exception as e:
         st.error(f"❌ Grafico {pair}: {e}")
 
+    # 🔄 REFRESH SElettivo ogni 30s per sidebar + scanner
+    if st.session_state.get('connected', False):
+        time_since_last_refresh = time_module.time() - st.session_state.get('last_refresh', 0)
+        if time_since_last_refresh > 30:  # 30s refresh
+            st.session_state['last_refresh'] = time_module.time()
+            st.rerun()  # Refresh sidebar + tutto
+   
     # 📊 STATISTICHE LIVE
     st.markdown("---")
     st.subheader("📊 **STATISTICHE LIVE**")
