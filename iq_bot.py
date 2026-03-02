@@ -16,7 +16,7 @@ TELEGRAM_CHAT_ID = st.secrets.get("TELEGRAM_CHAT_ID", "")
 def send_telegram_signal(signal_type, pair, price, rsi, macd):
     if not TELEGRAM_TOKEN: return
     timestamp = datetime.now().strftime("%H:%M:%S")
-    message = f"🚀 *SENTINEL AI*\n*{signal_type} - {pair}*\nPrezzo: `{price}`\nRSI: `{rsi}`\nOra: {timestamp}"
+    message = f"🚀 *SENTINEL AI*\n*{signal_type} - {pair}*\n💰 *Prezzo Entrata:* `{price}`\n📊 *RSI:* `{rsi}`\n⏰ *Ora* {timestamp}"
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     try: requests.post(url, data={"chat_id": TELEGRAM_CHAT_ID, "text": message, "parse_mode": "Markdown"}, timeout=5)
     except: pass
@@ -25,7 +25,14 @@ def play_trade_sound(sound_type="alert"):
     sounds = {"buy": "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav", "win": "https://www.soundjay.com/misc/sounds/ching-15.wav"}
     st.audio(sounds.get(sound_type, sounds["buy"]), autoplay=True)
 
-st.set_page_config(page_title="Sentinel AI - Aggressive Mode", page_icon="🚀", layout="wide")
+st.set_page_config(page_title="Sentinel AI", page_icon="🚀", layout="wide")
+
+# Logo
+try:
+    logo = Image.open("banner.png")
+    st.image(logo, use_column_width=True, caption="IQ Signals PRO")
+except:
+    st.image("https://via.placeholder.com/800x100/0066cc/white?text=SENTINEL+AI", use_column_width=True)
 
 # **SIDEBAR COMPLETO**
 with st.sidebar:
