@@ -106,19 +106,19 @@ if st.session_state.connected:
                 is_sell = curr_rsi > rsi_sell and curr_macd < curr_sig
 
 
-               if (is_buy or is_sell) and pair not in st.session_state.active_trades:
-                    direction = "BUY" if is_buy else "SELL"
+                    if (is_buy or is_sell) and pair not in st.session_state.active_trades:
+                        direction = "BUY" if is_buy else "SELL"
                     
-                    # Salvataggio con timestamp corrente
-                    st.session_state.active_trades[pair] = {'time': now_ts}
+                        # Salvataggio con timestamp corrente
+                        st.session_state.active_trades[pair] = {'time': now_ts}
                     
-                    st.session_state.signal_history.append({
-                        'time': datetime.now().strftime("%H:%M:%S"),
-                        'pair': pair, 
-                        'dir': direction,
-                        'price': f"{price:.5f}",
-                        'rsi': round(curr_rsi, 2)
-                    })
+                        st.session_state.signal_history.append({
+                            'time': datetime.now().strftime("%H:%M:%S"),
+                            'pair': pair, 
+                            'dir': direction,
+                            'price': f"{price:.5f}",
+                            'rsi': round(curr_rsi, 2)
+                        })
 
                     send_telegram_signal(direction, pair, price, curr_rsi, 0)
                     play_trade_sound()
