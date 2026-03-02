@@ -27,25 +27,42 @@ def play_trade_sound(sound_type="alert"):
 
 st.set_page_config(page_title="Sentinel AI - Aggressive Mode", page_icon="🚀", layout="wide")
 
-# --- LOGICA DI CONNESSIONE (Invariata) ---
-if 'connected' not in st.session_state: st.session_state.connected = False
-
+# **SIDEBAR COMPLETO**
 with st.sidebar:
-    st.header("⚙️ CONFIGURAZIONE")
-    if not st.session_state.connected:
-        email = st.text_input("Email", value="tua_email@esempio.com")
+    st.header("⚙️ **TRADING IQ OPTION**")
+    
+    if not st.session_state.get('connected', False):
+        email = st.text_input("Email Practice", value="mago_magoz@libero.it")
         password = st.text_input("Password", type="password")
-        if st.button("🔌 CONNETTI"):
-            Iq = IQ_Option(email, password)
-            check, reason = Iq.connect()
-            if check:
-                st.session_state.iq = Iq
-                st.session_state.connected = True
-                st.rerun()
+        
+        if st.button("🔌 **CONNETTI**", type="primary", use_container_width=True):
+            try:
+                Iq = IQ_Option(email, password)
+                check, reason = Iq.connect()
+                if check:
+                    st.session_state['iq'] = Iq
+                    st.session_state['connected'] = True
+                    st.session_state['email'] = email
+                    st.session_state['pair'] = "EURUSD"
+                    st.session_state['signal_history'] = []
+                    st.session_state['active_trades'] = {}
+                    st.success("✅ CONNESSO!")
+                    st.balloons()
+                    st.rerun()
+                else:
+                    st.error(f"❌ {reason}")
+            except Exception as e:
+                st.error(f"❌ Errore: {str(e)}")
     else:
-        st.success("🟢 Connesso")
-        if st.button("🔴 DISCONNETTI"):
-            st.session_state.connected = False
+        st.success(f"🟢 Connesso")
+        if st.button("🔴 **DISCONNETTI**", type="secondary", use_container_width=True):
+            try:
+                st.session_state['iq'].close()
+            except:
+                pass
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+            st.success("👋 Disconnesso!")
             st.rerun()
 
 # --- CORE LOGIC: IL MOTORE DEI SEGNALI ---
