@@ -67,11 +67,13 @@ with st.sidebar:
             status = "🟢 " if start <= now_cet <= end else "🔴 "
             st.write(f"{status} {city}")
 
-    # --- MAIN DASHBOARD ---
-    st.header("IQ TRADING SIGNAL")
-
 if st.session_state.connected:
     Iq = st.session_state.iq
+
+    # 2. SCANNER MULTI-PAIR
+    st.header("👁️ SCANNER FOREX")
+    st.session_state.scanner = st.toggle("🔍 Attiva Scanner FOREX", value=True)
+
     
     # 1. PARAMETRI AGGRESSIVI (MODIFICATI PER RILEVARE DI PIÙ)
     col1, col2, col3 = st.columns(3)
@@ -82,9 +84,6 @@ if st.session_state.connected:
     with col3:
         timeframe = st.selectbox("Timeframe", [60, 300], index=0)
 
-    # 2. SCANNER MULTI-PAIR
-    st.header("👁️ SCANNER FOREX")
-    st.session_state.scanner = st.toggle("🔍 Attiva Scanner FOREX", value=True)
     
     if st.session_state.scanner:
         ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"]
