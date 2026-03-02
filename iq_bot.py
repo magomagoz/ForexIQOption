@@ -20,6 +20,13 @@ def send_telegram_signal(signal_type, pair, price, rsi, macd):
     try: requests.post(url, data={"chat_id": TELEGRAM_CHAT_ID, "text": message, "parse_mode": "Markdown"}, timeout=5)
     except: pass
 
+def play_trade_sound(sound_type="buy"):
+    sounds = {
+        "buy": "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav",
+        "sell": "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav"
+    }
+    st.audio(sounds.get(sound_type, sounds["buy"]), autoplay=True)
+
 st.set_page_config(page_title="Sentinel AI", page_icon="🚀", layout="wide")
 
 # Logo
@@ -77,6 +84,9 @@ if st.session_state.connected:
     if st.session_state.scanner:
         ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"]
         placeholder = st.empty()
+
+        # DEFINIAMO IL TEMPO CORRENTE UNA VOLTA SOLA
+        now_ts = time_module.time()
         
         for pair in ALL_PAIRS:
             try:
@@ -96,33 +106,26 @@ if st.session_state.connected:
                 is_sell = curr_rsi > rsi_sell and curr_macd < curr_sig
 
 
-                # --- DENTRO IL CICLO FOR PAIR IN ALL_PAIRS ---
-                if (is_buy or is_sell) and pair not in st.session_state.active_trades:
+               if (is_buy or is_sell) and pair not in st.session_state.active_trades:
                     direction = "BUY" if is_buy else "SELL"
-                    #play_trade_sound("buy" if is_buy else "sell")
-
-                    st.session_state.active_trades[pair] = {'time': curr_time, 'price': price}
-                    #st.session_state.active_trades[pair] = {'time': time_module.time(), 'price': price}
                     
-                    # SALVATAGGIO CORRETTO: Usiamo nomi chiari
+                    # Salvataggio con timestamp corrente
+                    st.session_state.active_trades[pair] = {'time': now_ts}
+                    
                     st.session_state.signal_history.append({
                         'time': datetime.now().strftime("%H:%M:%S"),
                         'pair': pair, 
-                        'dir': direction, # <--- Deve essere 'dir'
-                        'price': f"{price:.5f}", # <--- Deve essere 'price'
+                        'dir': direction,
+                        'price': f"{price:.5f}",
                         'rsi': round(curr_rsi, 2)
                     })
 
                     send_telegram_signal(direction, pair, price, curr_rsi, 0)
-                    #st.toast(f"🚀 SEGNALE {direction} su {pair}!", icon="🔥")
+                    play_trade_sound()
+                    st.toast(f"🚀 NUOVO SEGNALE: {direction} su {pair}!", icon="🔥")
 
-                    # Sostituisci st.toast con questo:
-                    with st.container():
-                        st.warning(f" NUOVO SEGNALE: {direction} su {pair}! 🚀", icon="🔥")
-                        if st.button(f"OK, Visto ({pair})", key=f"btn_{pair}_{curr_t}"):
-                            st.rerun()
-            
-            except: continue
+            except Exception as e:
+                continue
 
     # 3. GRAFICO (Il tuo Plotly originale)
     pair_display = st.selectbox("Seleziona Grafico", ALL_PAIRS)
@@ -137,7 +140,7 @@ if st.session_state.connected:
     fig.add_hline(y=rsi_sell, line_color="red", row=2, col=1)
     fig.update_layout(height=600, template="plotly_dark", xaxis_rangeslider_visible=False)
     st.plotly_chart(fig, use_container_width=True)
-
+    
     st.subheader("📋 Storico Segnali Recenti")
     
     if st.session_state.signal_history:
