@@ -221,262 +221,156 @@ if st.session_state.get('connected', False):
     st.markdown("---")
     current_time = time_module.time()
 
-# --- CORE LOGIC: IL MOTORE DEI SEGNALI ---
+
+# --- CORE LOGIC: MOTORE SEGNALI E CHIUSURA AUTOMATICA ---
 if st.session_state.connected:
     Iq = st.session_state.iq
-    
-    # Inizializzazione parametri se mancanti
-    if 'active_trades' not in st.session_state: st.session_state.active_trades = {}
-    if 'signal_history' not in st.session_state: st.session_state.signal_history = []
-    if 'scanner_last_update' not in st.session_state: st.session_state.scanner_last_update = 0
+    curr_t = time_module.time()
 
+    # 1. LOGICA DI CHIUSURA (Controlla i trade scaduti ogni ciclo)
+    for pair_to_check in list(st.session_state.active_trades.keys()):
+        trade = st.session_state.active_trades[pair_to_check]
+        # Se sono passati 60 secondi dall'entrata
+        if curr_t - trade['entry_time'] >= 60:
+            try:
+                # Recupera l'ultimo prezzo per determinare l'esito
+                candles_check = Iq.get_candles(pair_to_check, 60, 1, curr_t)
+                current_price = candles_check[0]['close']
+                entry_price = trade['entry_price']
+                direction = trade['direction']
+                
+                # Calcolo Vittoria/Sconfitta
+                win = (direction == "BUY" and current_price > entry_price) or \
+                      (direction == "SELL" and current_price < entry_price)
+                
+                result_text = "✅ VITTORIA" if win else "❌ SCONFITTA"
+                play_trade_sound("win" if win else "lose")
+                
+                # Aggiorna il record nello storico segnali
+                for h in reversed(st.session_state.signal_history):
+                    if h['pair'] == pair_to_check and h['result'] == '⏳ IN CORSO':
+                        h['result'] = result_text
+                        break
+                
+                # Rimuovi dai trade attivi
+                del st.session_state.active_trades[pair_to_check]
+                st.toast(f"Chiuso {pair_to_check}: {result_text}", icon="🏁")
+            except: 
+                pass
+
+    # 2. INTERFACCIA PARAMETRI
     col1, col2, col3 = st.columns(3)
-    with col1: rsi_buy = st.number_input("🟢 RSI Buy (Sotto)", value=45) # Alzato da 28 a 45
-    with col2: rsi_sell = st.number_input("🔴 RSI Sell (Sopra)", value=55) # Abbassato da 72 a 55
-    with col3: mode = st.radio("Modalità", ["Aggressiva (Sempre)", "Prudente (Solo Incroci)"], index=0)
+    with col1: rsi_buy = st.number_input("🟢 RSI Buy (Sotto)", value=45, key="rsi_val_b")
+    with col2: rsi_sell = st.number_input("🔴 RSI Sell (Sopra)", value=55, key="rsi_val_s")
+    with col3: mode = st.radio("Filtro MACD", ["Standard", "Solo Incroci"], index=0, horizontal=True)
 
     st.session_state.scanner = st.toggle("🔍 ATTIVA SCANNER AUTOMATICO", value=True)
 
+    # 3. LOGICA DI APERTURA (Scanner ogni 5 secondi)
     if st.session_state.scanner:
-        curr_t = time_module.time()
-        if curr_t - st.session_state.scanner_last_update > 5: # Scan veloce ogni 5 secondi
-            ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"]
-            
-            for pair in ALL_PAIRS:
+        if curr_t - st.session_state.get('scanner_last_update', 0) > 5:
+            for p_name in ALL_PAIRS:
                 try:
-                    # Candele a 1 minuto
-                    candles = Iq.get_candles(pair, 60, 40, curr_t)
-                    df = pd.DataFrame(candles)
+                    # Ottieni candele a 1 minuto
+                    raw_candles = Iq.get_candles(p_name, 60, 40, curr_t)
+                    df_logic = pd.DataFrame(raw_candles)
                     
-                    # Indicatori veloci
-                    df['RSI'] = ta.rsi(df['close'], length=7)
-                    macd_df = ta.macd(df['close'], fast=8, slow=17, signal=9)
+                    # Calcolo indicatori
+                    df_logic['RSI'] = ta.rsi(df_logic['close'], length=7)
+                    macd_res = ta.macd(df_logic['close'], fast=8, slow=17, signal=9)
                     
-                    curr_rsi = df['RSI'].iloc[-1]
-                    curr_macd = macd_df['MACD_8_17_9'].iloc[-1]
-                    curr_signal = macd_df['MACDs_8_17_9'].iloc[-1]
-                    price = df['close'].iloc[-1]
+                    val_rsi = df_logic['RSI'].iloc[-1]
+                    val_macd = macd_res['MACD_8_17_9'].iloc[-1]
+                    val_sig = macd_res['MACDs_8_17_9'].iloc[-1]
+                    price_now = df_logic['close'].iloc[-1]
 
-                    # --- LOGICA DI TRIGGER APERTA ---
-                    buy_condition = curr_rsi < rsi_buy and curr_macd > curr_signal
-                    sell_condition = curr_rsi > rsi_sell and curr_macd < curr_signal
+                    # Condizioni Trigger
+                    buy_trigger = val_rsi < rsi_buy and val_macd > val_sig
+                    sell_trigger = val_rsi > rsi_sell and val_macd < val_sig
 
-                    if (buy_condition or sell_condition) and pair not in st.session_state.active_trades:
-                        direction = "BUY" if buy_condition else "SELL"
+                    if (buy_trigger or sell_trigger) and p_name not in st.session_state.active_trades:
+                        direction = "BUY" if buy_trigger else "SELL"
                         
-                        # Dove definisci il trade
-                        st.session_state.active_trades[pair] = {
-                            'entry_price': price,
-                            'entry_time': curr_t,
-                            'direction': direction,
-                            'amount': 100.0  # <--- Aggiungi un valore di default o una variabile
+                        # Registra il trade
+                        st.session_state.active_trades[p_name] = {
+                            'entry_price': price_now, 
+                            'entry_time': curr_t, 
+                            'direction': direction
                         }
+                        
+                        # Invia Alert
+                        st.session_state.scanner_alerts.append({
+                            'pair': p_name, 'type': direction, 'price': price_now, 'rsi': f"{val_rsi:.1f}"
+                        })
+                        send_telegram_signal(direction, p_name, price_now, round(val_rsi, 1), val_macd)
+                        play_trade_sound("buy" if direction == "BUY" else "sell")
 
-                        
-                        msg = f"{'🟢' if direction == 'BUY' else '🔴'} TRADE {direction} su {pair}"
-                        st.toast(msg, icon="🚀")
-                        play_trade_sound()
-                        send_telegram_signal(direction, pair, price, round(curr_rsi, 2), 0)
-                        
+                        # Salva nello storico
                         st.session_state.signal_history.append({
                             'time': datetime.now().strftime("%H:%M:%S"),
-                            'pair': pair,
-                            'type': direction,
-                            'rsi': f"{curr_rsi:.1f}",
-                            'price': price
+                            'pair': p_name, 'type': direction, 'price': price_now, 
+                            'rsi': f"{val_rsi:.1f}", 'result': '⏳ IN CORSO'
                         })
-
-                except Exception as e:
+                except: 
                     continue
-    
-    # 🔥 DASHBOARD TRADES APERTI - CORRETTO
-    if st.session_state.get('active_trades', {}):
+            st.session_state.scanner_last_update = curr_t
+
+    # --- VISUALIZZAZIONE DASHBOARD ---
+    if st.session_state.active_trades:
         st.subheader("🔥 **TRADES APERTI (1m)**")
         active_df = pd.DataFrame([
             {
-                'PAIR': trade_pair,
-                'ENTRY': f"{trade['direction']} @ {trade['entry_price']:.5f}", # Rimosso 'amount'
-                '⏱️': f"{int(current_time - trade['entry_time'])}s",
-                'STATUS': '⏳ APERTO'
-            }
-            for trade_pair, trade in st.session_state['active_trades'].items()
+                'COPPIA': pair, 
+                'DIREZIONE': trade['direction'], 
+                'ENTRATA': f"{trade['entry_price']:.5f}",
+                '⏱️ SCADENZA': f"{max(0, 60 - int(time_module.time() - trade['entry_time']))}s",
+                'STATUS': '⏳ LIVE'
+            } for pair, trade in st.session_state.active_trades.items()
         ])
-
         st.dataframe(active_df, use_container_width=True, hide_index=True)
 
-    # TABELLA SCANNER OTTIMIZZATA (invariata, OK)
-    st.subheader("🔍 **SCANNER FOREX LIVE**")
-    if st.session_state.get('scanner', False) and st.session_state.get('scanner_data', {}):
-        scanner_df = pd.DataFrame(st.session_state.scanner_data).T
-        scanner_df.reset_index(inplace=True)
-        scanner_df.rename(columns={'index': 'PAIR'}, inplace=True)
-        scanner_df = scanner_df[['PAIR', 'price', 'rsi', 'signal']]
-        
-        def color_signal(val):
-            if '🟢🚨' in str(val): return 'background-color: #00ff88; color: black; font-weight: bold'
-            elif '🔴🚨' in str(val): return 'background-color: #ff4444; color: white; font-weight: bold'
-            elif '⚪' in str(val): return 'background-color: #f0f0f0'
-            else: return ''
-        
-        scanner_df.rename(columns={
-            'PAIR': '💱 COPPIA',
-            'price': '💰 PREZZO', 
-            'rsi': '📊 RSI',
-            'signal': '🚦 SEGNALE'
-        }, inplace=True)
-        
-        st.dataframe(scanner_df.style.applymap(color_signal, subset=['🚦 SEGNALE']), 
-                    use_container_width=True, height=400, hide_index=True)
-
-    # 🔥 ALERT POPUP PRIORITARI - FUNZIONANTE AL 100%
-    if st.session_state.get('scanner_alerts', []):
-        st.markdown("---")
-        st.subheader("🚨 **ULTIMI TRADES APERTI**")
-        
-        # Processa alert in ordine inverso per indici stabili
-        for i, alert in enumerate(reversed(st.session_state.scanner_alerts[-3:])):
-            col1, col2 = st.columns([3,1])
-            with col1:
-                color = "#00ff88" if "BUY" in alert['type'] else "#ff4444"
-                st.markdown(f"""
-                <div style='background: linear-gradient(45deg, {color}, {color}); 
-                padding: 25px; border-radius: 20px; border: 4px solid #ffffff; 
-                text-align: center; font-size: 24px; font-weight: bold; color: black; box-shadow: 0 10px 30px rgba(0,0,0,0.3);'>
-                    🚀 **{alert['type']} {alert['pair'].upper()}**
-                    <div style='font-size: 28px; margin-top: 10px;'>
-                        💰 {alert['price']} | 📊 RSI: {alert['rsi']}
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            with col2:
-                # KEY SUPER STABILE - solo pair + indice fisso
-                alert_key = f"close_alert_{alert['pair']}_{i}"
-                if st.button("👁️ VISTO", key=alert_key):
-                    # Rimuovi TUTTI gli alert di questo pair
-                    st.session_state.scanner_alerts = [
-                        a for a in st.session_state.scanner_alerts 
-                        if a['pair'] != alert['pair']
-                    ]
-                    st.success(f"✅ Rimossa alert {alert['pair']}!")
-                    st.rerun()
-
-# GRAFICO CENTRALE REALTIME
-if st.session_state.get('connected', False):
-    Iq = st.session_state['iq']
-    pair = st.session_state.get('pair', 'EURUSD')
-    rsi_buy = st.session_state.get('rsi_buy', 28)
-    rsi_sell = st.session_state.get('rsi_sell', 72)
-    
-    st.subheader(f"📊 GRAFICO REALTIME - {pair.upper()}")
-    
+    # GRAFICO REALTIME
+    target_pair = st.session_state.get('pair', 'EURUSD')
+    st.subheader(f"📊 MONITORAGGIO: {target_pair}")
     try:
-        candles = Iq.get_candles(pair, 60, 150, time_module.time())
-        df = pd.DataFrame(candles)
-        df['from'] = pd.to_datetime(df['from'], unit='s')
-        df.set_index('from', inplace=True)
+        plot_candles = Iq.get_candles(target_pair, 60, 100, time_module.time())
+        df_plot = pd.DataFrame(plot_candles)
+        df_plot['from'] = pd.to_datetime(df_plot['from'], unit='s')
+        df_plot.set_index('from', inplace=True)
+        df_plot['RSI'] = ta.rsi(df_plot['close'], length=7)
         
-        # INDICATORI OTTIMIZZATI 1m
-        df['RSI'] = ta.rsi(df['close'], length=7)
-        bbands = ta.bbands(df['close'], length=20, std=2.0)
-        
-        bb_cols = [col for col in bbands.columns if 'BB' in col]
-        if len(bb_cols) >= 3:
-            df['BBU'] = bbands[bb_cols[0]]
-            df['BBM'] = bbands[bb_cols[1]] 
-            df['BBL'] = bbands[bb_cols[2]]
-        
-        macd = ta.macd(df['close'], fast=8, slow=17, signal=9)
-        df['MACD'] = macd['MACD_8_17_9']
-        df['MACD_signal'] = macd['MACDs_8_17_9']
-        
-        st.session_state['df'] = df
-        
-        # GRAFICO
-        df_last_hour = df.tail(60).copy()
-        fig = make_subplots(
-            rows=3, cols=1,
-            subplot_titles=(f'💹 {pair.upper()} CON BBANDS', '📈 RSI (1m Scalping)', '📉 MACD 8-17-9'),
-            row_heights=[0.5, 0.25, 0.25],
-            vertical_spacing=0.05,
-            shared_xaxes=True
-        )
-        
-        fig.add_trace(go.Candlestick(
-            x=df_last_hour.index, open=df_last_hour['open'], 
-            high=df_last_hour['max'], low=df_last_hour['min'], 
-            close=df_last_hour['close'], 
-            increasing_line_color='#00ff88', decreasing_line_color='#ff4444'), row=1, col=1)
-
-        fig.add_trace(go.Scatter(x=df_last_hour.index, y=df_last_hour['BBU'], 
-                               line=dict(color='#00ccff', width=1.5), name='BBU', opacity=0.7), row=1, col=1)
-        fig.add_trace(go.Scatter(x=df_last_hour.index, y=df_last_hour['BBM'], 
-                               line=dict(color='#ffaa00', width=2), name='BBM'), row=1, col=1)
-        fig.add_trace(go.Scatter(x=df_last_hour.index, y=df_last_hour['BBL'], 
-                               line=dict(color='#00ccff', width=1.5), fill='tonexty',
-                               fillcolor='rgba(0, 204, 255, 0.15)', showlegend=False), row=1, col=1)
-        
-        fig.add_trace(go.Scatter(x=df_last_hour.index, y=df_last_hour['RSI'], 
-                               line=dict(color='purple', width=2), name='RSI'), row=2, col=1)
-        fig.add_hline(y=rsi_buy, line_dash="solid", line_color="#00ff00", line_width=3, 
-                     annotation_text=f"BUY {rsi_buy}", row=2, col=1)
-        fig.add_hline(y=rsi_sell, line_dash="solid", line_color="#ff0000", line_width=3, 
-                     annotation_text=f"SELL {rsi_sell}", row=2, col=1)
-        fig.add_hline(y=50, line_dash="dot", line_color="gray", row=2, col=1)
-        
-        fig.add_trace(go.Scatter(x=df_last_hour.index, y=df_last_hour['MACD'], 
-                               line=dict(color='orange', width=2.5), name='MACD'), row=3, col=1)
-        fig.add_trace(go.Scatter(x=df_last_hour.index, y=df_last_hour['MACD_signal'], 
-                               line=dict(color='red', width=2), name='Signal'), row=3, col=1)
-        fig.add_hline(y=0, line_dash="solid", line_color="white", line_width=1, row=3, col=1)
-        
-        fig.update_layout(height=1000, showlegend=False, 
-                         title=f"🎯 {pair.upper()} - AUTO TRADES 1m ATTIVI",
-                         xaxis_rangeslider_visible=False, margin=dict(t=120))
+        fig = make_subplots(rows=2, cols=1, shared_xaxes=True, row_heights=[0.7, 0.3], vertical_spacing=0.05)
+        fig.add_trace(go.Candlestick(x=df_plot.index, open=df_plot['open'], high=df_plot['max'], low=df_plot['min'], close=df_plot['close'], name="Prezzo"), row=1, col=1)
+        fig.add_trace(go.Scatter(x=df_plot.index, y=df_plot['RSI'], name="RSI", line=dict(color='purple')), row=2, col=1)
+        fig.add_hline(y=rsi_buy, line_color="green", line_dash="dash", row=2, col=1)
+        fig.add_hline(y=rsi_sell, line_color="red", line_dash="dash", row=2, col=1)
+        fig.update_layout(height=600, showlegend=False, xaxis_rangeslider_visible=False, template="plotly_dark")
         st.plotly_chart(fig, use_container_width=True)
-        
-    except Exception as e:
-        st.error(f"❌ Grafico {pair}: {e}")
+    except: 
+        st.info("Sincronizzazione grafico in corso...")
 
-    # 🔄 REFRESH SElettivo ogni 30s per sidebar + scanner
-    if st.session_state.get('connected', False):
-        time_since_last_refresh = time_module.time() - st.session_state.get('last_refresh', 0)
-        if time_since_last_refresh > 30:  # 30s refresh
-            st.session_state['last_refresh'] = time_module.time()
-            st.rerun()  # Refresh sidebar + tutto
-
-    # 📊 STATISTICHE LIVE
+    # STATISTICHE E STORICO
     st.markdown("---")
-    st.subheader("📊 **STATISTICHE LIVE**")
-    if st.session_state.get('signal_history', []):
-        recent_trades = pd.DataFrame(st.session_state['signal_history'][-100:])
-        trade_results = recent_trades[recent_trades['result'].str.contains('VITTORIA|SCONFITTA', na=False)]
-        
-        if not trade_results.empty:
-            wins = len(trade_results[trade_results['result'].str.contains('VITTORIA')])
-            total = len(trade_results)
-            winrate = (wins / total * 100) if total > 0 else 0
-            
-            col1, col2, col3 = st.columns(3)
-            col1.metric("🎯 Trades Totali", total)
-            col2.metric("✅ Winrate", f"{winrate:.1f}%")
-            col3.metric("📈 Ultimi 10", f"{wins}/{total}")
-
-    # 📋 STORICO COMPLETO CON ESITI
-    st.markdown("---")
-    st.subheader("📋 **STORICO TRADES** (Ultimi 50)")
+    col_a, col_b = st.columns([1, 2])
     
-    if st.session_state.get('signal_history', []):
-        signals_df = pd.DataFrame(st.session_state['signal_history'][-50:])
-        if not signals_df.empty:
-            # Adatta colonne per entrambi i tipi
-            if 'result' in signals_df.columns:
-                signals_df = signals_df[['time', 'pair', 'entry', 'exit', 'pips', 'result']]
-                signals_df.columns = ['ORA', 'COPPIA', 'ENTRY', 'EXIT', 'PIPS', 'ESITO']
+    if st.session_state.signal_history:
+        df_h = pd.DataFrame(st.session_state.signal_history)
+        with col_a:
+            st.subheader("🎯 ** PERFORMANCE**")
+            # Filtra solo quelli conclusi
+            finiti = df_h[df_h['result'].isin(['✅ VITTORIA', '❌ SCONFITTA'])]
+            if not finiti.empty:
+                vittorie = len(finiti[finiti['result'] == '✅ VITTORIA'])
+                wr = (vittorie / len(finiti)) * 100
+                st.metric("Winrate", f"{wr:.1f}%", f"{vittorie}W - {len(finiti)-vittorie}L")
             else:
-                signals_df = signals_df[['time', 'pair', 'type', 'price', 'rsi']]
-                signals_df.columns = ['ORA', 'COPPIA', 'AZIONE', 'PREZZO', 'RSI']
-            
-            st.dataframe(signals_df, use_container_width=True, height=400, hide_index=True)
-    else:
-        st.info("⏳ Attendi i primi trades... Scanner attivo!")
+                st.write("In attesa dei primi esiti...")
+
+        with col_b:
+            st.subheader("📋 **STORICO RECENTE**")
+            st.dataframe(df_h.tail(15)[['time', 'pair', 'type', 'price', 'result']], use_container_width=True, hide_index=True)
+
+    # AUTO REFRESH (10 secondi)
+    if time_module.time() - st.session_state.get('last_refresh', 0) > 10:
+        st.session_state.last_refresh = time_module.time()
+        st.rerun()
