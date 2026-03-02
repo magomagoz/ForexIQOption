@@ -20,6 +20,18 @@ def send_telegram_signal(signal_type, pair, price, rsi, macd):
     try: requests.post(url, data={"chat_id": TELEGRAM_CHAT_ID, "text": message, "parse_mode": "Markdown"}, timeout=5)
     except: pass
 
+def play_trade_sound(sound_type="alert"):
+    """Suona notifica audio per trade"""
+    sounds = {
+        "buy": "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav",
+        "sell": "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav", 
+        "win": "https://www.soundjay.com/misc/sounds/ching-15.wav",
+        "lose": "https://www.soundjay.com/misc/sounds/ching-15.wav"
+    }
+    sound_url = sounds.get(sound_type, sounds["alert"])
+    st.audio(sound_url, autoplay=True, sample_rate=44100)
+    #st.audio(sounds.get(sound_type, sounds["buy"]), autoplay=True)
+
 st.set_page_config(page_title="Sentinel AI", page_icon="🚀", layout="wide")
 
 # Logo
@@ -56,6 +68,8 @@ with st.sidebar:
             st.write(f"{status} {city}")
 
 # --- MAIN DASHBOARD ---
+st.title("IQ TRADING SIGNAL")
+
 if st.session_state.connected:
     Iq = st.session_state.iq
     
@@ -69,6 +83,7 @@ if st.session_state.connected:
         timeframe = st.selectbox("Timeframe", [60, 300], index=0)
 
     # 2. SCANNER MULTI-PAIR
+    st.header("👁️ SCANNER FOREX")
     st.session_state.scanner = st.toggle("🔍 Attiva Scanner FOREX", value=True)
     
     if st.session_state.scanner:
