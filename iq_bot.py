@@ -18,12 +18,25 @@ if 'scanner_last_update' not in st.session_state:
 
 st.set_page_config(page_title="Sentinel AI", layout="wide")
 
-# --- 2. SIDEBAR DINAMICA (Senza tasti fantasma) ---
-with st.sidebar:
-    st.header("⚙️ TRADING CONTROL")
-    
-    # Creiamo un contenitore unico per il Login
-    login_container = st.container()
+# --- SIDEBAR: ACCESSO E CONFIGURAZIONE ---
+st.sidebar.title("🔐 IQ Option Access")
+
+if st.session_state['iq_api'] is None:
+    st.sidebar.error("🔴 STATO: DISCONNESSO")
+    user_mail = st.sidebar.text_input("Email IQ", value=IQ_EMAIL)
+    user_pass = st.sidebar.text_input("Password IQ", type="password", value=IQ_PASS)
+    if st.sidebar.button("🔌 Connetti", use_container_width=True):
+        api = IQ_Option(user_mail, user_pass)
+        check, reason = api.connect()
+        if check:
+            api.change_balance("PRACTICE")
+            st.session_state['iq_api'] = api
+            st.session_state['trading_attivo'] = True
+            st.rerun()
+                    
+else:
+    st.sidebar.success("🟢 STATO: IN LINEA")
+    API = st.session_state['iq_api']
     
     if not st.session_state.connected:
         with login_container:
