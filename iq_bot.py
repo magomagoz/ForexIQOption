@@ -67,8 +67,8 @@ with st.sidebar:
             status = "🟢 " if start <= now_cet <= end else "🔴 "
             st.write(f"{status} {city}")
 
-# --- MAIN DASHBOARD ---
-st.title("IQ TRADING SIGNAL")
+    # --- MAIN DASHBOARD ---
+    st.header("IQ TRADING SIGNAL")
 
 if st.session_state.connected:
     Iq = st.session_state.iq
