@@ -53,7 +53,7 @@ with st.sidebar:
         email = st.text_input("Email Practice", value="mago_magoz@libero.it")
         password = st.text_input("Password", type="password")
         
-        if st.button("🔌 **CONNETTI**", type="primary", use_container_width=True):
+        if st.button("🔌 **CONNETTI**", type="secondary", use_container_width=True):
             try:
                 Iq = IQ_Option(email, password)
                 check, reason = Iq.connect()
