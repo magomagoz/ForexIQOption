@@ -15,7 +15,7 @@ TELEGRAM_CHAT_ID = st.secrets.get("TELEGRAM_CHAT_ID", "")
 
 def send_telegram_signal(signal_type, pair, price, rsi, macd):
     timestamp = datetime.now().strftime("%H:%M:%S")
-    message = f"🚀 *SENTINEL AI*\n*{signal_type} - {pair}*\n💰 Prezzo: `{price:.5f}`\n📊 RSI: `{rsi:.1f}`\n⏰ {timestamp}"
+    message = f"🚀 *SENTINEL AI*\n*{signal_type} - {pair}*\n💰 Prezzo: `{price:.5f}`\n📊 RSI: `{rsi:.1f}`\n⏰ Ora: {timestamp}"
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     try: requests.post(url, data={"chat_id": TELEGRAM_CHAT_ID, "text": message, "parse_mode": "Markdown"}, timeout=5)
     except: pass
@@ -92,13 +92,21 @@ if st.session_state.connected:
                 is_buy = curr_rsi < rsi_buy and curr_macd > curr_sig
                 is_sell = curr_rsi > rsi_sell and curr_macd < curr_sig
 
+
+                # --- DENTRO IL CICLO FOR PAIR IN ALL_PAIRS ---
                 if (is_buy or is_sell) and pair not in st.session_state.active_trades:
                     direction = "BUY" if is_buy else "SELL"
-                    st.session_state.active_trades[pair] = {'time': time_module.time(), 'price': price}
+                    st.session_state.active_trades[pair] = {'time': curr_time, 'price': price}
+                    
+                    # SALVATAGGIO CORRETTO: Usiamo nomi chiari
                     st.session_state.signal_history.append({
                         'time': datetime.now().strftime("%H:%M:%S"),
-                        'pair': pair, 'dir': direction, 'rsi': round(curr_rsi, 1)
+                        'pair': pair, 
+                        'dir': direction, # <--- Deve essere 'dir'
+                        'price': f"{price:.5f}", # <--- Deve essere 'price'
+                        'rsi': round(curr_rsi, 2)
                     })
+
                     send_telegram_signal(direction, pair, price, curr_rsi, 0)
                     #st.toast(f"🚀 SEGNALE {direction} su {pair}!", icon="🔥")
 
@@ -125,27 +133,35 @@ if st.session_state.connected:
     fig.update_layout(height=600, template="plotly_dark", xaxis_rangeslider_visible=False)
     st.plotly_chart(fig, use_container_width=True)
 
-    # --- TABELLA SEGNALI VERIFICATA ---
     st.header("📋 Storico Segnali Recenti")
+    
     if st.session_state.signal_history:
-        # CORREZIONE: Selezione colonne con nomi esatti e doppie quadre
-        signals_df = pd.DataFrame(st.session_state.signal_history).tail(50)
+        # Creiamo il DataFrame dallo storico
+        signals_df = pd.DataFrame(st.session_state.signal_history)
         
-        # Rinomina colonne per estetica
-        display_df = signals_df[['time', 'pair', 'dir', 'price', 'rsi']].copy()
-        display_df.columns = ['⏰ ORA', '💱 COPPIA', 'AZIONE', '💰 PREZZO', '📊 RSI']
+        # Verifichiamo quali colonne sono effettivamente presenti per evitare il KeyError
+        available_cols = signals_df.columns.tolist()
+        target_cols = ['time', 'pair', 'dir', 'price', 'rsi']
         
-        st.dataframe(display_df, use_container_width=True, height=300, hide_index=True)
+        # Prendiamo solo quelle che esistono davvero
+        cols_to_show = [c for c in target_cols if c in available_cols]
+        
+        if cols_to_show:
+            display_df = signals_df[cols_to_show].copy()
+            
+            # Rinominiamo per un look professionale
+            rename_map = {
+                'time': '⏰ ORA',
+                'pair': '💱 COPPIA',
+                'dir': '🚀 TIPO',
+                'price': '💰 PREZZO',
+                'rsi': '📊 RSI'
+            }
+            display_df.rename(columns=rename_map, inplace=True)
+            
+            # Mostriamo la tabella pulita
+            st.dataframe(display_df.tail(15), use_container_width=True, hide_index=True)
+        else:
+            st.warning("Dati non ancora pronti per la visualizzazione.")
     else:
-        st.info("⏳ In attesa di segnali...")
-
-    # Pulizia active trades e rerun
-    for p in list(st.session_state.active_trades.keys()):
-        if time_module.time() - st.session_state.active_trades[p]['time'] > 60:
-            del st.session_state.active_trades[p]
-    
-    time_module.sleep(2)
-    st.rerun()
-    
-    #if st.session_state.get('signal_history', []):
-        
+        st.info("⏳ In attesa di segnali... Lo scanner è attivo!")
