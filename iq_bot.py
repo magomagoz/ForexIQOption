@@ -22,7 +22,7 @@ def send_telegram_signal(signal_type, pair, price, rsi):
     token = st.secrets.get("TELEGRAM_TOKEN", "")
     chat_id = st.secrets.get("TELEGRAM_CHAT_ID", "")
     if not token: return
-    msg = f"🚀 *SENTINEL AI - {signal_type}*\n💶 Pair: {pair}\n💰 *Prezzo:* {price}\n📊 *RSI:* {rsi}\n🔥 *MACD:* {macd}\n⏰ *Ora:* {timestamp}\n⚠️ *Entra Ora!*"
+    msg = f"🚀 *SENTINEL AI - {signal_type}*\n💶 Pair: {pair}\n💰 *Prezzo:* {price}\n📊 *RSI:* {rsi}\n⏰ *Ora:* {timestamp}\n🔥 *Entra Ora!*"
     url = f"https://api.telegram.org/bot{token}/sendMessage"
     try: requests.post(url, data={"chat_id": chat_id, "text": msg, "parse_mode": "Markdown"})
     except: pass
