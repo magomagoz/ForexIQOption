@@ -20,18 +20,6 @@ def send_telegram_signal(signal_type, pair, price, rsi, macd):
     try: requests.post(url, data={"chat_id": TELEGRAM_CHAT_ID, "text": message, "parse_mode": "Markdown"}, timeout=5)
     except: pass
 
-def play_trade_sound(sound_type="buy"):
-    """Suona notifica audio per trade"""
-    sounds = {
-        "buy": "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav",
-        "sell": "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav", 
-        "win": "https://www.soundjay.com/misc/sounds/ching-15.wav",
-        "lose": "https://www.soundjay.com/misc/sounds/button-10.wav"
-    }
-    # Se il sound_type non esiste, usa "buy" come default
-    sound_url = sounds.get(sound_type, sounds["buy"])
-    st.audio(sound_url, autoplay=True)
-
 st.set_page_config(page_title="Sentinel AI", page_icon="🚀", layout="wide")
 
 # Logo
