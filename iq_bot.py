@@ -50,7 +50,7 @@ with st.sidebar:
         st.success("🟢 IQ OPTION LIVE")
         # --- SESSIONI DI MERCATO ---
         now_cet = datetime.now().time()
-        st.markdown("🌍 Sessioni di mercato")
+        st.subheader("🌍 Sessioni di mercato")
         for city, (start, end) in {"LONDRA 🇬🇧": (time(9,0), time(18,0)), "NEW YORK 🇺🇸": (time(14,0), time(23,0)), "SYDNEY 🇦🇺": (time(23,0), time(8,0)), "TOKYO 🇯🇵": (time(1,0), time(10,0))}.items():
             status = "🟢 " if start <= now_cet <= end else "🔴 "
             st.write(f"{status} {city}")
@@ -126,10 +126,28 @@ if st.session_state.connected:
     st.plotly_chart(fig, use_container_width=True)
 
     # 4. TABELLA SEGNALI
-    st.subheader("📋 Storico Segnali Recenti")
+    st.header("📋 Storico Segnali Recenti")
     if st.session_state.signal_history:
-        st.table(pd.DataFrame(st.session_state.signal_history).tail(10))
+        #st.table(pd.DataFrame(st.session_state.signal_history).tail(10))
+        signals_df = pd.DataFrame(st.session_state['signal_history'][-50:])
+        if not signals_df.empty:
+            # Adatta colonne per entrambi i tipi
+            if 'result' in signals_df.columns:
+                signals_df = signals_df[['time', 'pair', 'entry', 'exit', 'pips', 'result']]
+                signals_df.columns = ['⏰ ORA', '💱 COPPIA', '🚀 ENTRY', '👋 EXIT', '📈 PIPS', '🔍 ESITO']
+            else:
+                signals_df = signals_df[['time', 'pair', 'type', 'price', 'rsi']
+                signals_df.columns = ['⏰ ORA', '💱 COPPIA', 'AZIONE', '💰 PREZZO', '📊 RSI']
+            
+            st.dataframe(signals_df, use_container_width=True, height=400, hide_index=True)
+    else:
+        st.info("⏳ Attendi i primi trades... Scanner attivo!")
 
+        
     # Auto-refresh
     time_module.sleep(2)
     st.rerun()
+
+    
+    #if st.session_state.get('signal_history', []):
+        
