@@ -27,17 +27,23 @@ def send_telegram_signal(signal_type, pair, price, rsi):
     try: requests.post(url, data={"chat_id": chat_id, "text": msg, "parse_mode": "Markdown"})
     except: pass
 
-st.set_page_config(page_title="Sentinel AI", layout="wide")
+st.set_page_config(page_title="Sentinel AI", page_icon="🚀", layout="wide")
 
-# --- 3. SIDEBAR (LOGICA LOGIN PULITA) ---
-with st.sidebar:
-    st.header("⚙️ TRADING CONTROL")
+# Logo
+try:
+    logo = Image.open("banner.png")
+    st.image(logo, use_column_width=True, caption="IQ Signals PRO")
+except:
+    st.image("https://via.placeholder.com/800x100/0066cc/white?text=SENTINEL+AI", use_column_width=True)
     
+# **SIDEBAR COMPLETO**
+with st.sidebar:
+    st.header("⚙️ **TRADING IQ OPTION**")    
     if not st.session_state.connected:
         # VISIBILE SOLO PRIMA DEL LOGIN
         email = st.text_input("Email", value="mago_magoz@libero.it")
         password = st.text_input("Password", type="password")
-        if st.button("🔌 CONNETTI ORA", type="primary"):
+        if st.button("🔌 CONNETTI ORA", type="secondary"):
             Iq = IQ_Option(email, password)
             check, reason = Iq.connect()
             if check:
@@ -49,7 +55,7 @@ with st.sidebar:
     else:
         # VISIBILE SOLO DOPO IL LOGIN
         st.success("🟢 STATUS: COLLEGATO")
-        if st.button("🔴 SCOLLEGA ACCOUNT", type="secondary"):
+        if st.button("🚪 SCOLLEGA ACCOUNT", type="primary"):
             st.session_state.connected = False
             if 'iq' in st.session_state: del st.session_state['iq']
             st.rerun()
@@ -68,7 +74,7 @@ if st.session_state.connected:
     if st.toggle("🔍 AVVIA SCANNER", value=True):
         curr_t = time_module.time()
         if curr_t - st.session_state.scanner_last_update > 5:
-            PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD"]
+            PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"]
             
             for pair in PAIRS:
                 try:
