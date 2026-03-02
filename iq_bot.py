@@ -64,14 +64,14 @@ with st.sidebar:
         now_cet = datetime.now().time()
         st.subheader("🌍 SESSIONI DI MERCATO")
         for city, (start, end) in {"LONDRA 🇬🇧": (time(9,0), time(18,0)), "NEW YORK 🇺🇸": (time(14,0), time(23,0)), "SYDNEY 🇦🇺": (time(23,0), time(8,0)), "TOKYO 🇯🇵": (time(1,0), time(10,0))}.items():
-            status = "🟢 " if start <= now_cet <= end else "🔴 "
+            status = "🟢 Open: " if start <= now_cet <= end else "🔴 Closed: "
             st.write(f"{status} {city}")
 
 if st.session_state.connected:
     Iq = st.session_state.iq
 
     # 2. SCANNER MULTI-PAIR
-    st.header("👁️ SCANNER FOREX")
+    st.subheader("👁️ Scanner FOREX")
     st.session_state.scanner = st.toggle("🔍 Attiva Scanner FOREX", value=True)
 
     
@@ -129,7 +129,6 @@ if st.session_state.connected:
                         st.warning(f" NUOVO SEGNALE: {direction} su {pair}! 🚀", icon="🔥")
                         if st.button(f"OK, Visto ({pair})", key=f"btn_{pair}_{curr_t}"):
                             st.rerun()
-
             
             except: continue
 
@@ -147,7 +146,7 @@ if st.session_state.connected:
     fig.update_layout(height=600, template="plotly_dark", xaxis_rangeslider_visible=False)
     st.plotly_chart(fig, use_container_width=True)
 
-    st.header("📋 Storico Segnali Recenti")
+    st.subheader("📋 Storico Segnali Recenti")
     
     if st.session_state.signal_history:
         # Creiamo il DataFrame dallo storico
