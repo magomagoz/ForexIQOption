@@ -50,9 +50,9 @@ with st.sidebar:
         st.success("🟢 IQ OPTION LIVE")
         # --- SESSIONI DI MERCATO ---
         now_cet = datetime.now().time()
-        st.markdown("### 🌍 Sessioni di mercato")
-        for city, (start, end) in {"🇬🇧 LONDRA": (time(9,0), time(18,0)), "🇺🇸 NEW YORK": (time(14,0), time(23,0)), "🇦🇺 SYDNEY": (time(23,0), time(8,0)), "🇯🇵 TOKYO": (time(1,0), time(10,0))}.items():
-            status = "🟢" if start <= now_cet <= end else "🔴"
+        st.markdown("🌍 Sessioni di mercato")
+        for city, (start, end) in {"LONDRA 🇬🇧": (time(9,0), time(18,0)), "NEW YORK 🇺🇸": (time(14,0), time(23,0)), "SYDNEY 🇦🇺": (time(23,0), time(8,0)), "TOKYO 🇯🇵": (time(1,0), time(10,0))}.items():
+            status = "🟢 " if start <= now_cet <= end else "🔴 "
             st.write(f"{status} {city}")
 
 # --- MAIN DASHBOARD ---
