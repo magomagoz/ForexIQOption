@@ -125,29 +125,27 @@ if st.session_state.connected:
     fig.update_layout(height=600, template="plotly_dark", xaxis_rangeslider_visible=False)
     st.plotly_chart(fig, use_container_width=True)
 
-    # 4. TABELLA SEGNALI
+    # --- TABELLA SEGNALI VERIFICATA ---
     st.header("📋 Storico Segnali Recenti")
     if st.session_state.signal_history:
-        #st.table(pd.DataFrame(st.session_state.signal_history).tail(10))
-        signals_df = pd.DataFrame(st.session_state['signal_history'][-50:])
-        if not signals_df.empty:
-            # Adatta colonne per entrambi i tipi
-            if 'result' in signals_df.columns:
-                signals_df = signals_df['time', 'pair', 'entry', 'exit', 'pips', 'result']
-                signals_df.columns = ['⏰ ORA', '💱 COPPIA', '🚀 ENTRY', '👋 EXIT', '📈 PIPS', '🔍 ESITO']
-            else:
-                signals_df = signals_df['time', 'pair', 'type', 'price', 'rsi']
-                signals_df.columns = ['⏰ ORA', '💱 COPPIA', 'AZIONE', '💰 PREZZO', '📊 RSI']
-            
-            st.dataframe(signals_df, use_container_width=True, height=400, hide_index=True)
-    else:
-        st.info("⏳ Attendi i primi trades... Scanner attivo!")
-
+        # CORREZIONE: Selezione colonne con nomi esatti e doppie quadre
+        signals_df = pd.DataFrame(st.session_state.signal_history).tail(50)
         
-    # Auto-refresh
+        # Rinominia colonne per estetica
+        display_df = signals_df[['time', 'pair', 'dir', 'price', 'rsi']].copy()
+        display_df.columns = ['⏰ ORA', '💱 COPPIA', 'AZIONE', '💰 PREZZO', '📊 RSI']
+        
+        st.dataframe(display_df, use_container_width=True, height=300, hide_index=True)
+    else:
+        st.info("⏳ In attesa di segnali...")
+
+    # Pulizia active trades e rerun
+    for p in list(st.session_state.active_trades.keys()):
+        if time_module.time() - st.session_state.active_trades[p]['time'] > 60:
+            del st.session_state.active_trades[p]
+    
     time_module.sleep(2)
     st.rerun()
-
     
     #if st.session_state.get('signal_history', []):
         
