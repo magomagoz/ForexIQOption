@@ -20,17 +20,17 @@ def send_telegram_signal(signal_type, pair, price, rsi, macd):
     try: requests.post(url, data={"chat_id": TELEGRAM_CHAT_ID, "text": message, "parse_mode": "Markdown"}, timeout=5)
     except: pass
 
-def play_trade_sound(sound_type="alert"):
+def play_trade_sound(sound_type="buy"):
     """Suona notifica audio per trade"""
     sounds = {
         "buy": "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav",
         "sell": "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav", 
         "win": "https://www.soundjay.com/misc/sounds/ching-15.wav",
-        "lose": "https://www.soundjay.com/misc/sounds/ching-15.wav"
+        "lose": "https://www.soundjay.com/misc/sounds/button-10.wav"
     }
-    sound_url = sounds.get(sound_type, sounds["alert"])
-    st.audio(sound_url, autoplay=True, sample_rate=44100)
-    #st.audio(sounds.get(sound_type, sounds["buy"]), autoplay=True)
+    # Se il sound_type non esiste, usa "buy" come default
+    sound_url = sounds.get(sound_type, sounds["buy"])
+    st.audio(sound_url, autoplay=True)
 
 st.set_page_config(page_title="Sentinel AI", page_icon="🚀", layout="wide")
 
@@ -72,6 +72,7 @@ if st.session_state.connected:
 
     # 2. SCANNER MULTI-PAIR
     st.subheader("👁️ Scanner FOREX")
+    
     st.session_state.scanner = st.toggle("🔍 Attiva Scanner FOREX", value=True)
 
     
@@ -110,7 +111,10 @@ if st.session_state.connected:
                 # --- DENTRO IL CICLO FOR PAIR IN ALL_PAIRS ---
                 if (is_buy or is_sell) and pair not in st.session_state.active_trades:
                     direction = "BUY" if is_buy else "SELL"
-                    st.session_state.active_trades[pair] = {'time': curr_time, 'price': price}
+                    play_trade_sound("buy" if is_buy else "sell")
+
+                    #st.session_state.active_trades[pair] = {'time': curr_time, 'price': price}
+                    st.session_state.active_trades[pair] = {'time': time_module.time(), 'price': price}
                     
                     # SALVATAGGIO CORRETTO: Usiamo nomi chiari
                     st.session_state.signal_history.append({
