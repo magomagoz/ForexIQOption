@@ -132,8 +132,8 @@ if st.session_state.connected:
         signals_df = pd.DataFrame(st.session_state.signal_history).tail(50)
         
         # Rinominia colonne per estetica
-        display_df = signals_df['time', 'pair', 'dir', 'price', 'rsi'].copy()
-        display_df.columns = ['⏰ ORA', '💱 COPPIA', 'AZIONE', '💰 PREZZO', '📊 RSI']
+        display_df = signals_df[['time', 'pair', 'dir', 'price', 'rsi']].copy()
+        display_df.columns = [['⏰ ORA', '💱 COPPIA', 'AZIONE', '💰 PREZZO', '📊 RSI']]
         
         st.dataframe(display_df, use_container_width=True, height=300, hide_index=True)
     else:
