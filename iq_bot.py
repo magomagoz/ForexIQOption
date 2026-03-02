@@ -50,7 +50,7 @@ with st.sidebar:
         st.success("🟢 IQ OPTION LIVE")
         # --- SESSIONI DI MERCATO ---
         now_cet = datetime.now().time()
-        st.markdown("### 🌍 Sessioni")
+        st.markdown("### 🌍 Sessioni di mercato")
         for city, (start, end) in {"🇬🇧 LONDRA": (time(9,0), time(18,0)), "🇺🇸 NEW YORK": (time(14,0), time(23,0)), "🇦🇺 SYDNEY": (time(23,0), time(8,0)), "🇯🇵 TOKYO": (time(1,0), time(10,0))}.items():
             status = "🟢" if start <= now_cet <= end else "🔴"
             st.write(f"{status} {city}")
@@ -69,10 +69,10 @@ if st.session_state.connected:
         timeframe = st.selectbox("Timeframe", [60, 300], index=0)
 
     # 2. SCANNER MULTI-PAIR
-    st.session_state.scanner = st.toggle("🔍 Attiva Scanner Aggressivo", value=True)
+    st.session_state.scanner = st.toggle("🔍 Attiva Scanner FOREX", value=True)
     
     if st.session_state.scanner:
-        ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "EURJPY", "GBPJPY"]
+        ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"]
         placeholder = st.empty()
         
         for pair in ALL_PAIRS:
@@ -100,8 +100,15 @@ if st.session_state.connected:
                         'pair': pair, 'dir': direction, 'rsi': round(curr_rsi, 1)
                     })
                     send_telegram_signal(direction, pair, price, curr_rsi, 0)
-                    st.toast(f"🚀 SEGNALE {direction} su {pair}!", icon="🔥")
+                    #st.toast(f"🚀 SEGNALE {direction} su {pair}!", icon="🔥")
 
+                    # Sostituisci st.toast con questo:
+                    with st.container():
+                        st.warning(f" NUOVO SEGNALE: {direction} su {pair}! 🚀", icon="🔥")
+                        if st.button(f"OK, Visto ({pair})", key=f"btn_{pair}_{curr_t}"):
+                            st.rerun()
+
+            
             except: continue
 
     # 3. GRAFICO (Il tuo Plotly originale)
