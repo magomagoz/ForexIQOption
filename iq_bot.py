@@ -133,10 +133,10 @@ if st.session_state.connected:
         if not signals_df.empty:
             # Adatta colonne per entrambi i tipi
             if 'result' in signals_df.columns:
-                signals_df = signals_df[['time', 'pair', 'entry', 'exit', 'pips', 'result']]
+                signals_df = signals_df['time', 'pair', 'entry', 'exit', 'pips', 'result']
                 signals_df.columns = ['⏰ ORA', '💱 COPPIA', '🚀 ENTRY', '👋 EXIT', '📈 PIPS', '🔍 ESITO']
             else:
-                signals_df = signals_df[['time', 'pair', 'type', 'price', 'rsi']
+                signals_df = signals_df['time', 'pair', 'type', 'price', 'rsi']
                 signals_df.columns = ['⏰ ORA', '💱 COPPIA', 'AZIONE', '💰 PREZZO', '📊 RSI']
             
             st.dataframe(signals_df, use_container_width=True, height=400, hide_index=True)
