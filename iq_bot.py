@@ -99,10 +99,10 @@ if st.session_state.connected:
                 # --- DENTRO IL CICLO FOR PAIR IN ALL_PAIRS ---
                 if (is_buy or is_sell) and pair not in st.session_state.active_trades:
                     direction = "BUY" if is_buy else "SELL"
-                    play_trade_sound("buy" if is_buy else "sell")
+                    #play_trade_sound("buy" if is_buy else "sell")
 
-                    #st.session_state.active_trades[pair] = {'time': curr_time, 'price': price}
-                    st.session_state.active_trades[pair] = {'time': time_module.time(), 'price': price}
+                    st.session_state.active_trades[pair] = {'time': curr_time, 'price': price}
+                    #st.session_state.active_trades[pair] = {'time': time_module.time(), 'price': price}
                     
                     # SALVATAGGIO CORRETTO: Usiamo nomi chiari
                     st.session_state.signal_history.append({
