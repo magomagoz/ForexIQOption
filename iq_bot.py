@@ -20,7 +20,14 @@ def send_telegram_signal(signal_type, pair, price, rsi, macd):
     try: requests.post(url, data={"chat_id": TELEGRAM_CHAT_ID, "text": message, "parse_mode": "Markdown"}, timeout=5)
     except: pass
 
-st.set_page_config(page_title="Sentinel AI PRO", page_icon="🚀", layout="wide")
+st.set_page_config(page_title="Sentinel AI", page_icon="🚀", layout="wide")
+
+# Logo
+try:
+    logo = Image.open("banner.png")
+    st.image(logo, use_column_width=True, caption="IQ Signals PRO")
+except:
+    st.image("https://via.placeholder.com/800x100/0066cc/white?text=SENTINEL+AI", use_column_width=True)
 
 # --- LOGICA DI CONNESSIONE ---
 if 'connected' not in st.session_state: st.session_state.connected = False
@@ -28,7 +35,7 @@ if 'active_trades' not in st.session_state: st.session_state.active_trades = {}
 if 'signal_history' not in st.session_state: st.session_state.signal_history = []
 
 with st.sidebar:
-    st.header("⚙️ SENTINEL AI")
+    st.header("⚙️ TRADING IQ OPTION")
     if not st.session_state.connected:
         email = st.text_input("Email", value="mago_magoz@libero.it")
         password = st.text_input("Password", type="password")
@@ -44,7 +51,7 @@ with st.sidebar:
         # --- SESSIONI DI MERCATO ---
         now_cet = datetime.now().time()
         st.markdown("### 🌍 Sessioni")
-        for city, (start, end) in {"Londra": (time(9,0), time(18,0)), "NY": (time(14,0), time(23,0))}.items():
+        for city, (start, end) in {"🇬🇧 LONDRA": (time(9,0), time(18,0)), "🇺🇸 NEW YORK": (time(14,0), time(23,0)), "🇦🇺 SYDNEY": (time(23,0), time(8,0)), "🇯🇵 TOKYO": (time(1,0), time(10,0))}.items():
             status = "🟢" if start <= now_cet <= end else "🔴"
             st.write(f"{status} {city}")
 
