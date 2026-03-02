@@ -15,12 +15,12 @@ TELEGRAM_CHAT_ID = st.secrets.get("TELEGRAM_CHAT_ID", "")
 
 def send_telegram_signal(signal_type, pair, price, rsi, macd):
     timestamp = datetime.now().strftime("%H:%M:%S")
-    message = f"🚀 *SENTINEL AI*\n*{signal_type} - {pair}*\n💰 Prezzo: `{price:.5f}`\n📊 RSI: `{rsi:.1f}`\n⏰ {timestamp}"
+    message = f"🚀 *SENTINEL AI*\n*{signal_type} - {pair}*\n💰 Prezzo: `{price:.5f}`\n📊 RSI: `{rsi:.1f}`\n⏰ Ora: {timestamp}"
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     try: requests.post(url, data={"chat_id": TELEGRAM_CHAT_ID, "text": message, "parse_mode": "Markdown"}, timeout=5)
     except: pass
 
-st.set_page_config(page_title="Sentinel AI PRO", page_icon="🚀", layout="wide")
+st.set_page_config(page_title="Sentinel AI", page_icon="🚀", layout="wide")
 
 # --- LOGICA DI CONNESSIONE ---
 if 'connected' not in st.session_state: st.session_state.connected = False
