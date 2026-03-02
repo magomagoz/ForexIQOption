@@ -264,12 +264,14 @@ if st.session_state.connected:
                     if (buy_condition or sell_condition) and pair not in st.session_state.active_trades:
                         direction = "BUY" if buy_condition else "SELL"
                         
-                        # Esecuzione Trade Virtuale (per test segnali)
+                        # Dove definisci il trade
                         st.session_state.active_trades[pair] = {
                             'entry_price': price,
                             'entry_time': curr_t,
-                            'direction': direction
+                            'direction': direction,
+                            'amount': 100.0  # <--- Aggiungi un valore di default o una variabile
                         }
+
                         
                         msg = f"{'🟢' if direction == 'BUY' else '🔴'} TRADE {direction} su {pair}"
                         st.toast(msg, icon="🚀")
@@ -286,20 +288,20 @@ if st.session_state.connected:
 
                 except Exception as e:
                     continue
-            
     
     # 🔥 DASHBOARD TRADES APERTI - CORRETTO
     if st.session_state.get('active_trades', {}):
         st.subheader("🔥 **TRADES APERTI (1m)**")
         active_df = pd.DataFrame([
             {
-                'PAIR': trade_pair,  # ← CORRETTO: usa trade_pair invece di pair
-                'ENTRY': f"€{trade['amount']:.0f} @ {trade['entry_price']:.5f}",
+                'PAIR': trade_pair,
+                'ENTRY': f"{trade['direction']} @ {trade['entry_price']:.5f}", # Rimosso 'amount'
                 '⏱️': f"{int(current_time - trade['entry_time'])}s",
                 'STATUS': '⏳ APERTO'
             }
-            for trade_pair, trade in st.session_state['active_trades'].items()  # ← trade_pair dalla comprehension
+            for trade_pair, trade in st.session_state['active_trades'].items()
         ])
+
         st.dataframe(active_df, use_container_width=True, hide_index=True)
 
     # TABELLA SCANNER OTTIMIZZATA (invariata, OK)
@@ -478,73 +480,3 @@ if st.session_state.get('connected', False):
             st.dataframe(signals_df, use_container_width=True, height=400, hide_index=True)
     else:
         st.info("⏳ Attendi i primi trades... Scanner attivo!")
-
-
-
-# --- CORE LOGIC: IL MOTORE DEI SEGNALI ---
-if st.session_state.connected:
-    Iq = st.session_state.iq
-    
-    # Inizializzazione parametri se mancanti
-    if 'active_trades' not in st.session_state: st.session_state.active_trades = {}
-    if 'signal_history' not in st.session_state: st.session_state.signal_history = []
-    if 'scanner_last_update' not in st.session_state: st.session_state.scanner_last_update = 0
-
-    col1, col2, col3 = st.columns(3)
-    with col1: rsi_buy = st.number_input("🟢 RSI Buy (Sotto)", value=45) # Alzato da 28 a 45
-    with col2: rsi_sell = st.number_input("🔴 RSI Sell (Sopra)", value=55) # Abbassato da 72 a 55
-    with col3: mode = st.radio("Modalità", ["Aggressiva (Sempre)", "Prudente (Solo Incroci)"], index=0)
-
-    st.session_state.scanner = st.toggle("🔍 ATTIVA SCANNER AUTOMATICO", value=True)
-
-    if st.session_state.scanner:
-        curr_t = time_module.time()
-        if curr_t - st.session_state.scanner_last_update > 5: # Scan veloce ogni 5 secondi
-            ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"]
-            
-            for pair in ALL_PAIRS:
-                try:
-                    # Candele a 1 minuto
-                    candles = Iq.get_candles(pair, 60, 40, curr_t)
-                    df = pd.DataFrame(candles)
-                    
-                    # Indicatori veloci
-                    df['RSI'] = ta.rsi(df['close'], length=7)
-                    macd_df = ta.macd(df['close'], fast=8, slow=17, signal=9)
-                    
-                    curr_rsi = df['RSI'].iloc[-1]
-                    curr_macd = macd_df['MACD_8_17_9'].iloc[-1]
-                    curr_signal = macd_df['MACDs_8_17_9'].iloc[-1]
-                    price = df['close'].iloc[-1]
-
-                    # --- LOGICA DI TRIGGER APERTA ---
-                    buy_condition = curr_rsi < rsi_buy and curr_macd > curr_signal
-                    sell_condition = curr_rsi > rsi_sell and curr_macd < curr_signal
-
-                    if (buy_condition or sell_condition) and pair not in st.session_state.active_trades:
-                        direction = "BUY" if buy_condition else "SELL"
-                        
-                        # Esecuzione Trade Virtuale (per test segnali)
-                        st.session_state.active_trades[pair] = {
-                            'entry_price': price,
-                            'entry_time': curr_t,
-                            'direction': direction
-                        }
-                        
-                        msg = f"{'🟢' if direction == 'BUY' else '🔴'} TRADE {direction} su {pair}"
-                        st.toast(msg, icon="🚀")
-                        play_trade_sound()
-                        send_telegram_signal(direction, pair, price, round(curr_rsi, 2), 0)
-                        
-                        st.session_state.signal_history.append({
-                            'time': datetime.now().strftime("%H:%M:%S"),
-                            'pair': pair,
-                            'type': direction,
-                            'rsi': f"{curr_rsi:.1f}",
-                            'price': price
-                        })
-
-                except Exception as e:
-                    continue
-            
-            st.session_state.scanner_last_update = curr_t
