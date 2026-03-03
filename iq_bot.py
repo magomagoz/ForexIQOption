@@ -162,9 +162,6 @@ if st.session_state.connected:
                 
                 # SELL: RSI alto + Prezzo >= Banda Superiore + MACD incrocia DOWN
                 is_sell = (curr_rsi > rsi_sell) and (price >= bb_up) and (curr_macd < curr_sig)
-            
-                    
-                    
                     
                 if (is_buy or is_sell) and pair not in st.session_state.active_trades:
                     # Calcolo distanza BB (es. quanto il prezzo è fuori dalla banda in %)
@@ -232,14 +229,14 @@ if st.session_state.connected:
                                          low=df_final['min'], close=df_final['close'], name="Prezzo"), row=1, col=1)
             
             # Banda Superiore
-            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBU'], line=dict(color='rgba(255,255,255,0.2)', dash='dot'), name="Banda Sup"), row=1, col=1)
+            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBU'], line=dict(color='rgba(8,69,126,0.2)', dash='dot'), name="BBU"), row=1, col=1)
             
             # Banda Media (BBM) - La "Bussole" del trend
-            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBM'], line=dict(color='orange', width=1), name="Banda Media (BBM)"), row=1, col=1)
+            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBM'], line=dict(color='red', width=1), name="BBM"), row=1, col=1)
             
             # Banda Inferiore con riempimento leggero
-            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBL'], line=dict(color='rgba(255,255,255,0.2)', dash='dot'), 
-                                     fill='tonexty', fillcolor='rgba(153, 203, 255, 0.1)', name="Banda Inf"), row=1, col=1)
+            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBL'], line=dict(color='rgba(8,69,126,0.2)', dash='dot'), 
+                                     fill='tonexty', fillcolor='rgba(153, 203, 255, 0.1)', name="BBL"), row=1, col=1)
     
             # --- PANNELLO 2: RSI ---
             fig.add_trace(go.Scatter(x=df_final.index, y=df_final['RSI'], line=dict(color='#AB63FA'), name="RSI"), row=2, col=1)
