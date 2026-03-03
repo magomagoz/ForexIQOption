@@ -109,7 +109,7 @@ with st.sidebar:
             st.write(f"{status} {city}")
 
         # Visualizzazione
-        st.info(get_market_status())
+        #st.info(get_market_status())
 
 
 
