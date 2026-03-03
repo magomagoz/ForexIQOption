@@ -183,6 +183,7 @@ if st.session_state.connected:
                 except:
                     continue
 
+    st.divider()
     
     # --- 4. TABELLA SEGNALI AGGIORNATA ---
     st.subheader("📋 Trading Journal & Esiti")
