@@ -197,18 +197,25 @@ if st.session_state.connected:
     candles = Iq.get_candles(pair_display, 60, 80, time_module.time())
     df_plot = pd.DataFrame(candles)
     df_plot['RSI'] = ta.rsi(df_plot['close'], length=7)
-    
+
     fig = make_subplots(rows=2, cols=1, shared_xaxes=True, row_heights=[0.7, 0.3])
     fig.add_trace(go.Candlestick(x=df_plot.index, open=df_plot['open'], high=df_plot['max'], low=df_plot['min'], close=df_plot['close']), row=1, col=1)
     
+
+
+    # --- AGGIUNGI QUESTO PRIMA DI FIG.ADD_TRACE ---
+    # Ricalcoliamo le bande per il grafico corrente
+    bb_plot = ta.bbands(df_plot['close'], length=20, std=2)
+    
+    # Aggiungi al grafico (Row 1)
     fig.add_trace(go.Scatter(
-        x=df_plot.index, y=bb['BBU_20_2.0'], 
+        x=df_plot.index, y=bb_plot['BBU_20_2.0'], 
         line=dict(color='rgba(173, 216, 230, 0.4)', dash='dot'), 
         name='BB Upper'
     ), row=1, col=1)
     
     fig.add_trace(go.Scatter(
-        x=df_plot.index, y=bb['BBL_20_2.0'], 
+        x=df_plot.index, y=bb_plot['BBL_20_2.0'], 
         line=dict(color='rgba(173, 216, 230, 0.4)', dash='dot'), 
         name='BB Lower'
     ), row=1, col=1)
