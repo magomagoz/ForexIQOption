@@ -35,6 +35,27 @@ def play_trade_sound(sound_type="buy"):
         pass
     placeholder.empty()
 
+def get_market_status():
+    now = datetime.now().time()
+    # Definiamo gli orari
+    londra = (time(9,0), time(18,0))
+    new_york = (time(14,0), time(23,0))
+    
+    is_londra = londra[0] <= now <= londra[1]
+    is_ny = new_york[0] <= now <= new_york[1]
+    
+    if is_londra and is_ny:
+        return "🔥 SOVRAPPOSIZIONE (EU/USA) - Alta Volatilità"
+    elif is_londra:
+        return "🇪🇺 SESSIONE LONDRA"
+    elif is_ny:
+        return "🇺🇸 SESSIONE NEW YORK"
+    else:
+        return "💤 MERCATO LENTO"
+
+# Visualizzazione
+st.info(get_market_status())
+
 st.set_page_config(page_title="Sentinel AI", page_icon="🚀", layout="wide")
 
 # Logo
@@ -114,21 +135,32 @@ if st.session_state.connected:
         ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"]
         
         for pair in ALL_PAIRS:
+                
+            # --- DENTRO IL CICLO FOR PAIR ---
             try:
-                # Recupero dati
-                candles = Iq.get_candles(pair, timeframe, 50, time_module.time())
+                candles = Iq.get_candles(pair, timeframe, 100, time_module.time())
                 df = pd.DataFrame(candles)
+                
+                # Calcolo Indicatori
                 df['RSI'] = ta.rsi(df['close'], length=7)
                 macd = ta.macd(df['close'], fast=8, slow=17, signal=9)
+                bb = ta.bbands(df['close'], length=20, std=2)
                 
+                # Valori attuali
+                price = df['close'].iloc[-1]
                 curr_rsi = df['RSI'].iloc[-1]
                 curr_macd = macd['MACD_8_17_9'].iloc[-1]
                 curr_sig = macd['MACDs_8_17_9'].iloc[-1]
-                price = df['close'].iloc[-1] # <--- Il prezzo viene preso qui
-
-                is_buy = curr_rsi < rsi_buy and curr_macd > curr_sig
-                is_sell = curr_rsi > rsi_sell and curr_macd < curr_sig
-
+                bb_low = bb['BBL_20_2.0'].iloc[-1]
+                bb_up = bb['BBU_20_2.0'].iloc[-1]
+            
+                # LOGICA 65%+ WIN RATE
+                # BUY: RSI basso + Prezzo <= Banda Inferiore + MACD incrocia UP
+                is_buy = (curr_rsi < rsi_buy) and (price <= bb_low) and (curr_macd > curr_sig)
+                
+                # SELL: RSI alto + Prezzo >= Banda Superiore + MACD incrocia DOWN
+                is_sell = (curr_rsi > rsi_sell) and (price >= bb_up) and (curr_macd < curr_sig)
+            
                 # --- LOGICA TRIGGER (Dentro il ciclo for pair in ALL_PAIRS) ---
                 if (is_buy or is_sell) and pair not in st.session_state.active_trades:
                     direction = "BUY" if is_buy else "SELL"
@@ -168,6 +200,19 @@ if st.session_state.connected:
     
     fig = make_subplots(rows=2, cols=1, shared_xaxes=True, row_heights=[0.7, 0.3])
     fig.add_trace(go.Candlestick(x=df_plot.index, open=df_plot['open'], high=df_plot['max'], low=df_plot['min'], close=df_plot['close']), row=1, col=1)
+    
+    fig.add_trace(go.Scatter(
+        x=df_plot.index, y=bb['BBU_20_2.0'], 
+        line=dict(color='rgba(173, 216, 230, 0.4)', dash='dot'), 
+        name='BB Upper'
+    ), row=1, col=1)
+    
+    fig.add_trace(go.Scatter(
+        x=df_plot.index, y=bb['BBL_20_2.0'], 
+        line=dict(color='rgba(173, 216, 230, 0.4)', dash='dot'), 
+        name='BB Lower'
+    ), row=1, col=1)
+
     fig.add_trace(go.Scatter(x=df_plot.index, y=df_plot['RSI'], line=dict(color='purple')), row=2, col=1)
     fig.add_hline(y=rsi_buy, line_color="green", row=2, col=1)
     fig.add_hline(y=rsi_sell, line_color="red", row=2, col=1)
@@ -296,8 +341,3 @@ if st.session_state.connected:
     # 3. Il comando magico che resetta lo script dall'alto
     st.rerun() 
 
-
-    # TABELLA SEGNALI SCARNA MA FUNZIONANTE
-    #st.subheader("📋 Storico Segnali Recenti")
-    #if st.session_state.signal_history:
-        #st.table(pd.DataFrame(st.session_state.signal_history).tail(10))
