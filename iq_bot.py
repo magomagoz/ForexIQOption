@@ -21,11 +21,15 @@ def send_telegram_signal(signal_type, pair, price, rsi, macd):
     except: pass
 
 def play_trade_sound(sound_type="buy"):
+    # Link aggiornati e funzionanti per evitare la barra grigia di errore
     sounds = {
-        "buy": "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav",
-        "win": "https://www.soundjay.com/misc/sounds/bell-ringing-04.wav"
+        "buy": "https://actions.google.com/sounds/v1/alarms/beep_short.ogg",
+        "win": "https://actions.google.com/sounds/v1/cartoon/clink_vibrant.ogg"
     }
-    st.audio(sounds.get(sound_type, sounds["buy"]), autoplay=True)
+    try:
+        st.audio(sounds.get(sound_type, sounds["buy"]), autoplay=True)
+    except:
+        pass # Evita di mostrare la barra di errore se il caricamento fallisce
 
 st.set_page_config(page_title="Sentinel AI", page_icon="🚀", layout="wide")
 
@@ -50,7 +54,7 @@ with st.sidebar:
             if check:
                 mode = "PRACTICE" if tipo_conto == "DEMO" else "REAL"
                 Iq_obj.change_balance(mode)
-                st.session_state.iq_client = Iq_obj 
+                st.session_state.iq_client = Iq_obj # Salviamo con questo nome
                 st.session_state.connected = True
                 st.session_state.account_type = tipo_conto
                 st.session_state.local_balance = Iq_obj.get_balance()
@@ -66,17 +70,24 @@ with st.sidebar:
 
 # --- MAIN DASHBOARD ---
 if st.session_state.connected:
+    # Usiamo lo stesso nome salvato nella session_state
     Iq = st.session_state.iq_client 
     
-    # 2. HEADER E SALDO
-    curr_actual = Iq.get_balance()
+    # Header Saldo
+    try:
+        curr_actual = Iq.get_balance()
+    except:
+        curr_actual = st.session_state.local_balance
+
     st.metric(
         label=f"💵 SALDO {st.session_state.account_type} (Sentinel AI)", 
         value=f"{st.session_state.local_balance:.2f} $",
         delta=f"{st.session_state.local_balance - curr_actual:.2f} $ vs IQ"
     )
     
-    # 3. SCANNER
+    st.divider()
+
+    # --- SCANNER ---
     st.subheader("👁️ Scanner FOREX")
     col1, col2, col3 = st.columns(3)
     with col1: rsi_buy = st.number_input("🟢 RSI Buy", value=45)
@@ -84,34 +95,36 @@ if st.session_state.connected:
     with col3: timeframe = st.selectbox("Timeframe", [60, 300], index=0)
 
     ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"]
-    
-    # LOGICA SCANNER
     now_ts = time_module.time()
-    for pair in ALL_PAIRS:
-        try:
-            candles = Iq.get_candles(pair, timeframe, 50, now_ts)
-            df = pd.DataFrame(candles)
-            df['RSI'] = ta.rsi(df['close'], length=7)
-            macd = ta.macd(df['close'], fast=8, slow=17, signal=9)
-            
-            curr_rsi = df['RSI'].iloc[-1]
-            price = df['close'].iloc[-1]
-            is_buy = curr_rsi < rsi_buy and macd['MACD_8_17_9'].iloc[-1] > macd['MACDs_8_17_9'].iloc[-1]
-            is_sell = curr_rsi > rsi_sell and macd['MACD_8_17_9'].iloc[-1] < macd['MACDs_8_17_9'].iloc[-1]
+    
+    if st.toggle("🔍 Attiva Scansione", value=True):
+        for pair in ALL_PAIRS:
+            try:
+                candles = Iq.get_candles(pair, timeframe, 50, now_ts)
+                df = pd.DataFrame(candles)
+                df['RSI'] = ta.rsi(df['close'], length=7)
+                macd = ta.macd(df['close'], fast=8, slow=17, signal=9)
+                
+                curr_rsi = df['RSI'].iloc[-1]
+                price = df['close'].iloc[-1]
+                
+                # Logica Segnali
+                is_buy = curr_rsi < rsi_buy and macd['MACD_8_17_9'].iloc[-1] > macd['MACDs_8_17_9'].iloc[-1]
+                is_sell = curr_rsi > rsi_sell and macd['MACD_8_17_9'].iloc[-1] < macd['MACDs_8_17_9'].iloc[-1]
 
-            if (is_buy or is_sell) and pair not in st.session_state.active_trades:
-                direction = "BUY" if is_buy else "SELL"
-                st.session_state.active_trades[pair] = {'entry_time': now_ts, 'entry_price': price, 'direction': direction}
-                st.session_state.signal_history.append({
-                    'time': datetime.now().strftime("%H:%M:%S"), 'pair': pair, 'dir': direction, 
-                    'price': f"{price:.5f}", 'rsi': round(curr_rsi, 1), 'result': "⏳ In corso..."
-                })
-                send_telegram_signal(direction, pair, price, curr_rsi, 0)
-                play_trade_sound("buy")
-                st.toast(f"🚀 {direction} su {pair}!", icon="🔥")
-        except: continue
+                if (is_buy or is_sell) and pair not in st.session_state.active_trades:
+                    direction = "BUY" if is_buy else "SELL"
+                    st.session_state.active_trades[pair] = {'entry_time': now_ts, 'entry_price': price, 'direction': direction}
+                    st.session_state.signal_history.append({
+                        'time': datetime.now().strftime("%H:%M:%S"), 'pair': pair, 'dir': direction, 
+                        'price': f"{price:.5f}", 'rsi': round(curr_rsi, 1), 'result': "⏳ In corso..."
+                    })
+                    send_telegram_signal(direction, pair, price, curr_rsi, 0)
+                    play_trade_sound("buy")
+                    st.toast(f"🚀 {direction} su {pair}!", icon="🔥")
+            except: continue
 
-    # 4. VERIFICA ESITI (Dopo 60 sec)
+    # --- VERIFICA ESITI ---
     for pair, trade in list(st.session_state.active_trades.items()):
         if now_ts - trade['entry_time'] >= 60:
             try:
@@ -132,27 +145,24 @@ if st.session_state.connected:
                 del st.session_state.active_trades[pair]
             except: continue
 
-    # 5. GRAFICO
+    # --- TABELLA E GRAFICO ---
     st.divider()
-    pair_plot = st.selectbox("Analisi Grafica", ALL_PAIRS)
-    c_plot = Iq.get_candles(pair_plot, 60, 80, now_ts)
-    df_p = pd.DataFrame(c_plot)
-    fig = make_subplots(rows=2, cols=1, shared_xaxes=True, row_heights=[0.7, 0.3])
-    fig.add_trace(go.Candlestick(x=df_p.index, open=df_p['open'], high=df_p['max'], low=df_p['min'], close=df_p['close']), row=1, col=1)
-    fig.update_layout(height=400, template="plotly_dark", xaxis_rangeslider_visible=False)
-    st.plotly_chart(fig, use_container_width=True)
-
-    # 6. TABELLA
-    st.subheader("📋 Storico Segnali")
+    
+    # Statistiche Win Rate
     if st.session_state.signal_history:
-        # Statistiche
         w = sum(1 for s in st.session_state.signal_history if "✅" in str(s.get('result')))
         l = sum(1 for s in st.session_state.signal_history if "❌" in str(s.get('result')))
-        st.write(f"📊 **Win Rate:** {((w/(w+l)*100) if w+l>0 else 0):.1f}% | ✅ {w} | ❌ {l}")
-        
-        df_final = pd.DataFrame(st.session_state.signal_history).iloc[::-1]
-        st.dataframe(df_final, use_container_width=True, hide_index=True)
+        total = w + l
+        st.metric("🏆 PERFORMANCE LIVE", f"Win Rate: {(w/total*100 if total>0 else 0):.1f}%", f"W: {w} | L: {l}")
 
-    # REFRESH
+    # Tabella Invertita (Ultimo in alto)
+    if st.session_state.signal_history:
+        df_show = pd.DataFrame(st.session_state.signal_history).iloc[::-1]
+        # Forza le colonne per evitare KeyError
+        for c in ['time', 'pair', 'dir', 'price', 'rsi', 'result']:
+            if c not in df_show.columns: df_show[c] = "-"
+        st.dataframe(df_show[['time', 'pair', 'dir', 'price', 'rsi', 'result']], use_container_width=True, hide_index=True)
+
+    # Refresh automatico
     time_module.sleep(3)
     st.rerun()
