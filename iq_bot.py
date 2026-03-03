@@ -202,36 +202,44 @@ if st.session_state.connected:
     pair_display = st.selectbox("Seleziona asset", ALL_PAIRS)
     
     if st.session_state.connected:
-        Iq = st.session_state.iq # Protezione per NameError
+        Iq = st.session_state.iq # Risolve il NameError dello screenshot
         
         try:
-            # 1. Recupero Dati
-            candles = Iq.get_candles(pair_display, 60, 100, time_module.time())
+            # 1. Recupero Dati (100 candele per avere stabilità sugli indicatori)
+            candles = Iq.get_candles(pair_display, timeframe, 100, time_module.time())
             df_plot = pd.DataFrame(candles)
             
             # 2. Calcolo Indicatori
             df_plot['RSI'] = ta.rsi(df_plot['close'], length=7)
             
-            # Calcolo Bollinger e FORZATURA nomi colonne per evitare KeyError
+            # Calcolo Bollinger con nomi colonne forzati
             bb = ta.bbands(df_plot['close'], length=20, std=2)
             bb.columns = ['BBL', 'BBM', 'BBU', 'BBB', 'BBP'] 
             
-            # Calcolo MACD e FORZATURA nomi colonne
+            # Calcolo MACD con nomi colonne forzati
             macd = ta.macd(df_plot['close'], fast=8, slow=17, signal=9)
             macd.columns = ['MACD', 'HIST', 'SIGNAL']
             
-            # Unione dati in un unico DataFrame pulito
-            df_final = pd.concat([df_plot, bb[['BBL', 'BBU']], macd], axis=1)
+            # Unione dati
+            df_final = pd.concat([df_plot, bb[['BBL', 'BBM', 'BBU']], macd], axis=1)
     
-            # 3. Creazione Subplots (3 Pannelli: Prezzo, RSI, MACD)
+            # 3. Creazione Subplots (Prezzo, RSI, MACD)
             fig = make_subplots(rows=3, cols=1, shared_xaxes=True, 
                                 row_heights=[0.5, 0.25, 0.25], vertical_spacing=0.03)
     
             # --- PANNELLO 1: Candele + Bollinger ---
             fig.add_trace(go.Candlestick(x=df_final.index, open=df_final['open'], high=df_final['max'], 
                                          low=df_final['min'], close=df_final['close'], name="Prezzo"), row=1, col=1)
-            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBU'], line=dict(color='gray', dash='dot'), name="Banda Sup"), row=1, col=1)
-            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBL'], line=dict(color='gray', dash='dot'), fill='tonexty', name="Banda Inf"), row=1, col=1)
+            
+            # Banda Superiore
+            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBU'], line=dict(color='rgba(255,255,255,0.2)', dash='dot'), name="Banda Sup"), row=1, col=1)
+            
+            # Banda Media (BBM) - La "Bussole" del trend
+            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBM'], line=dict(color='orange', width=1), name="Banda Media (BBM)"), row=1, col=1)
+            
+            # Banda Inferiore con riempimento leggero
+            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBL'], line=dict(color='rgba(255,255,255,0.2)', dash='dot'), 
+                                     fill='tonexty', fillcolor='rgba(153, 203, 255, 0.1)', name="Banda Inf"), row=1, col=1)
     
             # --- PANNELLO 2: RSI ---
             fig.add_trace(go.Scatter(x=df_final.index, y=df_final['RSI'], line=dict(color='#AB63FA'), name="RSI"), row=2, col=1)
@@ -239,11 +247,11 @@ if st.session_state.connected:
             fig.add_hline(y=rsi_sell, line_color="red", row=2, col=1, line_dash="dash")
     
             # --- PANNELLO 3: MACD ---
-            fig.add_trace(go.Bar(x=df_final.index, y=df_final['HIST'], name="Momentum"), row=3, col=1)
+            fig.add_trace(go.Bar(x=df_final.index, y=df_final['HIST'], name="Momentum", marker_color='rgba(255,255,255,0.3)'), row=3, col=1)
             fig.add_trace(go.Scatter(x=df_final.index, y=df_final['MACD'], line=dict(color='cyan'), name="MACD"), row=3, col=1)
             fig.add_trace(go.Scatter(x=df_final.index, y=df_final['SIGNAL'], line=dict(color='orange'), name="Signal"), row=3, col=1)
     
-            fig.update_layout(height=800, template="plotly_dark", xaxis_rangeslider_visible=False, margin=dict(t=10, b=10))
+            fig.update_layout(height=800, template="plotly_dark", xaxis_rangeslider_visible=False)
             st.plotly_chart(fig, use_container_width=True)
     
         except Exception as e:
