@@ -156,8 +156,7 @@ if st.session_state.connected:
             bb_period, bb_std = 20, 2.0
             m_fast, m_slow, m_sig = 8, 17, 9
             current_tf = timeframe # Usa quello selezionato nel selectbox
-            timeframe = st.selectbox("Timeframe", [60, 300], index=0)
-
+           
         for pair in ALL_PAIRS:
                 
             try:
