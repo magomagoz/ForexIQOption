@@ -20,7 +20,21 @@ def send_telegram_signal(signal_type, pair, price, rsi, macd):
     try: requests.post(url, data={"chat_id": TELEGRAM_CHAT_ID, "text": message, "parse_mode": "Markdown"}, timeout=5)
     except: pass
 
+def play_trade_sound(sound_type="buy"):
+    sounds = {
+        "buy": "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav",
+        "sell": "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav"
+    }
+    st.audio(sounds.get(sound_type, sounds["buy"]), autoplay=True)
+
 st.set_page_config(page_title="Sentinel AI", page_icon="🚀", layout="wide")
+
+# Logo
+try:
+    logo = Image.open("banner.png")
+    st.image(logo, use_column_width=True, caption="IQ Signals PRO")
+except:
+    st.image("https://via.placeholder.com/800x100/0066cc/white?text=SENTINEL+AI", use_column_width=True)
 
 # --- LOGICA DI CONNESSIONE ---
 if 'connected' not in st.session_state: st.session_state.connected = False
@@ -41,7 +55,9 @@ with st.sidebar:
                 st.rerun()
     else:
         st.success("🟢 IQ OPTION LIVE")
-        st.markdown(---)
+
+        st.divider()
+        
         # --- SESSIONI DI MERCATO ---
         now_cet = datetime.now().time()
         st.markdown("🌍 SESSIONI DI MERCATO")
