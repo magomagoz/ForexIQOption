@@ -21,15 +21,16 @@ def send_telegram_signal(signal_type, pair, price, rsi, macd):
     except: pass
 
 def play_trade_sound(sound_type="buy"):
-    # Link aggiornati e funzionanti per evitare la barra grigia di errore
     sounds = {
         "buy": "https://actions.google.com/sounds/v1/alarms/beep_short.ogg",
         "win": "https://actions.google.com/sounds/v1/cartoon/clink_vibrant.ogg"
     }
-    try:
+    # Usiamo un placeholder per non lasciare tracce grafiche (barra grigia)
+    placeholder = st.empty()
+    with placeholder:
         st.audio(sounds.get(sound_type, sounds["buy"]), autoplay=True)
-    except:
-        pass # Evita di mostrare la barra di errore se il caricamento fallisce
+    time_module.sleep(0.1) # Breve pausa tecnica
+    placeholder.empty() # Rimuove il lettore dalla UI
 
 st.set_page_config(page_title="Sentinel AI", page_icon="🚀", layout="wide")
 
@@ -146,9 +147,10 @@ if st.session_state.connected:
                         'result': "⏳ In corso..."
                     })
                     
+                    #st.error(f"SEGNALE {direction} su {pair}!", icon="🔥")
+                    st.session_state.last_signal = f"🔥 SEGNALE {direction} su {pair}!"
                     send_telegram_signal(direction, pair, price, curr_rsi, 0)
                     play_trade_sound("buy")
-                    st.error(f"SEGNALE {direction} su {pair}!", icon="🔥")
 
             except: continue
 
@@ -209,9 +211,15 @@ if st.session_state.connected:
                 # Se c'è un errore nell'API o nei dati, passa oltre
                 continue
 
+    # --- POSIZIONAMENTO NUOVO POPUP ---
+    if 'last_signal' in st.session_state and st.session_state.last_signal:
+        st.error(st.session_state.last_signal)
+        # Puliamo il segnale dopo averlo mostrato per non farlo restare fisso
+        st.session_state.last_signal = None 
+
     st.divider()
 
-    st.subheader("📋 Trading Journal & Esiti")
+    st.subheader("📋 Trading Journal")
 
     # Calcolo statistiche veloci
     if st.session_state.signal_history:
