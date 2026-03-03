@@ -88,7 +88,7 @@ if st.session_state.connected:
         delta=f"{st.session_state.local_balance - current_actual_balance:.2f} $ vs IQ"
     )
         
-        st.divider()
+    st.divider()
         
         # --- SESSIONI DI MERCATO ---
         now_cet = datetime.now().time()
