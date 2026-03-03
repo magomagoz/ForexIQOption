@@ -46,31 +46,32 @@ if 'active_trades' not in st.session_state: st.session_state.active_trades = {}
 if 'signal_history' not in st.session_state: st.session_state.signal_history = []
 if 'local_balance' not in st.session_state: st.session_state.local_balance = 0
 
-# --- SIDEBAR: LOGIN ---
 with st.sidebar:
-    st.header("⚙️ AI TRADING PLATFORM")
+    st.header("⚙️ CONFIGURAZIONE")
     if not st.session_state.connected:
-        email = st.text_input("Email", value="mago_magoz@libero.it")
+        email = st.text_input("Email", value="tua_email@esempio.it")
         password = st.text_input("Password", type="password")
-        tipo_conto = st.radio("Seleziona Conto", ["DEMO", "REALE"])
+        tipo_conto = st.radio("Conto", ["DEMO", "REALE"])
         
         if st.button("🔌 CONNETTI"):
+            from iqoptionapi.stable_api import IQ_Option
             Iq_obj = IQ_Option(email, password)
             check, reason = Iq_obj.connect()
             
             if check:
+                # Imposta Demo o Reale
                 mode = "PRACTICE" if tipo_conto == "DEMO" else "REAL"
                 Iq_obj.change_balance(mode)
-                st.session_state.iq_client = Iq_obj # Salviamo con questo nome
+                
+                # Salva i dati importanti
+                st.session_state.iq = Iq_obj 
                 st.session_state.connected = True
                 st.session_state.account_type = tipo_conto
                 st.session_state.local_balance = Iq_obj.get_balance()
                 st.rerun()
-            else:
-                st.error(f"❌ Errore: {reason}")
     else:
-        st.success(f"🟢 {st.session_state.account_type} LIVE")
-        st.session_state.stake = st.number_input("💰 Stake Virtuale ($)", value=100.0, step=5.0)
+        st.success(f"🟢 {st.session_state.account_type} ATTIVO")
+        st.session_state.stake = st.number_input("💰 Stake ($)", value=100.0)
         if st.button("🔴 SCOLLEGA"):
             st.session_state.connected = False
             st.rerun()
