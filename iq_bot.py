@@ -170,37 +170,44 @@ if st.session_state.connected:
     st.plotly_chart(fig, use_container_width=True)
     
     # --- LOGICA DI VERIFICA ESITI (Dopo lo scanner) ---
-    if st.session_state.connected:
-        now = time_module.time()
-        for pair, trade in list(st.session_state.active_trades.items()):
-            # Se sono passati 60 secondi (o il timeframe scelto)
-            if now - trade['entry_time'] >= 60: 
-                try:
-                    res = Iq.get_candles(pair, 60, 1, now)
-                    exit_price = res[0]['close']
+if st.session_state.connected:
+    now = time_module.time()
+    
+    # Usiamo list() per evitare errori durante la rimozione di elementi dal dizionario
+    for pair, trade in list(st.session_state.active_trades.items()):
+        
+        # 1. Verifica se è passata la scadenza (60 secondi)
+        if now - trade['entry_time'] >= 60: 
+            try:
+                # Recupera il prezzo di chiusura
+                res = Iq.get_candles(pair, 60, 1, now)
+                exit_price = res[0]['close']
                 
-                # Calcola Win/Loss
+                # 2. Calcola se il trade è vincente o perdente
                 if trade['direction'] == "BUY":
                     win = exit_price > trade['entry_price']
                 else:
                     win = exit_price < trade['entry_price']
                 
-                # Aggiorna il Saldo Locale
+                # 3. Aggiorna il Saldo Locale (Virtuale)
                 stake = st.session_state.get('stake', 100.0)
                 if win:
                     st.session_state.local_balance += (stake * 0.85)
                 else:
                     st.session_state.local_balance -= stake
     
-                # Aggiorna la riga nella tabella
+                # 4. Aggiorna lo stato nello storico (Tabella)
                 for s in reversed(st.session_state.signal_history):
                     if s['pair'] == pair and s['result'] == "⏳ In corso...":
                         s['result'] = "✅ WIN" if win else "❌ LOSS"
                         break
                 
-                # Rimuovi dai trade attivi
+                # 5. Rimuovi il trade dai monitorati per liberare la coppia
                 del st.session_state.active_trades[pair]
-            except: continue
+                
+            except Exception as e:
+                # Se c'è un errore nell'API o nei dati, passa oltre
+                continue
 
     st.divider()
 
