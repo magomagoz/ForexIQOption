@@ -219,19 +219,28 @@ if st.session_state.connected:
 
     st.divider()
 
-    st.subheader("📋 Trading Journal")
-
-    # Calcolo statistiche veloci
+    # --- SEZIONE STATISTICHE E SALDO AGGIORNATO ---
+    st.subheader("📋 Trading Journal & Esiti")
+    
     if st.session_state.signal_history:
         wins = sum(1 for s in st.session_state.signal_history if "✅" in str(s.get('result', '')))
         losses = sum(1 for s in st.session_state.signal_history if "❌" in str(s.get('result', '')))
         total = wins + losses
         rate = (wins / total * 100) if total > 0 else 0
-        
-        st.metric("🏆 PERFORMANCE LIVE", f"Win Rate: {rate:.1f}%", f"W: {wins} | L: {losses}")
 
-    # --- 4. TABELLA SEGNALI (ULTIMO IN ALTO) ---
-    
+        #st.metric("🏆 PERFORMANCE LIVE", f"Win Rate: {rate:.1f}%", f"W: {wins} | L: {losses}")
+
+        # Creiamo 3 colonne per le metriche finali
+        m1, m2, m3 = st.columns(3)
+        with m1:
+            st.metric("🏆 Win Rate", f"{rate:.1f}%")
+        with m2:
+            st.metric("📊 Score", f"W: {wins} | L: {losses}")
+        with m3:
+            # Questo è il saldo che si aggiorna con i tuoi calcoli Win/Loss
+            st.metric(f"💰 Saldo {st.session_state.account_type}", f"{st.session_state.local_balance:.2f} $")    
+        
+    # --- 4. TABELLA SEGNALI (ULTIMO IN ALTO) ---    
     if st.session_state.signal_history:
         # Creiamo il DataFrame
         df_journal = pd.DataFrame(st.session_state.signal_history)
