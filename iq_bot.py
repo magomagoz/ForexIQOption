@@ -275,8 +275,12 @@ if st.session_state.connected:
             fig.add_trace(go.Bar(x=df_final.index, y=df_final['HIST'], name="Momentum", marker_color='rgba(255,255,255,0.3)'), row=3, col=1)
             fig.add_trace(go.Scatter(x=df_final.index, y=df_final['MACD'], line=dict(color='cyan'), name="MACD"), row=3, col=1)
             fig.add_trace(go.Scatter(x=df_final.index, y=df_final['SIGNAL'], line=dict(color='orange'), name="Signal"), row=3, col=1)
-    
-            fig.update_layout(height=800, template="plotly_dark", xaxis_rangeslider_visible=False)
+
+            # Personalizzazione dei font dei titoli dei subplot
+            for i in fig['layout']['annotations']:
+                i['font'] = dict(size=14, color='#000000') # Rende i titoli bianchi e più grandi
+            
+            fig.update_layout(height=850, template="plotly_dark", xaxis_rangeslider_visible=False)
             st.plotly_chart(fig, use_container_width=True)
     
         except Exception as e:
