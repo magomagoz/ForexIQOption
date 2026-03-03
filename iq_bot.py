@@ -84,35 +84,42 @@ if st.session_state.connected:
     # 2. SCANNER MULTI-PAIR
     st.session_state.scanner = st.toggle("🔍 Attiva Scansione", value=True)
     
+# ... (Parti precedenti invariate fino allo scanner) ...
+
     if st.session_state.scanner:
         ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"]
-        placeholder = st.empty()
         
         for pair in ALL_PAIRS:
             try:
+                # Recupero dati
                 candles = Iq.get_candles(pair, timeframe, 50, time_module.time())
                 df = pd.DataFrame(candles)
-                df['RSI'] = ta.rsi(df['close'], length=7) # Periodo corto = più nervoso/più segnali
+                df['RSI'] = ta.rsi(df['close'], length=7)
                 macd = ta.macd(df['close'], fast=8, slow=17, signal=9)
                 
                 curr_rsi = df['RSI'].iloc[-1]
                 curr_macd = macd['MACD_8_17_9'].iloc[-1]
                 curr_sig = macd['MACDs_8_17_9'].iloc[-1]
-                price = df['close'].iloc[-1]
+                price = df['close'].iloc[-1] # <--- Il prezzo viene preso qui
 
-                # --- LOGICA APERTA (AGGIUSTATA) ---
-                # Non aspettiamo più il cross perfetto, basta che la direzione sia corretta
                 is_buy = curr_rsi < rsi_buy and curr_macd > curr_sig
                 is_sell = curr_rsi > rsi_sell and curr_macd < curr_sig
 
                 if (is_buy or is_sell) and pair not in st.session_state.active_trades:
                     direction = "BUY" if is_buy else "SELL"
                     st.session_state.active_trades[pair] = {'time': time_module.time(), 'price': price}
+                    
+                    # --- CORREZIONE QUI: AGGIUNTO 'price' ---
                     st.session_state.signal_history.append({
                         'time': datetime.now().strftime("%H:%M:%S"),
-                        'pair': pair, 'dir': direction, 'rsi': round(curr_rsi, 1)
+                        'pair': pair, 
+                        'dir': direction, 
+                        'rsi': round(curr_rsi, 1),
+                        'price': f"{price:.5f}" # <--- QUESTA RIGA MANCAVA!
                     })
+                    
                     send_telegram_signal(direction, pair, price, curr_rsi, 0)
+                    play_trade_sound("buy")
                     st.toast(f"🚀 SEGNALE {direction} su {pair}!", icon="🔥")
 
             except: continue
@@ -131,19 +138,17 @@ if st.session_state.connected:
     fig.update_layout(height=600, template="plotly_dark", xaxis_rangeslider_visible=False)
     st.plotly_chart(fig, use_container_width=True)
 
-    # 4. TABELLA SEGNALI
+    # 4. TABELLA SEGNALI (CON RIGHE DI SICUREZZA)
     st.subheader("📋 Storico Segnali Recenti")
     
     if st.session_state.signal_history:
         signals_df = pd.DataFrame(st.session_state.signal_history)
         
-        # Invece di filtrare solo quelle disponibili, forziamo la creazione 
-        # delle colonne mancanti riempiendole con "-"
+        # Assicuriamoci che tutte le colonne esistano prima di mostrarle
         for col in ['time', 'pair', 'dir', 'price', 'rsi']:
             if col not in signals_df.columns:
                 signals_df[col] = "-" 
 
-        # Ora mostriamo le colonne nell'ordine desiderato
         display_df = signals_df[['time', 'pair', 'dir', 'price', 'rsi']].copy()
         
         rename_map = {
@@ -154,15 +159,12 @@ if st.session_state.connected:
             'rsi': '📊 RSI'
         }
         st.dataframe(display_df.rename(columns=rename_map).tail(15), use_container_width=True, hide_index=True)
-            
     else:
-        st.warning("Dati non ancora pronti per la visualizzazione.")
-else:
-    st.info("⏳ In attesa di segnali... Lo scanner è attivo!")
+        st.info("⏳ In attesa di segnali... Scanner attivo!")
 
-    # Auto-refresh
+    # --- SPOSTA IL REFRESH QUI DENTRO ---
     time_module.sleep(2)
-    st.rerun()
+    st.rerun() 
 
 
     # TABELLA SEGNALI SCARNA MA FUNZIONANTE
