@@ -141,63 +141,77 @@ if st.session_state.connected:
 
     if st.session_state.scanner:
         ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"]
-        
+
+        # --- PUNTO 2: DEFINIZIONE PARAMETRI DINAMICI ---
+        if stress_test:
+            # Parametri "Sporchi" per inondare lo scanner di segnali
+            rsi_buy, rsi_sell = 45, 55
+            bb_period, bb_std = 10, 1.0  # Bande strettissime e nervose
+            m_fast, m_slow, m_sig = 3, 10, 2 # MACD ultra-rapido
+            current_tf = 60 
+        else:
+            # Parametri "Gold" per Trading Reale (da input sidebar o fissi)
+            rsi_buy = st.sidebar.number_input("🟢 RSI Buy (Soglia)", value=30)
+            rsi_sell = st.sidebar.number_input("🔴 RSI Sell (Soglia)", value=70)
+            bb_period, bb_std = 20, 2.0
+            m_fast, m_slow, m_sig = 8, 17, 9
+            current_tf = timeframe # Usa quello selezionato nel selectbox
+
         for pair in ALL_PAIRS:
                 
-            # --- DENTRO IL CICLO FOR PAIR ---
             try:
-                candles = Iq.get_candles(pair, timeframe, 80, time_module.time())
+                # Recupero candele con il timeframe corrente
+                candles = Iq.get_candles(pair, current_tf, 100, time_module.time())
                 df = pd.DataFrame(candles)
                 
-                # Calcolo Indicatori
+                # Calcolo RSI
                 df['RSI'] = ta.rsi(df['close'], length=7)
-                macd = ta.macd(df['close'], fast=8, slow=17, signal=9)
-                bb = ta.bbands(df['close'], length=20, std=2)
                 
-                # Valori attuali
+                # Calcolo Bollinger (Usa i parametri dinamici del Punto 2)
+                bb = ta.bbands(df['close'], length=bb_period, std=bb_std)
+                # Rinominiamo per evitare errori e includere la Media (BBM)
+                bb.columns = ['BBL', 'BBM', 'BBU', 'BBB', 'BBP']
+                
+                # Calcolo MACD (Usa i parametri dinamici del Punto 2)
+                macd = ta.macd(df['close'], fast=m_fast, slow=m_slow, signal=m_sig)
+                macd.columns = ['MACD', 'HIST', 'SIGNAL']
+                
+                # Valori attuali per il trigger
                 price = df['close'].iloc[-1]
                 curr_rsi = df['RSI'].iloc[-1]
-                curr_macd = macd['MACD_8_17_9'].iloc[-1]
-                curr_sig = macd['MACDs_8_17_9'].iloc[-1]
-                bb_low = bb['BBL_20_2.0'].iloc[-1]
-                bb_up = bb['BBU_20_2.0'].iloc[-1]
+                curr_bb_low = bb['BBL'].iloc[-1]
+                curr_bb_up = bb['BBU'].iloc[-1]
+                curr_macd = macd['MACD'].iloc[-1]
+                curr_sig = macd['SIGNAL'].iloc[-1]
             
-                # LOGICA 65%+ WIN RATE
-                # BUY: RSI basso + Prezzo <= Banda Inferiore + MACD incrocia UP
-                is_buy = (curr_rsi < rsi_buy) and (price <= bb_low) and (curr_macd > curr_sig)
-                
-                # SELL: RSI alto + Prezzo >= Banda Superiore + MACD incrocia DOWN
-                is_sell = (curr_rsi > rsi_sell) and (price >= bb_up) and (curr_macd < curr_sig)
-                    
+                # LOGICA DI TRIGGER (Triple Confirmation)
+                is_buy = (curr_rsi < rsi_buy) and (price <= curr_bb_low) and (curr_macd > curr_sig)
+                is_sell = (curr_rsi > rsi_sell) and (price >= curr_bb_up) and (curr_macd < curr_sig)
+            
                 if (is_buy or is_sell) and pair not in st.session_state.active_trades:
-                    # Calcolo distanza BB (es. quanto il prezzo è fuori dalla banda in %)
-                    dist_bb = ((price - bb_low) / bb_low) * 100 if is_buy else ((price - bb_up) / bb_up) * 100
                     direction = "BUY" if is_buy else "SELL"
-
-                    # Salviamo i dati necessari per il calcolo futuro
-                    st.session_state.active_trades[pair] = {
-                        'entry_time': time_module.time(),
-                        'entry_price': price,
-                        'direction': direction
-                    }
-
+                    
+                    # Salvataggio dati nel Journal con dettagli tecnici
                     st.session_state.signal_history.append({
                         'time': datetime.now().strftime("%H:%M:%S"),
                         'pair': pair, 
                         'dir': direction, 
                         'price': f"{price:.5f}",
                         'rsi': round(curr_rsi, 1),
-                        'macd': round(curr_macd, 5), # Nuovo dato
-                        'bb_dist': f"{dist_bb:.2f}%", # Nuovo dato (distanza dalla banda)
+                        'macd': round(curr_macd, 6),
+                        'bb': "OUT" if (price <= curr_bb_low or price >= curr_bb_up) else "IN",
                         'result': "⏳ In corso..."
                     })
                     
-                    #st.error(f"SEGNALE {direction} su {pair}!", icon="🔥")
+                    # Feedback e Suono
                     st.session_state.last_signal = f"🔥 SEGNALE {direction} su {pair}!"
-                    send_telegram_signal(direction, pair, price, curr_rsi, 0)
                     play_trade_sound("buy")
+                    send_telegram_signal(direction, pair, price, curr_rsi, curr_macd)
+            
+            except Exception as e:
+                # Se una coppia non ha dati, passa alla successiva senza crashare
+                continue
 
-            except: continue
 
     st.divider()
     st.subheader("📈 Grafico (BB + RSI)")
