@@ -60,7 +60,7 @@ with st.sidebar:
         
         # --- SESSIONI DI MERCATO ---
         now_cet = datetime.now().time()
-        st.markdown("🌍 SESSIONI DI MERCATO")
+        st.subheader("🌍 SESSIONI DI MERCATO")
         for city, (start, end) in {"LONDRA 🇬🇧": (time(9,0), time(18,0)), "NEW YORK 🇺🇸": (time(14,0), time(23,0)), "SYDNEY 🇦🇺": (time(23,0), time(8,0)), "TOKYO 🇯🇵": (time(1,0), time(10,0))}.items():
             status = "🟢 Open: " if start <= now_cet <= end else "🔴 Closed: "
             st.write(f"{status} {city}")
@@ -68,7 +68,9 @@ with st.sidebar:
 # --- MAIN DASHBOARD ---
 if st.session_state.connected:
     Iq = st.session_state.iq
-    
+
+    st.subheader("👁️ Scanner FOREX")
+
     # 1. PARAMETRI AGGRESSIVI (MODIFICATI PER RILEVARE DI PIÙ)
     col1, col2, col3 = st.columns(3)
     with col1: 
@@ -79,8 +81,6 @@ if st.session_state.connected:
         timeframe = st.selectbox("Timeframe", [60, 300], index=0)
 
     # 2. SCANNER MULTI-PAIR
-    st.subheader("👁️ Scanner FOREX")
-    
     st.session_state.scanner = st.toggle("🔍 Attiva Scansione", value=True)
     
     if st.session_state.scanner:
@@ -132,9 +132,44 @@ if st.session_state.connected:
 
     # 4. TABELLA SEGNALI
     st.subheader("📋 Storico Segnali Recenti")
+    
     if st.session_state.signal_history:
-        st.table(pd.DataFrame(st.session_state.signal_history).tail(10))
+        # Creiamo il DataFrame dallo storico
+        signals_df = pd.DataFrame(st.session_state.signal_history)
+        
+        # Verifichiamo quali colonne sono effettivamente presenti per evitare il KeyError
+        available_cols = signals_df.columns.tolist()
+        target_cols = ['time', 'pair', 'dir', 'price', 'rsi']
+        
+        # Prendiamo solo quelle che esistono davvero
+        cols_to_show = [c for c in target_cols if c in available_cols]
+        
+        if cols_to_show:
+            display_df = signals_df[cols_to_show].copy()
+            
+            # Rinominiamo per un look professionale
+            rename_map = {
+                'time': '⏰ ORA',
+                'pair': '💱 COPPIA',
+                'dir': '🚀 TIPO',
+                'price': '💰 PREZZO',
+                'rsi': '📊 RSI'
+            }
+            display_df.rename(columns=rename_map, inplace=True)
+            
+            # Mostriamo la tabella pulita
+            st.dataframe(display_df.tail(15), use_container_width=True, hide_index=True)
+        else:
+            st.warning("Dati non ancora pronti per la visualizzazione.")
+    else:
+        st.info("⏳ In attesa di segnali... Lo scanner è attivo!")
 
     # Auto-refresh
     time_module.sleep(2)
     st.rerun()
+
+
+    # TABELLA SEGNALI SCARNA MA FUNZIONANTE
+    #st.subheader("📋 Storico Segnali Recenti")
+    #if st.session_state.signal_history:
+        #st.table(pd.DataFrame(st.session_state.signal_history).tail(10))
