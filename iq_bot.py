@@ -199,39 +199,40 @@ if st.session_state.connected:
     st.divider()
     st.subheader("📈 Grafico (BB + RSI)")
     
-    # 3. GRAFICO (Plotly con Bollinger e RSI)
-    pair_display = st.selectbox("Seleziona asset per l'analisi", ALL_PAIRS)
+    pair_display = st.selectbox("Seleziona asset", ALL_PAIRS)
     
-    # --- NUOVA CONFIGURAZIONE GRAFICO 3 PANNELLI ---
     try:
-        candles = Iq.get_candles(pair_display, 60, 80, time_module.time())
+        # 1. Recupero Dati
+        candles = Iq.get_candles(pair_display, 60, 100, time_module.time())
         df_plot = pd.DataFrame(candles)
         
-        # Calcolo Indicatori
+        # 2. Calcolo Indicatori
         df_plot['RSI'] = ta.rsi(df_plot['close'], length=7)
-        bb_plot = ta.bbands(df_plot['close'], length=20, std=2)
-        macd_df = ta.macd(df_plot['close'], fast=8, slow=17, signal=9)
+        bb = ta.bbands(df_plot['close'], length=20, std=2)
+        macd = ta.macd(df_plot['close'], fast=8, slow=17, signal=9)
         
-        # Creazione Subplots: 3 righe ora!
+        # Uniamo i dataframe per sicurezza sulle colonne
+        df_plot = pd.concat([df_plot, bb, macd], axis=1)
+    
+        # 3. Creazione Subplots (3 righe)
         fig = make_subplots(rows=3, cols=1, shared_xaxes=True, 
                             row_heights=[0.5, 0.25, 0.25], vertical_spacing=0.03)
     
-        # ROW 1: Candele + Bollinger (come prima)
+        # --- ROW 1: Bollinger ---
         fig.add_trace(go.Candlestick(x=df_plot.index, open=df_plot['open'], high=df_plot['max'], 
                                      low=df_plot['min'], close=df_plot['close'], name="Prezzo"), row=1, col=1)
-        fig.add_trace(go.Scatter(x=df_plot.index, y=bb_plot['BBU_20_2.0'], line=dict(color='gray', dash='dot'), name='BB Upper'), row=1, col=1)
-        fig.add_trace(go.Scatter(x=df_plot.index, y=bb_plot['BBL_20_2.0'], line=dict(color='gray', dash='dot'), fill='tonexty', name='BB Lower'), row=1, col=1)
+        fig.add_trace(go.Scatter(x=df_plot.index, y=df_plot['BBU_20_2.0'], line=dict(color='rgba(255,255,255,0.2)', dash='dot'), name="BB Upper"), row=1, col=1)
+        fig.add_trace(go.Scatter(x=df_plot.index, y=df_plot['BBL_20_2.0'], line=dict(color='rgba(255,255,255,0.2)', dash='dot'), fill='tonexty', name="BB Lower"), row=1, col=1)
     
-        # ROW 2: RSI
+        # --- ROW 2: RSI ---
         fig.add_trace(go.Scatter(x=df_plot.index, y=df_plot['RSI'], line=dict(color='#AB63FA'), name="RSI"), row=2, col=1)
-        fig.add_hline(y=rsi_buy, line_color="green", row=2, col=1)
-        fig.add_hline(y=rsi_sell, line_color="red", row=2, col=1)
+        fig.add_hline(y=rsi_buy, line_color="green", row=2, col=1, line_dash="dash")
+        fig.add_hline(y=rsi_sell, line_color="red", row=2, col=1, line_dash="dash")
     
-        # ROW 3: MACD (Istogramma + Linee)
-        [attachment_0](attachment)
-        fig.add_trace(go.Bar(x=df_plot.index, y=macd_df['MACDh_8_17_9'], name="Istogramma", marker_color='gray'), row=3, col=1)
-        fig.add_trace(go.Scatter(x=df_plot.index, y=macd_df['MACD_8_17_9'], line=dict(color='cyan'), name="MACD"), row=3, col=1)
-        fig.add_trace(go.Scatter(x=df_plot.index, y=macd_df['MACDs_8_17_9'], line=dict(color='orange'), name="Signal"), row=3, col=1)
+        # --- ROW 3: MACD ---
+        fig.add_trace(go.Bar(x=df_plot.index, y=df_plot['MACDh_8_17_9'], name="Momentum"), row=3, col=1)
+        fig.add_trace(go.Scatter(x=df_plot.index, y=df_plot['MACD_8_17_9'], line=dict(color='cyan'), name="MACD"), row=3, col=1)
+        fig.add_trace(go.Scatter(x=df_plot.index, y=df_plot['MACDs_8_17_9'], line=dict(color='orange'), name="Signal"), row=3, col=1)
     
         fig.update_layout(height=800, template="plotly_dark", xaxis_rangeslider_visible=False)
         st.plotly_chart(fig, use_container_width=True)
