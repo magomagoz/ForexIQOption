@@ -199,53 +199,55 @@ if st.session_state.connected:
     st.divider()
     st.subheader("📈 Grafico (BB + RSI)")
     
-    pair_display = st.selectbox("Seleziona valute", ALL_PAIRS)
+    pair_display = st.selectbox("Seleziona asset", ALL_PAIRS)
     
-    try:
-        # 1. Recupero dati
-        candles = Iq.get_candles(pair_display, 60, 100, time_module.time())
-        df_plot = pd.DataFrame(candles)
+    if st.session_state.connected:
+        Iq = st.session_state.iq # Protezione per NameError
         
-        # 2. Calcolo Indicatori
-        df_plot['RSI'] = ta.rsi(df_plot['close'], length=7)
-        
-        # Calcolo Bollinger e rinomina manuale per evitare KeyError
-        bb = ta.bbands(df_plot['close'], length=20, std=2)
-        bb.columns = ['BBL', 'BBM', 'BBU', 'BBB', 'BBP'] # Forza nomi semplici
-        
-        # Calcolo MACD e rinomina manuale
-        macd = ta.macd(df_plot['close'], fast=8, slow=17, signal=9)
-        macd.columns = ['MACD', 'HIST', 'SIGNAL'] # Forza nomi semplici
-        
-        # Unione dati
-        df_plot = pd.concat([df_plot, bb[['BBL', 'BBU']], macd], axis=1)
+        try:
+            # 1. Recupero Dati
+            candles = Iq.get_candles(pair_display, 60, 100, time_module.time())
+            df_plot = pd.DataFrame(candles)
+            
+            # 2. Calcolo Indicatori
+            df_plot['RSI'] = ta.rsi(df_plot['close'], length=7)
+            
+            # Calcolo Bollinger e FORZATURA nomi colonne per evitare KeyError
+            bb = ta.bbands(df_plot['close'], length=20, std=2)
+            bb.columns = ['BBL', 'BBM', 'BBU', 'BBB', 'BBP'] 
+            
+            # Calcolo MACD e FORZATURA nomi colonne
+            macd = ta.macd(df_plot['close'], fast=8, slow=17, signal=9)
+            macd.columns = ['MACD', 'HIST', 'SIGNAL']
+            
+            # Unione dati in un unico DataFrame pulito
+            df_final = pd.concat([df_plot, bb[['BBL', 'BBU']], macd], axis=1)
     
-        # 3. Creazione Subplots (3 Righe)
-        fig = make_subplots(rows=3, cols=1, shared_xaxes=True, 
-                            row_heights=[0.5, 0.25, 0.25], vertical_spacing=0.03)
+            # 3. Creazione Subplots (3 Pannelli: Prezzo, RSI, MACD)
+            fig = make_subplots(rows=3, cols=1, shared_xaxes=True, 
+                                row_heights=[0.5, 0.25, 0.25], vertical_spacing=0.03)
     
-        # --- ROW 1: Candele + Bollinger ---
-        fig.add_trace(go.Candlestick(x=df_plot.index, open=df_plot['open'], high=df_plot['max'], 
-                                     low=df_plot['min'], close=df_plot['close'], name="Prezzo"), row=1, col=1)
-        fig.add_trace(go.Scatter(x=df_plot.index, y=df_plot['BBU'], line=dict(color='rgba(255,255,255,0.3)', dash='dot'), name="BB Upper"), row=1, col=1)
-        fig.add_trace(go.Scatter(x=df_plot.index, y=df_plot['BBL'], line=dict(color='rgba(255,255,255,0.3)', dash='dot'), fill='tonexty', name="BB Lower"), row=1, col=1)
+            # --- PANNELLO 1: Candele + Bollinger ---
+            fig.add_trace(go.Candlestick(x=df_final.index, open=df_final['open'], high=df_final['max'], 
+                                         low=df_final['min'], close=df_final['close'], name="Prezzo"), row=1, col=1)
+            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBU'], line=dict(color='gray', dash='dot'), name="Banda Sup"), row=1, col=1)
+            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBL'], line=dict(color='gray', dash='dot'), fill='tonexty', name="Banda Inf"), row=1, col=1)
     
-        # --- ROW 2: RSI ---
-        fig.add_trace(go.Scatter(x=df_plot.index, y=df_plot['RSI'], line=dict(color='#AB63FA'), name="RSI"), row=2, col=1)
-        fig.add_hline(y=rsi_buy, line_color="green", row=2, col=1, line_dash="dash")
-        fig.add_hline(y=rsi_sell, line_color="red", row=2, col=1, line_dash="dash")
+            # --- PANNELLO 2: RSI ---
+            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['RSI'], line=dict(color='#AB63FA'), name="RSI"), row=2, col=1)
+            fig.add_hline(y=rsi_buy, line_color="green", row=2, col=1, line_dash="dash")
+            fig.add_hline(y=rsi_sell, line_color="red", row=2, col=1, line_dash="dash")
     
-        # --- ROW 3: MACD ---
-        [attachment_0](attachment)
-        fig.add_trace(go.Bar(x=df_plot.index, y=df_plot['HIST'], name="Momentum", marker_color='rgba(255,255,255,0.2)'), row=3, col=1)
-        fig.add_trace(go.Scatter(x=df_plot.index, y=df_plot['MACD'], line=dict(color='cyan'), name="MACD"), row=3, col=1)
-        fig.add_trace(go.Scatter(x=df_plot.index, y=df_plot['SIGNAL'], line=dict(color='orange'), name="Signal"), row=3, col=1)
+            # --- PANNELLO 3: MACD ---
+                    fig.add_trace(go.Bar(x=df_final.index, y=df_final['HIST'], name="Momentum"), row=3, col=1)
+            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['MACD'], line=dict(color='cyan'), name="MACD"), row=3, col=1)
+            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['SIGNAL'], line=dict(color='orange'), name="Signal"), row=3, col=1)
     
-        fig.update_layout(height=800, template="plotly_dark", xaxis_rangeslider_visible=False)
-        st.plotly_chart(fig, use_container_width=True)
+            fig.update_layout(height=800, template="plotly_dark", xaxis_rangeslider_visible=False, margin=dict(t=10, b=10))
+            st.plotly_chart(fig, use_container_width=True)
     
-    except Exception as e:
-        st.warning(f"⚠️ Impossibile caricare il grafico per {pair_display}: {e}")
+        except Exception as e:
+            st.warning(f"⚠️ Impossibile caricare il grafico per {pair_display}: {e}")
     
     # --- LOGICA DI VERIFICA ESITI (Dopo lo scanner) ---
 if st.session_state.connected:
