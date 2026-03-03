@@ -229,13 +229,13 @@ if st.session_state.connected:
                                          low=df_final['min'], close=df_final['close'], name="Prezzo"), row=1, col=1)
             
             # Banda Superiore
-            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBU'], line=dict(color='rgba(0,0,0,0.2)', dash='dot'), name="BBU"), row=1, col=1)
+            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBU'], line=dict(color='rgba(0,71,171,0.2)', dash='dot'), name="BBU"), row=1, col=1)
             
             # Banda Media (BBM) - La "Bussole" del trend
-            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBM'], line=dict(color='red', width=1), name="BBM"), row=1, col=1)
+            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBM'], line=dict(color='gray', width=1), name="BBM"), row=1, col=1)
             
             # Banda Inferiore con riempimento leggero
-            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBL'], line=dict(color='rgba(0,0,0,0.2)', dash='dot'), 
+            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBL'], line=dict(color='rgba(0,71,171,0.2)', dash='dot'), 
                                      fill='tonexty', fillcolor='rgba(153, 203, 255, 0.1)', name="BBL"), row=1, col=1)
     
             # --- PANNELLO 2: RSI ---
