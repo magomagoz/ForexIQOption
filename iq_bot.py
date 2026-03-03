@@ -41,7 +41,7 @@ if 'connected' not in st.session_state: st.session_state.connected = False
 if 'active_trades' not in st.session_state: st.session_state.active_trades = {}
 if 'signal_history' not in st.session_state: st.session_state.signal_history = []
 
-# --- SIDEBAR: CONNESSIONE ---
+# --- SIDEBAR: LOGIN E SCELTA CONTO ---
 with st.sidebar:
     st.header("⚙️ AI TRADING PLATFORM")
     if not st.session_state.connected:
@@ -51,18 +51,22 @@ with st.sidebar:
             Iq = IQ_Option(email, password)
             check, reason = Iq.connect()
             if check:
+                # --- AGGIUNTA FONDAMENTALE PER IL CONTO DEMO ---
+                Iq.change_balance("PRACTICE") # Forziamo il passaggio al conto Demo
+                
                 st.session_state.iq = Iq
                 st.session_state.connected = True
+                
+                # Leggiamo il saldo del conto Demo (Practice)
+                st.session_state.local_balance = Iq.get_balance() 
                 st.rerun()
-
-                # CARICHIAMO IL SALDO REALE SOLO UNA VOLTA
-                st.session_state.local_balance = Iq.get_balance()
-                st.rerun()
-
+            else:
+                st.error(f"Errore: {reason}")
     else:
-        st.success(f"🟢 IQ OPTION LIVE - Saldo Iniziale: {st.session_state.get('local_balance', 0):.2f}$")
-        # Input per decidere quanto "investire" virtualmente per ogni trade
-        st.session_state.stake = st.number_input("💰 Stake virtuale per trade ($)", value=100.0)
+        # Visualizzazione stato nella sidebar
+        st.success(f"🟢 DEMO ACCOUNT LIVE")
+        st.write(f"💰 Saldo Iniziale: {st.session_state.get('local_balance', 0):.2f}$")
+        st.session_state.virtual_stake = st.number_input("💰 Stake Virtuale ($)", value=100.0, step=5.0)
 
         # --- IN CIMA AL MAIN DASHBOARD ---
         if st.session_state.connected:
