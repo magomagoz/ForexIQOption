@@ -219,9 +219,8 @@ if st.session_state.connected:
                 # Se una coppia non ha dati, passa alla successiva senza crashare
                 continue
 
-
     st.divider()
-    st.subheader("📈 Grafico (BB + RSI)")
+    st.subheader("📈 Grafico (BB+RSI+MACD)")
     
     pair_display = st.selectbox("Seleziona asset", ALL_PAIRS)
     
@@ -230,7 +229,7 @@ if st.session_state.connected:
         
         try:
             # 1. Recupero Dati (100 candele per avere stabilità sugli indicatori)
-            candles = Iq.get_candles(pair_display, timeframe, 80, time_module.time())
+            candles = Iq.get_candles(pair_display, timeframe, 100, time_module.time())
             df_plot = pd.DataFrame(candles)
             
             # 2. Calcolo Indicatori
