@@ -172,9 +172,9 @@ if st.session_state.connected:
     
     for pair, trade in list(st.session_state.active_trades.items()):
         # Se sono passati 60 secondi
-        if now_ts - trade['entry_time'] >= 60:
+        if now - trade['entry_time'] >= 60:
             try:
-                res = Iq.get_candles(pair, 60, 1, now_ts)
+                res = Iq.get_candles(pair, 60, 1, now)
                 exit_price = res[0]['close']
                 
                 # Calcola Win/Loss
