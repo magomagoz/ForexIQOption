@@ -25,12 +25,15 @@ def play_trade_sound(sound_type="buy"):
         "buy": "https://actions.google.com/sounds/v1/alarms/beep_short.ogg",
         "win": "https://actions.google.com/sounds/v1/cartoon/clink_vibrant.ogg"
     }
-    # Usiamo un placeholder per non lasciare tracce grafiche (barra grigia)
     placeholder = st.empty()
-    with placeholder:
-        st.audio(sounds.get(sound_type, sounds["buy"]), autoplay=True)
-    time_module.sleep(0.1) # Breve pausa tecnica
-    placeholder.empty() # Rimuove il lettore dalla UI
+    try:
+        with placeholder:
+            # autoplay=True è fondamentale
+            st.audio(sounds.get(sound_type, sounds["buy"]), autoplay=True)
+        time_module.sleep(0.2) # Leggermente aumentato per dare tempo al buffer
+    except:
+        pass
+    placeholder.empty()
 
 st.set_page_config(page_title="Sentinel AI", page_icon="🚀", layout="wide")
 
@@ -195,6 +198,7 @@ if st.session_state.connected:
                 stake = st.session_state.get('stake', 100.0)
                 if win:
                     st.session_state.local_balance += (stake * 0.85)
+                    play_trade_sound("win")
                 else:
                     st.session_state.local_balance -= stake
     
@@ -203,7 +207,7 @@ if st.session_state.connected:
                     if s['pair'] == pair and s['result'] == "⏳ In corso...":
                         s['result'] = "✅ WIN" if win else "❌ LOSS"
                         break
-                
+
                 # 5. Rimuovi il trade dai monitorati per liberare la coppia
                 del st.session_state.active_trades[pair]
                 
