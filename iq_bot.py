@@ -168,11 +168,13 @@ if st.session_state.connected:
     fig.add_hline(y=rsi_sell, line_color="red", row=2, col=1)
     fig.update_layout(height=600, template="plotly_dark", xaxis_rangeslider_visible=False)
     st.plotly_chart(fig, use_container_width=True)
-
     
-    for pair, trade in list(st.session_state.active_trades.items()):
-        # Se sono passati 60 secondi
-        if now - trade['entry_time'] >= 60:
+    # --- LOGICA DI VERIFICA ESITI (Dopo lo scanner) ---
+    if st.session_state.connected:
+        now = time_module.time()
+        for pair, trade in list(st.session_state.active_trades.items()):
+            # Se sono passati 60 secondi (o il timeframe scelto)
+            if now - trade['entry_time'] >= 60: 
             try:
                 res = Iq.get_candles(pair, 60, 1, now)
                 exit_price = res[0]['close']
