@@ -251,8 +251,8 @@ if st.session_state.connected:
     
         st.plotly_chart(fig, use_container_width=True)
 
-except Exception as e:
-    st.warning(f"⚠️ Impossibile caricare il grafico per {pair_display}: {e}")
+    except Exception as e:
+        st.warning(f"⚠️ Impossibile caricare il grafico per {pair_display}: {e}")
     
     # --- LOGICA DI VERIFICA ESITI (Dopo lo scanner) ---
 if st.session_state.connected:
