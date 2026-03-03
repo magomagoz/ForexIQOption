@@ -92,7 +92,7 @@ with st.sidebar:
                 st.session_state.local_balance = Iq_obj.get_balance()
                 st.rerun()
     else:
-        st.success(f"🟢 {st.session_state.account_type} ATTIVO")
+        st.success(f"🟢 Conto {st.session_state.account_type} ATTIVO")
         st.session_state.stake = st.number_input("💰 Stake (€)", value=100.0)
         if st.button("🔴 DISCONNETTI"):
             st.session_state.connected = False
@@ -250,7 +250,7 @@ if st.session_state.connected:
     
             # 3. Creazione Subplots (Prezzo, RSI, MACD)
             fig = make_subplots(rows=3, cols=1, shared_xaxes=True, 
-                                row_heights=[0.5, 0.25, 0.25], vertical_spacing=0.03)
+                                row_heights=[0.5, 0.25, 0.25], vertical_spacing=0.07, subplots_title=("📊 Analisi Prezzo", "📉 Oscillatore RSI", "🚀 Momentum MACD"))
     
             # --- PANNELLO 1: Candele + Bollinger ---
             fig.add_trace(go.Candlestick(x=df_final.index, open=df_final['open'], high=df_final['max'], 
