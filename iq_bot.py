@@ -28,7 +28,7 @@ if 'active_trades' not in st.session_state: st.session_state.active_trades = {}
 if 'signal_history' not in st.session_state: st.session_state.signal_history = []
 
 with st.sidebar:
-    st.header("⚙️ SENTINEL AI")
+    st.header("⚙️ IQ TRADING PLATFORM")
     if not st.session_state.connected:
         email = st.text_input("Email", value="mago_magoz@libero.it")
         password = st.text_input("Password", type="password")
@@ -41,11 +41,12 @@ with st.sidebar:
                 st.rerun()
     else:
         st.success("🟢 IQ OPTION LIVE")
+        st.markdown()
         # --- SESSIONI DI MERCATO ---
         now_cet = datetime.now().time()
-        st.markdown("### 🌍 Sessioni")
-        for city, (start, end) in {"Londra": (time(9,0), time(18,0)), "NY": (time(14,0), time(23,0))}.items():
-            status = "🟢" if start <= now_cet <= end else "🔴"
+        st.markdown("🌍 SESSIONI DI MERCATO")
+        for city, (start, end) in {"LONDRA 🇬🇧": (time(9,0), time(18,0)), "NEW YORK 🇺🇸": (time(14,0), time(23,0)), "SYDNEY 🇦🇺": (time(23,0), time(8,0)), "TOKYO 🇯🇵": (time(1,0), time(10,0))}.items():
+            status = "🟢 Open: " if start <= now_cet <= end else "🔴 Closed: "
             st.write(f"{status} {city}")
 
 # --- MAIN DASHBOARD ---
