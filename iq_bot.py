@@ -75,15 +75,15 @@ with st.sidebar:
             st.session_state.connected = False
             st.rerun()
         
-    st.divider()
-
-    # --- SESSIONI DI MERCATO ---
-    now_cet = datetime.now().time()
-    st.subheader("🌍 SESSIONI DI MERCATO")
-        
-    for city, (start, end) in {"LONDRA 🇬🇧": (time(9,0), time(18,0)), "NEW YORK 🇺🇸": (time(14,0), time(23,0)), "SYDNEY 🇦🇺": (time(23,0), time(8,0)), "TOKYO 🇯🇵": (time(1,0), time(10,0))}.items():
-        status = "🟢 Open: " if start <= now_cet <= end else "🔴 Closed: "
-        st.write(f"{status} {city}")
+        st.divider()
+    
+        # --- SESSIONI DI MERCATO ---
+        now_cet = datetime.now().time()
+        st.subheader("🌍 SESSIONI DI MERCATO")
+            
+        for city, (start, end) in {"LONDRA 🇬🇧": (time(9,0), time(18,0)), "NEW YORK 🇺🇸": (time(14,0), time(23,0)), "SYDNEY 🇦🇺": (time(23,0), time(8,0)), "TOKYO 🇯🇵": (time(1,0), time(10,0))}.items():
+            status = "🟢 Open: " if start <= now_cet <= end else "🔴 Closed: "
+            st.write(f"{status} {city}")
 
 # --- MAIN DASHBOARD ---
 if st.session_state.connected:
