@@ -117,7 +117,7 @@ with st.sidebar:
         
         if stress_test:
             st.warning("⚠️ Modalità Test Attiva: BB (10,1.0) - RSI (45/55) - MACD (3,10,2)")
-        else
+        else:
             st.success("🟢 Modalità Reale Attiva: BB (20,2.0) - RSI (30/70) - MACD (8,17,9)")
 
         st.divider()
