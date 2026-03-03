@@ -118,6 +118,13 @@ with st.sidebar:
         if stress_test:
             st.warning("⚠️ Modalità Test Attiva: Parametri alterati per generare segnali continui.")
 
+        st.divider()
+        if st.button("🗑️ PULISCI STORICO", use_container_width=True):
+            st.session_state.signal_history = []
+            st.session_state.local_balance = Iq.get_balance() if st.session_state.connected else 0
+            st.success("Storico resettato!")
+            st.rerun()
+
 
 # --- MAIN DASHBOARD ---
 if st.session_state.connected:
