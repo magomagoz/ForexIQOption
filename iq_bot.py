@@ -169,39 +169,36 @@ if st.session_state.connected:
     fig.update_layout(height=600, template="plotly_dark", xaxis_rangeslider_visible=False)
     st.plotly_chart(fig, use_container_width=True)
 
-    # --- LOGICA DI VERIFICA ESITI (Dopo lo scanner) ---
-    if st.session_state.connected:
-        now = time_module.time()
-        for pair, trade in list(st.session_state.active_trades.items()):
-            # Se sono passati 60 secondi (o il timeframe scelto)
-            if now - trade['entry_time'] >= 60: 
-                try:
-                    # Chiediamo l'ultima candela chiusa per avere il prezzo di uscita
-                    res = Iq.get_candles(pair, 60, 1, now)
-                    exit_price = res[0]['close']
-                    entry_price = trade['entry_price']
-                    
-                    # Calcolo Esito
-                    if trade['direction'] == "BUY":
-                        win = exit_price > entry_price
-                    else:
-                        win = exit_price < entry_price
-                    
-                    esito_testo = "✅ WIN" if win else "❌ LOSS"
-                    if exit_price == entry_price: esito_testo = "⚪ PARE"
     
-                    # Aggiorniamo l'ultimo segnale di quella coppia nello storico
-                    for signal in reversed(st.session_state.signal_history):
-                        if signal['pair'] == pair and signal['result'] == "⏳ In corso...":
-                            signal['result'] = esito_testo
-                            # Suona se hai vinto!
-                            if win: play_trade_sound("win") 
-                            break
-                    
-                    # Rimuoviamo dai trade attivi così può generare nuovi segnali
-                    del st.session_state.active_trades[pair]
-                except:
-                    continue
+    for pair, trade in list(st.session_state.active_trades.items()):
+    # Se sono passati 60 secondi
+    if now_ts - trade['entry_time'] >= 60:
+        try:
+            res = Iq.get_candles(pair, 60, 1, now_ts)
+            exit_price = res[0]['close']
+            
+            # Calcola Win/Loss
+            if trade['direction'] == "BUY":
+                win = exit_price > trade['entry_price']
+            else:
+                win = exit_price < trade['entry_price']
+            
+            # Aggiorna il Saldo Locale
+            stake = st.session_state.get('stake', 100.0)
+            if win:
+                st.session_state.local_balance += (stake * 0.85)
+            else:
+                st.session_state.local_balance -= stake
+
+            # Aggiorna la riga nella tabella
+            for s in reversed(st.session_state.signal_history):
+                if s['pair'] == pair and s['result'] == "⏳ In corso...":
+                    s['result'] = "✅ WIN" if win else "❌ LOSS"
+                    break
+            
+            # Rimuovi dai trade attivi
+            del st.session_state.active_trades[pair]
+        except: continue
 
     st.divider()
 
