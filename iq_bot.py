@@ -233,12 +233,12 @@ if st.session_state.connected:
         # Creiamo 3 colonne per le metriche finali
         m1, m2, m3 = st.columns(3)
         with m1:
-            st.metric("🏆 Win Rate", f"{rate:.1f}%")
+            st.markdown("🏆 Win Rate", f"{rate:.1f}%")
         with m2:
-            st.metric("📊 Score", f"W: {wins} | L: {losses}")
+            st.markdown("📊 Score", f"W: {wins} | L: {losses}")
         with m3:
             # Questo è il saldo che si aggiorna con i tuoi calcoli Win/Loss
-            st.metric(f"💰 Saldo {st.session_state.account_type}", f"{st.session_state.local_balance:.2f} $")    
+            st.markdown(f"💰 Saldo {st.session_state.account_type}", f"{st.session_state.local_balance:.2f} $")    
         
     # --- 4. TABELLA SEGNALI (ULTIMO IN ALTO) ---    
     if st.session_state.signal_history:
