@@ -70,6 +70,8 @@ with st.sidebar:
 if st.session_state.connected:
     Iq = st.session_state.iq
 
+    st.divider()
+
     st.subheader("👁️ Scanner FOREX")
 
     # 1. PARAMETRI AGGRESSIVI (MODIFICATI PER RILEVARE DI PIÙ)
@@ -130,6 +132,7 @@ if st.session_state.connected:
 
             except: continue
 
+    st.divider()
     st.subheader("📈 Grafico & RSI")
     
     # 3. GRAFICO (Il tuo Plotly originale)
