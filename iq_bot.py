@@ -215,7 +215,7 @@ if st.session_state.connected:
             color = 'white'
             if '✅' in str(val): color = '#00ff00'
             elif '❌' in str(val): color = '#ff4b4b'
-            elif '⏳' in str(val): color = '#ffff00'
+            elif '⏳' in str(val): color = '#ffbf00'
             return f'color: {color}'
     
         # Visualizzazione della tabella invertita
