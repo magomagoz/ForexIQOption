@@ -199,9 +199,6 @@ if st.session_state.connected:
                     
                     # Rimuoviamo dai trade attivi così può generare nuovi segnali
                     del st.session_state.active_trades[pair]
-                except:
-                    continue
-
                     
                     # AGGIORNAMENTO SALDO LOCALE
                     stake = st.session_state.get('stake', 10)
