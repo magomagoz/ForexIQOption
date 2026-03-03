@@ -21,11 +21,15 @@ def send_telegram_signal(signal_type, pair, price, rsi, macd):
     except: pass
 
 def play_trade_sound(sound_type="buy"):
+    # Link aggiornati e funzionanti per evitare la barra grigia di errore
     sounds = {
-        "buy": "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav",
-        "sell": "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav"
+        "buy": "https://actions.google.com/sounds/v1/alarms/beep_short.ogg",
+        "win": "https://actions.google.com/sounds/v1/cartoon/clink_vibrant.ogg"
     }
-    st.audio(sounds.get(sound_type, sounds["buy"]), autoplay=True)
+    try:
+        st.audio(sounds.get(sound_type, sounds["buy"]), autoplay=True)
+    except:
+        pass # Evita di mostrare la barra di errore se il caricamento fallisce
 
 st.set_page_config(page_title="Sentinel AI", page_icon="🚀", layout="wide")
 
@@ -40,21 +44,36 @@ except:
 if 'connected' not in st.session_state: st.session_state.connected = False
 if 'active_trades' not in st.session_state: st.session_state.active_trades = {}
 if 'signal_history' not in st.session_state: st.session_state.signal_history = []
+if 'local_balance' not in st.session_state: st.session_state.local_balance = 0
 
+# --- SIDEBAR: LOGIN ---
 with st.sidebar:
     st.header("⚙️ AI TRADING PLATFORM")
     if not st.session_state.connected:
         email = st.text_input("Email", value="mago_magoz@libero.it")
         password = st.text_input("Password", type="password")
+        tipo_conto = st.radio("Seleziona Conto", ["DEMO", "REALE"])
+        
         if st.button("🔌 CONNETTI"):
-            Iq = IQ_Option(email, password)
-            check, reason = Iq.connect()
+            Iq_obj = IQ_Option(email, password)
+            check, reason = Iq_obj.connect()
+            
             if check:
-                st.session_state.iq = Iq
+                mode = "PRACTICE" if tipo_conto == "DEMO" else "REAL"
+                Iq_obj.change_balance(mode)
+                st.session_state.iq_client = Iq_obj # Salviamo con questo nome
                 st.session_state.connected = True
+                st.session_state.account_type = tipo_conto
+                st.session_state.local_balance = Iq_obj.get_balance()
                 st.rerun()
+            else:
+                st.error(f"❌ Errore: {reason}")
     else:
-        st.success("🟢 IQ OPTION LIVE")
+        st.success(f"🟢 {st.session_state.account_type} LIVE")
+        st.session_state.stake = st.number_input("💰 Stake Virtuale ($)", value=10.0, step=5.0)
+        if st.button("🔴 SCOLLEGA"):
+            st.session_state.connected = False
+            st.rerun()
 
         st.divider()
         
