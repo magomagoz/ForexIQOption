@@ -94,7 +94,7 @@ with st.sidebar:
     else:
         st.success(f"🟢 {st.session_state.account_type} ATTIVO")
         st.session_state.stake = st.number_input("💰 Stake ($)", value=100.0)
-        if st.button("🔴 **SCOLLEGA**"):
+        if st.button("🔴 SCOLLEGA"):
             st.session_state.connected = False
             st.rerun()
 
@@ -138,7 +138,7 @@ if st.session_state.connected:
                 
             # --- DENTRO IL CICLO FOR PAIR ---
             try:
-                candles = Iq.get_candles(pair, timeframe, 100, time_module.time())
+                candles = Iq.get_candles(pair, timeframe, 80, time_module.time())
                 df = pd.DataFrame(candles)
                 
                 # Calcolo Indicatori
