@@ -83,8 +83,6 @@ if st.session_state.connected:
 
     # 2. SCANNER MULTI-PAIR
     st.session_state.scanner = st.toggle("🔍 Attiva Scansione", value=True)
-    
-# ... (Parti precedenti invariate fino allo scanner) ...
 
     if st.session_state.scanner:
         ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"]
@@ -105,25 +103,35 @@ if st.session_state.connected:
                 is_buy = curr_rsi < rsi_buy and curr_macd > curr_sig
                 is_sell = curr_rsi > rsi_sell and curr_macd < curr_sig
 
+                # --- LOGICA TRIGGER (Dentro il ciclo for pair in ALL_PAIRS) ---
                 if (is_buy or is_sell) and pair not in st.session_state.active_trades:
                     direction = "BUY" if is_buy else "SELL"
-                    st.session_state.active_trades[pair] = {'time': time_module.time(), 'price': price}
                     
-                    # --- CORREZIONE QUI: AGGIUNTO 'price' ---
+                    # Salviamo i dati necessari per il calcolo futuro
+                    st.session_state.active_trades[pair] = {
+                        'entry_time': time_module.time(),
+                        'entry_price': price,
+                        'direction': direction
+                    }
+                    
+                    # Primo inserimento nello storico (Esito in attesa)
                     st.session_state.signal_history.append({
                         'time': datetime.now().strftime("%H:%M:%S"),
                         'pair': pair, 
                         'dir': direction, 
+                        'price': f"{price:.5f}",
                         'rsi': round(curr_rsi, 1),
-                        'price': f"{price:.5f}" # <--- QUESTA RIGA MANCAVA!
+                        'result': "⏳ In corso..."
                     })
                     
                     send_telegram_signal(direction, pair, price, curr_rsi, 0)
                     play_trade_sound("buy")
-                    st.toast(f"🚀 SEGNALE {direction} su {pair}!", icon="🔥")
+                    st.toast(f"SEGNALE {direction} su {pair}!", icon="🔥")
 
             except: continue
 
+    st.subheader("📈 Grafico FOREX")
+    
     # 3. GRAFICO (Il tuo Plotly originale)
     pair_display = st.selectbox("Seleziona Grafico", ALL_PAIRS)
     candles = Iq.get_candles(pair_display, 60, 100, time_module.time())
@@ -138,33 +146,69 @@ if st.session_state.connected:
     fig.update_layout(height=600, template="plotly_dark", xaxis_rangeslider_visible=False)
     st.plotly_chart(fig, use_container_width=True)
 
-    # 4. TABELLA SEGNALI (CON RIGHE DI SICUREZZA)
-    st.subheader("📋 Storico Segnali Recenti")
+    # --- LOGICA DI VERIFICA ESITI (Dopo lo scanner) ---
+    if st.session_state.connected:
+        now = time_module.time()
+        for pair, trade in list(st.session_state.active_trades.items()):
+            # Se sono passati 60 secondi (o il timeframe scelto)
+            if now - trade['entry_time'] >= 60: 
+                try:
+                    # Chiediamo l'ultima candela chiusa per avere il prezzo di uscita
+                    res = Iq.get_candles(pair, 60, 1, now)
+                    exit_price = res[0]['close']
+                    entry_price = trade['entry_price']
+                    
+                    # Calcolo Esito
+                    if trade['direction'] == "BUY":
+                        win = exit_price > entry_price
+                    else:
+                        win = exit_price < entry_price
+                    
+                    esito_testo = "✅ WIN" if win else "❌ LOSS"
+                    if exit_price == entry_price: esito_testo = "⚪ PARE"
+    
+                    # Aggiorniamo l'ultimo segnale di quella coppia nello storico
+                    for signal in reversed(st.session_state.signal_history):
+                        if signal['pair'] == pair and signal['result'] == "⏳ In corso...":
+                            signal['result'] = esito_testo
+                            # Suona se hai vinto!
+                            if win: play_trade_sound("win") 
+                            break
+                    
+                    # Rimuoviamo dai trade attivi così può generare nuovi segnali
+                    del st.session_state.active_trades[pair]
+                except:
+                    continue
+
+    
+    # --- 4. TABELLA SEGNALI AGGIORNATA ---
+    st.subheader("📋 Trading Journal & Esiti")
     
     if st.session_state.signal_history:
-        signals_df = pd.DataFrame(st.session_state.signal_history)
+        df_journal = pd.DataFrame(st.session_state.signal_history)
         
-        # Assicuriamoci che tutte le colonne esistano prima di mostrarle
-        for col in ['time', 'pair', 'dir', 'price', 'rsi']:
-            if col not in signals_df.columns:
-                signals_df[col] = "-" 
-
-        display_df = signals_df[['time', 'pair', 'dir', 'price', 'rsi']].copy()
-        
+        # Rinominiamo le colonne per la visualizzazione
         rename_map = {
             'time': '⏰ ORA',
             'pair': '💱 COPPIA',
             'dir': '🚀 TIPO',
-            'price': '💰 PREZZO',
-            'rsi': '📊 RSI'
+            'price': '💰 ENTRATA',
+            'rsi': '📊 RSI',
+            'result': '🔍 ESITO'
         }
-        st.dataframe(display_df.rename(columns=rename_map).tail(15), use_container_width=True, hide_index=True)
-    else:
-        st.info("⏳ In attesa di segnali... Scanner attivo!")
-
-    # --- SPOSTA IL REFRESH QUI DENTRO ---
-    time_module.sleep(2)
-    st.rerun() 
+        
+        # Applichiamo lo stile (Verde per Win, Rosso per Loss)
+        def style_result(val):
+            color = 'white'
+            if '✅' in str(val): color = '#00ff00' # Verde
+            elif '❌' in str(val): color = '#ff4b4b' # Rosso
+            return f'color: {color}'
+    
+        st.dataframe(
+            df_journal.rename(columns=rename_map).tail(15).style.applymap(style_result, subset=['🔍 ESITO']),
+            use_container_width=True, 
+            hide_index=True
+        )
 
 
     # TABELLA SEGNALI SCARNA MA FUNZIONANTE
