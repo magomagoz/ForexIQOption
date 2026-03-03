@@ -137,7 +137,7 @@ if st.session_state.connected:
     
     # 3. GRAFICO (Il tuo Plotly originale)
     pair_display = st.selectbox("Seleziona valute", ALL_PAIRS)
-    candles = Iq.get_candles(pair_display, 60, 100, time_module.time())
+    candles = Iq.get_candles(pair_display, 60, 80, time_module.time())
     df_plot = pd.DataFrame(candles)
     df_plot['RSI'] = ta.rsi(df_plot['close'], length=7)
     
