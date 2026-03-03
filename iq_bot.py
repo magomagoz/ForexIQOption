@@ -136,13 +136,13 @@ if st.session_state.connected:
     with col3:
         timeframe = st.selectbox("Timeframe", [60, 300], index=0)
 
+    st.session_state.scanner = st.toggle("🔍 Attiva Scansione", value=True)
+
     if st.session_state.scanner:
         ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"]
 
         # --- PUNTO 2: DEFINIZIONE PARAMETRI DINAMICI ---
-        # 2. SCANNER MULTI-PAIR
-        st.session_state.scanner = st.toggle("🔍 Attiva Scansione", value=True)
-
+        
         if stress_test:
             # Parametri "Sporchi" per inondare lo scanner di segnali
             rsi_buy, rsi_sell = 45, 55
