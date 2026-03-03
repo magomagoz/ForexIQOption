@@ -41,7 +41,7 @@ with st.sidebar:
                 st.rerun()
     else:
         st.success("🟢 IQ OPTION LIVE")
-        st.markdown()
+        st.markdown(---)
         # --- SESSIONI DI MERCATO ---
         now_cet = datetime.now().time()
         st.markdown("🌍 SESSIONI DI MERCATO")
