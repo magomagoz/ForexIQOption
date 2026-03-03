@@ -36,62 +36,57 @@ try:
 except:
     st.image("https://via.placeholder.com/800x100/0066cc/white?text=SENTINEL+AI", use_column_width=True)
 
-# --- LOGICA DI CONNESSIONE ---
+# --- INIZIO CODICE ---
+# (Assicurati di avere tutti gli import necessari)
+
+# 1. INIZIALIZZAZIONE STATO (Sempre all'inizio)
 if 'connected' not in st.session_state: st.session_state.connected = False
 if 'active_trades' not in st.session_state: st.session_state.active_trades = {}
 if 'signal_history' not in st.session_state: st.session_state.signal_history = []
+if 'local_balance' not in st.session_state: st.session_state.local_balance = 0
 
-# --- SIDEBAR: LOGIN E SCELTA CONTO ---
+# --- SIDEBAR: LOGIN ---
 with st.sidebar:
     st.header("⚙️ AI TRADING PLATFORM")
     if not st.session_state.connected:
         email = st.text_input("Email", value="mago_magoz@libero.it")
         password = st.text_input("Password", type="password")
-        
-        # Scelta del conto prima di connettersi
         tipo_conto = st.radio("Seleziona Conto", ["DEMO", "REALE"])
         
-        if st.button("🔌 CONNETTI", type="primary"):
-            Iq = IQ_Option(email, password)
-            check, reason = Iq.connect()
+        if st.button("🔌 CONNETTI"):
+            from iqoptionapi.stable_api import IQ_Option # Import locale per sicurezza
+            Iq_obj = IQ_Option(email, password)
+            check, reason = Iq_obj.connect()
             
             if check:
-                # 1. Impostiamo la modalità in base alla scelta dell'utente
                 mode = "PRACTICE" if tipo_conto == "DEMO" else "REAL"
-                Iq.change_balance(mode) 
+                Iq_obj.change_balance(mode)
                 
-                # 2. Salviamo i dati in sessione
-                st.session_state.iq = Iq
+                st.session_state.iq_client = Iq_obj # Salviamo l'oggetto client
                 st.session_state.connected = True
-                st.session_state.account_type = tipo_conto # Salviamo il tipo per la grafica
-                
-                # 3. Leggiamo il saldo del conto scelto (Demo o Reale)
-                st.session_state.local_balance = Iq.get_balance() 
+                st.session_state.account_type = tipo_conto
+                st.session_state.local_balance = Iq_obj.get_balance()
                 st.rerun()
             else:
                 st.error(f"❌ Errore: {reason}")
     else:
-        # Visualizzazione stato dinamica
-        acc_type = st.session_state.get('account_type', 'DEMO')
-        st.success(f"🟢 {acc_type} ACCOUNT LIVE")
-        
-        st.write(f"💰 Saldo Iniziale: {st.session_state.get('local_balance', 0):.2f}$")
-        
-        # Stake virtuale
-        st.session_state.virtual_stake = st.number_input("💰 Stake Virtuale ($)", value=100.0, step=10.0)
-        
-        if st.button("🔴 DISCONNETTI"):
+        st.success(f"🟢 {st.session_state.account_type} LIVE")
+        if st.button("🔴 SCOLLEGA"):
             st.session_state.connected = False
             st.rerun()
 
-        # --- IN CIMA AL MAIN DASHBOARD ---
-        if st.session_state.connected:
-            # Mostriamo il saldo locale aggiornato
-            st.metric(
-                label="💵 Saldo Sessione (Virtuale)", 
-                value=f"{st.session_state.local_balance:.2f} $",
-                delta=f"{st.session_state.local_balance - Iq.get_balance():.2f} $ vs Inizio"
-            )
+# --- MAIN DASHBOARD ---
+if st.session_state.connected:
+    # RECUPERO CLIENT (Risolve il NameError riga 93)
+    Iq = st.session_state.iq_client 
+
+    # 2. VISUALIZZAZIONE SALDO (Corretto con controllo esistenza)
+    current_actual_balance = Iq.get_balance()
+    st.metric(
+        label=f"💵 SALDO {st.session_state.account_type} (Sentinel AI)", 
+        value=f"{st.session_state.local_balance:.2f} $",
+        delta=f"{st.session_state.local_balance - current_actual_balance:.2f} $ vs IQ"
+    )
         
         st.divider()
         
@@ -245,46 +240,39 @@ if st.session_state.connected:
         
         st.metric("🏆 PERFORMANCE LIVE", f"Win Rate: {rate:.1f}%", f"W: {wins} | L: {losses}")
 
-    # --- 4. TABELLA SEGNALI (ULTIMO IN ALTO) ---
+
+    # ... (Qui inserisci la tua logica dello Scanner) ...
+
+    # 4. TABELLA SEGNALI (Risolve il KeyError riga 135)
+    st.subheader("📋 Storico Segnali Recenti")
     
     if st.session_state.signal_history:
-        # Creiamo il DataFrame
-        df_journal = pd.DataFrame(st.session_state.signal_history)
+        signals_df = pd.DataFrame(st.session_state.signal_history)
         
-        # Invertiamo l'ordine: l'ultimo aggiunto finisce in prima riga [::-1]
-        df_reversed = df_journal.iloc[::-1].copy()
+        # DEFINIAMO LE COLONNE CHE VOGLIAMO
+        target_cols = ['time', 'pair', 'dir', 'price', 'rsi', 'result']
         
-        # Assicuriamoci che tutte le colonne esistano (per evitare errori se il segnale è nuovo)
-        for col in ['time', 'pair', 'dir', 'price', 'rsi', 'result']:
-            if col not in df_reversed.columns:
-                df_reversed[col] = "-" 
-    
-        # Rinominiamo per la visualizzazione
+        # CREIAMO LE COLONNE MANCANTI SE NON ESISTONO (Previene il KeyError)
+        for col in target_cols:
+            if col not in signals_df.columns:
+                signals_df[col] = "-" 
+
+        # Filtriamo e invertiamo l'ordine (Ultimo in alto)
+        display_df = signals_df[target_cols].iloc[::-1].copy()
+        
+        # Rinominiamo per l'estetica
         rename_map = {
-            'time': '⏰ ORA',
-            'pair': '💱 COPPIA',
-            'dir': '🚀 TIPO',
-            'price': '💰 ENTRATA',
-            'rsi': '📊 RSI',
-            'result': '🔍 ESITO'
+            'time': '⏰ ORA', 'pair': '💱 COPPIA', 'dir': '🚀 TIPO', 
+            'price': '💰 PREZZO', 'rsi': '📊 RSI', 'result': '🔍 ESITO'
         }
         
-        # Funzione per colorare l'esito
-        def style_result(val):
-            color = 'white'
-            if '✅' in str(val): color = '#00ff00'
-            elif '❌' in str(val): color = '#ff4b4b'
-            elif '⏳' in str(val): color = '#ffbf00'
-            return f'color: {color}'
-    
-        # Visualizzazione della tabella invertita
-        st.dataframe(
-            df_reversed.rename(columns=rename_map).style.applymap(style_result, subset=['🔍 ESITO']),
-            use_container_width=True, 
-            hide_index=True
-        )
+        st.dataframe(display_df.rename(columns=rename_map), use_container_width=True, hide_index=True)
     else:
-        st.info("⏳ In attesa di segnali... Scanner attivo!")
+        st.info("⏳ Scanner attivo... in attesa di segnali.")
+
+    # REFRESH AUTOMATICO
+    time_module.sleep(2)
+    st.rerun()
 
     # --- LOGICA DI REFRESH AUTOMATICO ---
     
