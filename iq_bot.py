@@ -112,11 +112,13 @@ with st.sidebar:
         #st.info(get_market_status())
 
         st.divider()
-        st.subheader("🛠️ STRUMENTI DI TEST")
+        st.header("🛠️ STRUMENTI DI TEST")
         stress_test = st.toggle("🚀 STRESS TEST MODE", value=False, help="Attiva segnali frequenti per testare notifiche e suoni")
         
         if stress_test:
-            st.warning("⚠️ Modalità Test Attiva: Parametri alterati per generare segnali continui.")
+            st.warning("⚠️ Modalità Test Attiva: BB (10,1.0) - RSI (45/55) - MACD (3,10,2)")
+        else
+            st.success("🟢 Modalità Reale Attiva: BB (20,2.0) - RSI (30/70) - MACD (8,17,9)")
 
         st.divider()
         if st.button("🗑️ PULISCI STORICO", use_container_width=True):
