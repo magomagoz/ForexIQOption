@@ -163,24 +163,29 @@ if st.session_state.connected:
                 # SELL: RSI alto + Prezzo >= Banda Superiore + MACD incrocia DOWN
                 is_sell = (curr_rsi > rsi_sell) and (price >= bb_up) and (curr_macd < curr_sig)
             
-                # --- LOGICA TRIGGER (Dentro il ciclo for pair in ALL_PAIRS) ---
-                if (is_buy or is_sell) and pair not in st.session_state.active_trades:
-                    direction = "BUY" if is_buy else "SELL"
                     
+                    
+                    
+                if (is_buy or is_sell) and pair not in st.session_state.active_trades:
+                    # Calcolo distanza BB (es. quanto il prezzo è fuori dalla banda in %)
+                    dist_bb = ((price - bb_low) / bb_low) * 100 if is_buy else ((price - bb_up) / bb_up) * 100
+                    direction = "BUY" if is_buy else "SELL"
+
                     # Salviamo i dati necessari per il calcolo futuro
                     st.session_state.active_trades[pair] = {
                         'entry_time': time_module.time(),
                         'entry_price': price,
                         'direction': direction
                     }
-                    
-                    # Primo inserimento nello storico (Esito in attesa)
+
                     st.session_state.signal_history.append({
                         'time': datetime.now().strftime("%H:%M:%S"),
                         'pair': pair, 
                         'dir': direction, 
                         'price': f"{price:.5f}",
                         'rsi': round(curr_rsi, 1),
+                        'macd': round(curr_macd, 5), # Nuovo dato
+                        'bb_dist': f"{dist_bb:.2f}%", # Nuovo dato (distanza dalla banda)
                         'result': "⏳ In corso..."
                     })
                     
@@ -197,62 +202,40 @@ if st.session_state.connected:
     # 3. GRAFICO (Plotly con Bollinger e RSI)
     pair_display = st.selectbox("Seleziona asset per l'analisi", ALL_PAIRS)
     
+    # --- NUOVA CONFIGURAZIONE GRAFICO 3 PANNELLI ---
     try:
-        # Recupero candele aggiornate
         candles = Iq.get_candles(pair_display, 60, 80, time_module.time())
         df_plot = pd.DataFrame(candles)
         
-        # Calcolo Indicatori per il grafico
+        # Calcolo Indicatori
         df_plot['RSI'] = ta.rsi(df_plot['close'], length=7)
         bb_plot = ta.bbands(df_plot['close'], length=20, std=2)
+        macd_df = ta.macd(df_plot['close'], fast=8, slow=17, signal=9)
+        
+        # Creazione Subplots: 3 righe ora!
+        fig = make_subplots(rows=3, cols=1, shared_xaxes=True, 
+                            row_heights=[0.5, 0.25, 0.25], vertical_spacing=0.03)
     
-        # Creazione Subplots
-        fig = make_subplots(rows=2, cols=1, shared_xaxes=True, 
-                            row_heights=[0.7, 0.3], vertical_spacing=0.05)
+        # ROW 1: Candele + Bollinger (come prima)
+        fig.add_trace(go.Candlestick(x=df_plot.index, open=df_plot['open'], high=df_plot['max'], 
+                                     low=df_plot['min'], close=df_plot['close'], name="Prezzo"), row=1, col=1)
+        fig.add_trace(go.Scatter(x=df_plot.index, y=bb_plot['BBU_20_2.0'], line=dict(color='gray', dash='dot'), name='BB Upper'), row=1, col=1)
+        fig.add_trace(go.Scatter(x=df_plot.index, y=bb_plot['BBL_20_2.0'], line=dict(color='gray', dash='dot'), fill='tonexty', name='BB Lower'), row=1, col=1)
     
-        # --- ROW 1: CANDLESTICK + BOLLINGER ---
-        # Candele
-        fig.add_trace(go.Candlestick(
-            x=df_plot.index, open=df_plot['open'], high=df_plot['max'], 
-            low=df_plot['min'], close=df_plot['close'], name="Prezzo"
-        ), row=1, col=1)
+        # ROW 2: RSI
+        fig.add_trace(go.Scatter(x=df_plot.index, y=df_plot['RSI'], line=dict(color='#AB63FA'), name="RSI"), row=2, col=1)
+        fig.add_hline(y=rsi_buy, line_color="green", row=2, col=1)
+        fig.add_hline(y=rsi_sell, line_color="red", row=2, col=1)
     
-        # Banda Superiore
-        fig.add_trace(go.Scatter(
-            x=df_plot.index, y=bb_plot['BBU_20_2.0'], 
-            line=dict(color='rgba(173, 216, 230, 0.4)', width=1, dash='dot'), 
-            name='BB Upper'
-        ), row=1, col=1)
+        # ROW 3: MACD (Istogramma + Linee)
+        [attachment_0](attachment)
+        fig.add_trace(go.Bar(x=df_plot.index, y=macd_df['MACDh_8_17_9'], name="Istogramma", marker_color='gray'), row=3, col=1)
+        fig.add_trace(go.Scatter(x=df_plot.index, y=macd_df['MACD_8_17_9'], line=dict(color='cyan'), name="MACD"), row=3, col=1)
+        fig.add_trace(go.Scatter(x=df_plot.index, y=macd_df['MACDs_8_17_9'], line=dict(color='orange'), name="Signal"), row=3, col=1)
     
-        # Banda Inferiore (con riempimento verso la superiore)
-        fig.add_trace(go.Scatter(
-            x=df_plot.index, y=bb_plot['BBL_20_2.0'], 
-            line=dict(color='rgba(173, 216, 230, 0.4)', width=1, dash='dot'),
-            fill='tonexty', fillcolor='rgba(173, 216, 230, 0.05)', # Ombreggiatura area Bollinger
-            name='BB Lower'
-        ), row=1, col=1)
-    
-        # --- ROW 2: RSI ---
-        fig.add_trace(go.Scatter(
-            x=df_plot.index, y=df_plot['RSI'], 
-            line=dict(color='#AB63FA', width=2), name="RSI"
-        ), row=2, col=1)
-    
-        # Linee di soglia RSI
-        fig.add_hline(y=rsi_buy, line_color="#00FF00", line_dash="dash", row=2, col=1)
-        fig.add_hline(y=rsi_sell, line_color="#FF0000", line_dash="dash", row=2, col=1)
-    
-        # Layout finale
-        fig.update_layout(
-            height=600, 
-            template="plotly_dark", 
-            xaxis_rangeslider_visible=False,
-            margin=dict(l=10, r=10, t=10, b=10),
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
-        )
-    
+        fig.update_layout(height=800, template="plotly_dark", xaxis_rangeslider_visible=False)
         st.plotly_chart(fig, use_container_width=True)
-
+    
     except Exception as e:
         st.warning(f"⚠️ Impossibile caricare il grafico per {pair_display}: {e}")
     
@@ -338,17 +321,25 @@ if st.session_state.connected:
         for col in ['time', 'pair', 'dir', 'price', 'rsi', 'result']:
             if col not in df_reversed.columns:
                 df_reversed[col] = "-" 
-    
-        # Rinominiamo per la visualizzazione
-        rename_map = {
-            'time': '⏰ ORA',
-            'pair': '💱 COPPIA',
-            'dir': '🚀 TIPO',
-            'price': '💰 ENTRATA',
-            'rsi': '📊 RSI',
-            'result': '🔍 ESITO'
-        }
         
+            # Rinominiamo le nuove colonne
+            rename_map = {
+                'time': '⏰ ORA',
+                'pair': '💱 COPPIA',
+                'dir': '🚀 TIPO',
+                'price': '💰 ENTRATA',
+                'rsi': '📊 RSI',
+                'macd': '📉 MACD',
+                'bb_dist': '↔️ BB DIST',
+                'result': '🔍 ESITO'
+            }
+            
+            st.dataframe(
+                df_reversed.rename(columns=rename_map).style.applymap(style_result, subset=['🔍 ESITO']),
+                use_container_width=True, 
+                hide_index=True
+            )
+    
         # Funzione per colorare l'esito
         def style_result(val):
             color = 'white'
