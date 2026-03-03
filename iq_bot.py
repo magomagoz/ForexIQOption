@@ -135,35 +135,32 @@ if st.session_state.connected:
     st.subheader("📋 Storico Segnali Recenti")
     
     if st.session_state.signal_history:
-        # Creiamo il DataFrame dallo storico
         signals_df = pd.DataFrame(st.session_state.signal_history)
         
-        # Verifichiamo quali colonne sono effettivamente presenti per evitare il KeyError
-        available_cols = signals_df.columns.tolist()
-        target_cols = ['time', 'pair', 'dir', 'price', 'rsi']
+        # Invece di filtrare solo quelle disponibili, forziamo la creazione 
+        # delle colonne mancanti riempiendole con "-"
+        for col in ['time', 'pair', 'dir', 'price', 'rsi']:
+            if col not in signals_df.columns:
+                signals_df[col] = "-" 
+
+        # Ora mostriamo le colonne nell'ordine desiderato
+        display_df = signals_df[['time', 'pair', 'dir', 'price', 'rsi']].copy()
         
-        # Prendiamo solo quelle che esistono davvero
-        cols_to_show = [c for c in target_cols if c in available_cols]
-        
-        if cols_to_show:
-            display_df = signals_df[cols_to_show].copy()
-            
-            # Rinominiamo per un look professionale
-            rename_map = {
-                'time': '⏰ ORA',
-                'pair': '💱 COPPIA',
-                'dir': '🚀 TIPO',
-                'price': '💰 PREZZO',
-                'rsi': '📊 RSI'
-            }
-            display_df.rename(columns=rename_map, inplace=True)
+        rename_map = {
+            'time': '⏰ ORA',
+            'pair': '💱 COPPIA',
+            'dir': '🚀 TIPO',
+            'price': '💰 PREZZO',
+            'rsi': '📊 RSI'
+        }
+        st.dataframe(display_df.rename(columns=rename_map).tail(15), use_container_width=True, hide_index=True)
             
             # Mostriamo la tabella pulita
             st.dataframe(display_df.tail(15), use_container_width=True, hide_index=True)
-        else:
-            st.warning("Dati non ancora pronti per la visualizzazione.")
     else:
-        st.info("⏳ In attesa di segnali... Lo scanner è attivo!")
+        st.warning("Dati non ancora pronti per la visualizzazione.")
+else:
+    st.info("⏳ In attesa di segnali... Lo scanner è attivo!")
 
     # Auto-refresh
     time_module.sleep(2)
