@@ -239,7 +239,7 @@ if st.session_state.connected:
             fig.add_hline(y=rsi_sell, line_color="red", row=2, col=1, line_dash="dash")
     
             # --- PANNELLO 3: MACD ---
-                    fig.add_trace(go.Bar(x=df_final.index, y=df_final['HIST'], name="Momentum"), row=3, col=1)
+            fig.add_trace(go.Bar(x=df_final.index, y=df_final['HIST'], name="Momentum"), row=3, col=1)
             fig.add_trace(go.Scatter(x=df_final.index, y=df_final['MACD'], line=dict(color='cyan'), name="MACD"), row=3, col=1)
             fig.add_trace(go.Scatter(x=df_final.index, y=df_final['SIGNAL'], line=dict(color='orange'), name="Signal"), row=3, col=1)
     
