@@ -87,7 +87,7 @@ with st.sidebar:
 
 # --- MAIN DASHBOARD ---
 if st.session_state.connected:
-    Iq = st.session_state.iq_obj
+    Iq = st.session_state.iq
     
     st.divider()
 
