@@ -155,8 +155,6 @@ if st.session_state.connected:
         }
         st.dataframe(display_df.rename(columns=rename_map).tail(15), use_container_width=True, hide_index=True)
             
-            # Mostriamo la tabella pulita
-            st.dataframe(display_df.tail(15), use_container_width=True, hide_index=True)
     else:
         st.warning("Dati non ancora pronti per la visualizzazione.")
 else:
