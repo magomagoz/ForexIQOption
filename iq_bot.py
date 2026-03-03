@@ -123,26 +123,27 @@ with st.sidebar:
 if st.session_state.connected:
     Iq = st.session_state.iq
     
-    st.divider()
+    #st.divider()
 
-    st.subheader("👁️ Scanner FOREX")
+    #st.subheader("👁️ Scanner FOREX")
 
     # 1. PARAMETRI AGGRESSIVI (MODIFICATI PER RILEVARE DI PIÙ)
-    col1, col2, col3 = st.columns(3)
-    with col1: 
-        rsi_buy = st.number_input("🟢 RSI Buy (Soglia Alta = +Segnali)", value=30) # Alzato da 28
-    with col2: 
-        rsi_sell = st.number_input("🔴 RSI Sell (Soglia Bassa = +Segnali)", value=70) # Abbassato da 72
-    with col3:
-        timeframe = st.selectbox("Timeframe", [60, 300], index=0)
+    #col1, col2, col3 = st.columns(3)
+    #with col1: 
+        #rsi_buy = st.number_input("🟢 RSI Buy (Soglia Alta = +Segnali)", value=30) # Alzato da 28
+    #with col2: 
+        #rsi_sell = st.number_input("🔴 RSI Sell (Soglia Bassa = +Segnali)", value=70) # Abbassato da 72
+    #with col3:
+        #timeframe = st.selectbox("Timeframe", [60, 300], index=0)
 
-    # 2. SCANNER MULTI-PAIR
-    st.session_state.scanner = st.toggle("🔍 Attiva Scansione", value=True)
-
+    
     if st.session_state.scanner:
         ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"]
 
         # --- PUNTO 2: DEFINIZIONE PARAMETRI DINAMICI ---
+        # 2. SCANNER MULTI-PAIR
+        st.session_state.scanner = st.toggle("🔍 Attiva Scansione", value=True)
+
         if stress_test:
             # Parametri "Sporchi" per inondare lo scanner di segnali
             rsi_buy, rsi_sell = 45, 55
@@ -156,6 +157,7 @@ if st.session_state.connected:
             bb_period, bb_std = 20, 2.0
             m_fast, m_slow, m_sig = 8, 17, 9
             current_tf = timeframe # Usa quello selezionato nel selectbox
+            timeframe = st.selectbox("Timeframe", [60, 300], index=0)
 
         for pair in ALL_PAIRS:
                 
