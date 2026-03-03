@@ -70,7 +70,7 @@ with st.sidebar:
                 st.error(f"❌ Errore: {reason}")
     else:
         st.success(f"🟢 {st.session_state.account_type} LIVE")
-        st.session_state.stake = st.number_input("💰 Stake Virtuale ($)", value=10.0, step=5.0)
+        st.session_state.stake = st.number_input("💰 Stake Virtuale ($)", value=100.0, step=5.0)
         if st.button("🔴 SCOLLEGA"):
             st.session_state.connected = False
             st.rerun()
@@ -87,7 +87,7 @@ with st.sidebar:
 
 # --- MAIN DASHBOARD ---
 if st.session_state.connected:
-    Iq = st.session_state.iq
+    Iq = st.session_state.iq_obj
     
     st.divider()
 
