@@ -185,13 +185,22 @@ if st.session_state.connected:
 
     st.divider()
     
-    # --- 4. TABELLA SEGNALI AGGIORNATA ---
+    # --- 4. TABELLA SEGNALI (ULTIMO IN ALTO) ---
     st.subheader("📋 Trading Journal & Esiti")
     
     if st.session_state.signal_history:
+        # Creiamo il DataFrame
         df_journal = pd.DataFrame(st.session_state.signal_history)
         
-        # Rinominiamo le colonne per la visualizzazione
+        # Invertiamo l'ordine: l'ultimo aggiunto finisce in prima riga [::-1]
+        df_reversed = df_journal.iloc[::-1].copy()
+        
+        # Assicuriamoci che tutte le colonne esistano (per evitare errori se il segnale è nuovo)
+        for col in ['time', 'pair', 'dir', 'price', 'rsi', 'result']:
+            if col not in df_reversed.columns:
+                df_reversed[col] = "-" 
+    
+        # Rinominiamo per la visualizzazione
         rename_map = {
             'time': '⏰ ORA',
             'pair': '💱 COPPIA',
@@ -201,15 +210,17 @@ if st.session_state.connected:
             'result': '🔍 ESITO'
         }
         
-        # Applichiamo lo stile (Verde per Win, Rosso per Loss)
+        # Funzione per colorare l'esito
         def style_result(val):
             color = 'white'
-            if '✅' in str(val): color = '#00ff00' # Verde
-            elif '❌' in str(val): color = '#ff4b4b' # Rosso
+            if '✅' in str(val): color = '#00ff00'
+            elif '❌' in str(val): color = '#ff4b4b'
+            elif '⏳' in str(val): color = '#ffff00'
             return f'color: {color}'
     
+        # Visualizzazione della tabella invertita
         st.dataframe(
-            df_journal.rename(columns=rename_map).tail(15).style.applymap(style_result, subset=['🔍 ESITO']),
+            df_reversed.rename(columns=rename_map).style.applymap(style_result, subset=['🔍 ESITO']),
             use_container_width=True, 
             hide_index=True
         )
