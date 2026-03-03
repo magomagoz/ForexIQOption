@@ -190,41 +190,69 @@ if st.session_state.connected:
             except: continue
 
     st.divider()
-    st.subheader("📈 Grafico & RSI")
+    st.subheader("📈 Grafico (BB + RSI)")
     
-    # 3. GRAFICO (Il tuo Plotly originale)
-    pair_display = st.selectbox("Seleziona valute", ALL_PAIRS)
-    candles = Iq.get_candles(pair_display, 60, 80, time_module.time())
-    df_plot = pd.DataFrame(candles)
-    df_plot['RSI'] = ta.rsi(df_plot['close'], length=7)
-
-    fig = make_subplots(rows=2, cols=1, shared_xaxes=True, row_heights=[0.7, 0.3])
-    fig.add_trace(go.Candlestick(x=df_plot.index, open=df_plot['open'], high=df_plot['max'], low=df_plot['min'], close=df_plot['close']), row=1, col=1)
+    # 3. GRAFICO (Plotly con Bollinger e RSI)
+    pair_display = st.selectbox("Seleziona asset per l'analisi", ALL_PAIRS)
     
-
-
-    # --- AGGIUNGI QUESTO PRIMA DI FIG.ADD_TRACE ---
-    # Ricalcoliamo le bande per il grafico corrente
-    bb_plot = ta.bbands(df_plot['close'], length=20, std=2)
+    try:
+        # Recupero candele aggiornate
+        candles = Iq.get_candles(pair_display, 60, 80, time_module.time())
+        df_plot = pd.DataFrame(candles)
+        
+        # Calcolo Indicatori per il grafico
+        df_plot['RSI'] = ta.rsi(df_plot['close'], length=7)
+        bb_plot = ta.bbands(df_plot['close'], length=20, std=2)
     
-    # Aggiungi al grafico (Row 1)
-    fig.add_trace(go.Scatter(
-        x=df_plot.index, y=bb_plot['BBU_20_2.0'], 
-        line=dict(color='rgba(173, 216, 230, 0.4)', dash='dot'), 
-        name='BB Upper'
-    ), row=1, col=1)
+        # Creazione Subplots
+        fig = make_subplots(rows=2, cols=1, shared_xaxes=True, 
+                            row_heights=[0.7, 0.3], vertical_spacing=0.05)
     
-    fig.add_trace(go.Scatter(
-        x=df_plot.index, y=bb_plot['BBL_20_2.0'], 
-        line=dict(color='rgba(173, 216, 230, 0.4)', dash='dot'), 
-        name='BB Lower'
-    ), row=1, col=1)
+        # --- ROW 1: CANDLESTICK + BOLLINGER ---
+        # Candele
+        fig.add_trace(go.Candlestick(
+            x=df_plot.index, open=df_plot['open'], high=df_plot['max'], 
+            low=df_plot['min'], close=df_plot['close'], name="Prezzo"
+        ), row=1, col=1)
+    
+        # Banda Superiore
+        fig.add_trace(go.Scatter(
+            x=df_plot.index, y=bb_plot['BBU_20_2.0'], 
+            line=dict(color='rgba(173, 216, 230, 0.4)', width=1, dash='dot'), 
+            name='BB Upper'
+        ), row=1, col=1)
+    
+        # Banda Inferiore (con riempimento verso la superiore)
+        fig.add_trace(go.Scatter(
+            x=df_plot.index, y=bb_plot['BBL_20_2.0'], 
+            line=dict(color='rgba(173, 216, 230, 0.4)', width=1, dash='dot'),
+            fill='tonexty', fillcolor='rgba(173, 216, 230, 0.05)', # Ombreggiatura area Bollinger
+            name='BB Lower'
+        ), row=1, col=1)
+    
+        # --- ROW 2: RSI ---
+        fig.add_trace(go.Scatter(
+            x=df_plot.index, y=df_plot['RSI'], 
+            line=dict(color='#AB63FA', width=2), name="RSI"
+        ), row=2, col=1)
+    
+        # Linee di soglia RSI
+        fig.add_hline(y=rsi_buy, line_color="#00FF00", line_dash="dash", row=2, col=1)
+        fig.add_hline(y=rsi_sell, line_color="#FF0000", line_dash="dash", row=2, col=1)
+    
+        # Layout finale
+        fig.update_layout(
+            height=600, 
+            template="plotly_dark", 
+            xaxis_rangeslider_visible=False,
+            margin=dict(l=10, r=10, t=10, b=10),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+        )
+    
+        st.plotly_chart(fig, use_container_width=True)
 
-    fig.add_trace(go.Scatter(x=df_plot.index, y=df_plot['RSI'], line=dict(color='purple')), row=2, col=1)
-    fig.add_hline(y=rsi_buy, line_color="green", row=2, col=1)
-    fig.add_hline(y=rsi_sell, line_color="red", row=2, col=1)
-    fig.update_layout(height=600, template="plotly_dark", xaxis_rangeslider_visible=False)
-    st.plotly_chart(fig, use_container_width=True)
+except Exception as e:
+    st.warning(f"⚠️ Impossibile caricare il grafico per {pair_display}: {e}")
     
     # --- LOGICA DI VERIFICA ESITI (Dopo lo scanner) ---
 if st.session_state.connected:
