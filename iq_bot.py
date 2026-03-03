@@ -94,7 +94,7 @@ with st.sidebar:
     else:
         st.success(f"🟢 {st.session_state.account_type} ATTIVO")
         st.session_state.stake = st.number_input("💰 Stake ($)", value=100.0)
-        if st.button("🔴 SCOLLEGA"):
+        if st.button("🔴 **SCOLLEGA**"):
             st.session_state.connected = False
             st.rerun()
 
@@ -229,13 +229,13 @@ if st.session_state.connected:
                                          low=df_final['min'], close=df_final['close'], name="Prezzo"), row=1, col=1)
             
             # Banda Superiore
-            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBU'], line=dict(color='rgba(8,69,126,0.2)', dash='dot'), name="BBU"), row=1, col=1)
+            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBU'], line=dict(color='rgba(0,0,0,0.2)', dash='dot'), name="BBU"), row=1, col=1)
             
             # Banda Media (BBM) - La "Bussole" del trend
             fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBM'], line=dict(color='red', width=1), name="BBM"), row=1, col=1)
             
             # Banda Inferiore con riempimento leggero
-            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBL'], line=dict(color='rgba(8,69,126,0.2)', dash='dot'), 
+            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBL'], line=dict(color='rgba(0,0,0,0.2)', dash='dot'), 
                                      fill='tonexty', fillcolor='rgba(153, 203, 255, 0.1)', name="BBL"), row=1, col=1)
     
             # --- PANNELLO 2: RSI ---
