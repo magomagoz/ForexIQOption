@@ -111,6 +111,14 @@ with st.sidebar:
         # Visualizzazione
         #st.info(get_market_status())
 
+        st.divider()
+        st.subheader("🛠️ STRUMENTI DI TEST")
+        stress_test = st.toggle("🚀 STRESS TEST MODE", value=False, help="Attiva segnali frequenti per testare notifiche e suoni")
+        
+        if stress_test:
+            st.warning("⚠️ Modalità Test Attiva: Parametri alterati per generare segnali continui.")
+
+
 # --- MAIN DASHBOARD ---
 if st.session_state.connected:
     Iq = st.session_state.iq
