@@ -47,26 +47,42 @@ with st.sidebar:
     if not st.session_state.connected:
         email = st.text_input("Email", value="mago_magoz@libero.it")
         password = st.text_input("Password", type="password")
-        if st.button("🔌 CONNETTI"):
+        
+        # Scelta del conto prima di connettersi
+        tipo_conto = st.radio("Seleziona Conto", ["DEMO", "REALE"])
+        
+        if st.button("🔌 CONNETTI", type="primary"):
             Iq = IQ_Option(email, password)
             check, reason = Iq.connect()
+            
             if check:
-                # --- AGGIUNTA FONDAMENTALE PER IL CONTO DEMO ---
-                Iq.change_balance("PRACTICE") # Forziamo il passaggio al conto Demo
+                # 1. Impostiamo la modalità in base alla scelta dell'utente
+                mode = "PRACTICE" if tipo_conto == "DEMO" else "REAL"
+                Iq.change_balance(mode) 
                 
+                # 2. Salviamo i dati in sessione
                 st.session_state.iq = Iq
                 st.session_state.connected = True
+                st.session_state.account_type = tipo_conto # Salviamo il tipo per la grafica
                 
-                # Leggiamo il saldo del conto Demo (Practice)
+                # 3. Leggiamo il saldo del conto scelto (Demo o Reale)
                 st.session_state.local_balance = Iq.get_balance() 
                 st.rerun()
             else:
-                st.error(f"Errore: {reason}")
+                st.error(f"❌ Errore: {reason}")
     else:
-        # Visualizzazione stato nella sidebar
-        st.success(f"🟢 DEMO ACCOUNT LIVE")
+        # Visualizzazione stato dinamica
+        acc_type = st.session_state.get('account_type', 'DEMO')
+        st.success(f"🟢 {acc_type} ACCOUNT LIVE")
+        
         st.write(f"💰 Saldo Iniziale: {st.session_state.get('local_balance', 0):.2f}$")
-        st.session_state.virtual_stake = st.number_input("💰 Stake Virtuale ($)", value=100.0, step=5.0)
+        
+        # Stake virtuale
+        st.session_state.virtual_stake = st.number_input("💰 Stake Virtuale ($)", value=100.0, step=10.0)
+        
+        if st.button("🔴 DISCONNETTI"):
+            st.session_state.connected = False
+            st.rerun()
 
         # --- IN CIMA AL MAIN DASHBOARD ---
         if st.session_state.connected:
@@ -76,8 +92,6 @@ with st.sidebar:
                 value=f"{st.session_state.local_balance:.2f} $",
                 delta=f"{st.session_state.local_balance - Iq.get_balance():.2f} $ vs Inizio"
             )
-
-
         
         st.divider()
         
