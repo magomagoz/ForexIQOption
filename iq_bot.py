@@ -111,8 +111,6 @@ with st.sidebar:
         # Visualizzazione
         #st.info(get_market_status())
 
-
-
 # --- MAIN DASHBOARD ---
 if st.session_state.connected:
     Iq = st.session_state.iq
@@ -203,7 +201,7 @@ if st.session_state.connected:
         
         try:
             # 1. Recupero Dati (100 candele per avere stabilità sugli indicatori)
-            candles = Iq.get_candles(pair_display, timeframe, 100, time_module.time())
+            candles = Iq.get_candles(pair_display, timeframe, 80, time_module.time())
             df_plot = pd.DataFrame(candles)
             
             # 2. Calcolo Indicatori
