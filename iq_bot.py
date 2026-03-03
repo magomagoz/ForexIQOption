@@ -41,6 +41,7 @@ if 'connected' not in st.session_state: st.session_state.connected = False
 if 'active_trades' not in st.session_state: st.session_state.active_trades = {}
 if 'signal_history' not in st.session_state: st.session_state.signal_history = []
 
+# --- SIDEBAR: CONNESSIONE ---
 with st.sidebar:
     st.header("⚙️ AI TRADING PLATFORM")
     if not st.session_state.connected:
@@ -53,9 +54,27 @@ with st.sidebar:
                 st.session_state.iq = Iq
                 st.session_state.connected = True
                 st.rerun()
-    else:
-        st.success("🟢 IQ OPTION LIVE")
 
+                # CARICHIAMO IL SALDO REALE SOLO UNA VOLTA
+                st.session_state.local_balance = Iq.get_balance()
+                st.rerun()
+
+    else:
+        st.success(f"🟢 IQ OPTION LIVE - Saldo Iniziale: {st.session_state.get('local_balance', 0):.2f}$")
+        # Input per decidere quanto "investire" virtualmente per ogni trade
+        st.session_state.stake = st.number_input("💰 Stake virtuale per trade ($)", value=100.0)
+
+        # --- IN CIMA AL MAIN DASHBOARD ---
+        if st.session_state.connected:
+            # Mostriamo il saldo locale aggiornato
+            st.metric(
+                label="💵 Saldo Sessione (Virtuale)", 
+                value=f"{st.session_state.local_balance:.2f} $",
+                delta=f"{st.session_state.local_balance - Iq.get_balance():.2f} $ vs Inizio"
+            )
+
+
+        
         st.divider()
         
         # --- SESSIONI DI MERCATO ---
@@ -148,7 +167,7 @@ if st.session_state.connected:
     fig.add_hline(y=rsi_sell, line_color="red", row=2, col=1)
     fig.update_layout(height=600, template="plotly_dark", xaxis_rangeslider_visible=False)
     st.plotly_chart(fig, use_container_width=True)
-
+    
     # --- LOGICA DI VERIFICA ESITI (Dopo lo scanner) ---
     if st.session_state.connected:
         now = time_module.time()
@@ -182,6 +201,21 @@ if st.session_state.connected:
                     del st.session_state.active_trades[pair]
                 except:
                     continue
+
+                    
+                    # AGGIORNAMENTO SALDO LOCALE
+                    stake = st.session_state.get('stake', 10)
+                    if win:
+                        # Ipotizziamo un payout medio dell'85%
+                        st.session_state.local_balance += (stake * 0.85)
+                        esito_testo = "✅ WIN"
+                    else:
+                        st.session_state.local_balance -= stake
+                        esito_testo = "❌ LOSS"
+    
+                    # ... (aggiornamento signal_history) ...
+                except: continue
+
 
     st.divider()
 
