@@ -53,9 +53,6 @@ def get_market_status():
     else:
         return "💤 MERCATO LENTO"
 
-# Visualizzazione
-st.info(get_market_status())
-
 st.set_page_config(page_title="Sentinel AI", page_icon="🚀", layout="wide")
 
 # Logo
@@ -110,6 +107,11 @@ with st.sidebar:
         for city, (start, end) in {"LONDRA 🇬🇧": (time(9,0), time(18,0)), "NEW YORK 🇺🇸": (time(14,0), time(23,0)), "SYDNEY 🇦🇺": (time(23,0), time(8,0)), "TOKYO 🇯🇵": (time(1,0), time(10,0))}.items():
             status = "🟢 Open: " if start <= now_cet <= end else "🔴 Closed: "
             st.write(f"{status} {city}")
+
+        # Visualizzazione
+        st.info(get_market_status())
+
+
 
 # --- MAIN DASHBOARD ---
 if st.session_state.connected:
