@@ -244,7 +244,7 @@ if st.session_state.connected:
 
     # 2. Pausa tecnica (fondamentale per non bloccare il browser)
     # Imposta 2 o 3 secondi: è il tempo perfetto per l'API di IQ Option
-    time_module.sleep(2) 
+    time_module.sleep(3) 
 
     # 3. Il comando magico che resetta lo script dall'alto
     st.rerun() 
