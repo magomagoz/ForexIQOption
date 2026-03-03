@@ -98,9 +98,9 @@ if st.session_state.connected:
     # 1. PARAMETRI AGGRESSIVI (MODIFICATI PER RILEVARE DI PIÙ)
     col1, col2, col3 = st.columns(3)
     with col1: 
-        rsi_buy = st.number_input("🟢 RSI Buy (Soglia Alta = +Segnali)", value=45) # Alzato da 28
+        rsi_buy = st.number_input("🟢 RSI Buy (Soglia Alta = +Segnali)", value=35) # Alzato da 28
     with col2: 
-        rsi_sell = st.number_input("🔴 RSI Sell (Soglia Bassa = +Segnali)", value=55) # Abbassato da 72
+        rsi_sell = st.number_input("🔴 RSI Sell (Soglia Bassa = +Segnali)", value=65) # Abbassato da 72
     with col3:
         timeframe = st.selectbox("Timeframe", [60, 300], index=0)
 
@@ -268,7 +268,7 @@ if st.session_state.connected:
             color = 'white'
             if '✅' in str(val): color = '#00ff00'
             elif '❌' in str(val): color = '#ff4b4b'
-            elif '⏳' in str(val): color = '#ffbf00'
+            elif '⏳' in str(val): color = '#ffa500'
             return f'color: {color}'
     
         # Visualizzazione della tabella invertita
