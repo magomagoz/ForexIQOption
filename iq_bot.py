@@ -70,6 +70,18 @@ with st.sidebar:
 if st.session_state.connected:
     Iq = st.session_state.iq
 
+    # --- LOGICA DI REFRESH AUTOMATICO ---
+    
+    # 1. Messaggio discreto di stato dello scanner
+    st.caption(f"🔄 Scanner in esecuzione... Ultimo check: {datetime.now().strftime('%H:%M:%S')}")
+
+    # 2. Pausa tecnica (fondamentale per non bloccare il browser)
+    # Imposta 2 o 3 secondi: è il tempo perfetto per l'API di IQ Option
+    time_module.sleep(2) 
+
+    # 3. Il comando magico che resetta lo script dall'alto
+    st.rerun() 
+    
     st.divider()
 
     st.subheader("👁️ Scanner FOREX")
@@ -184,7 +196,16 @@ if st.session_state.connected:
                     continue
 
     st.divider()
-    
+
+    # Calcolo statistiche veloci
+    if st.session_state.signal_history:
+        wins = sum(1 for s in st.session_state.signal_history if "✅" in str(s.get('result', '')))
+        losses = sum(1 for s in st.session_state.signal_history if "❌" in str(s.get('result', '')))
+        total = wins + losses
+        rate = (wins / total * 100) if total > 0 else 0
+        
+        st.metric("🏆 PERFORMANCE LIVE", f"Win Rate: {rate:.1f}%", f"W: {wins} | L: {losses}")
+
     # --- 4. TABELLA SEGNALI (ULTIMO IN ALTO) ---
     st.subheader("📋 Trading Journal & Esiti")
     
@@ -232,3 +253,4 @@ if st.session_state.connected:
     #st.subheader("📋 Storico Segnali Recenti")
     #if st.session_state.signal_history:
         #st.table(pd.DataFrame(st.session_state.signal_history).tail(10))
+
