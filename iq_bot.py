@@ -128,7 +128,7 @@ if st.session_state.connected:
                     
                     send_telegram_signal(direction, pair, price, curr_rsi, 0)
                     play_trade_sound("buy")
-                    st.toast(f"SEGNALE {direction} su {pair}!", icon="🔥")
+                    st.error(f"SEGNALE {direction} su {pair}!", icon="🔥")
 
             except: continue
 
@@ -185,6 +185,8 @@ if st.session_state.connected:
 
     st.divider()
 
+    st.subheader("📋 Trading Journal & Esiti")
+
     # Calcolo statistiche veloci
     if st.session_state.signal_history:
         wins = sum(1 for s in st.session_state.signal_history if "✅" in str(s.get('result', '')))
@@ -195,7 +197,6 @@ if st.session_state.connected:
         st.metric("🏆 PERFORMANCE LIVE", f"Win Rate: {rate:.1f}%", f"W: {wins} | L: {losses}")
 
     # --- 4. TABELLA SEGNALI (ULTIMO IN ALTO) ---
-    st.subheader("📋 Trading Journal & Esiti")
     
     if st.session_state.signal_history:
         # Creiamo il DataFrame
