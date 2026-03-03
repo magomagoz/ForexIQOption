@@ -158,8 +158,8 @@ if st.session_state.connected:
             current_tf = 60 
         else:
             # Parametri "Gold" per Trading Reale (da input sidebar o fissi)
-            rsi_buy = st.sidebar.number_input("🟢 RSI Buy (Soglia)", value=30)
-            rsi_sell = st.sidebar.number_input("🔴 RSI Sell (Soglia)", value=70)
+            rsi_buy = 30
+            rsi_sell = 70
             bb_period, bb_std = 20, 2.0
             m_fast, m_slow, m_sig = 8, 17, 9
             current_tf = timeframe # Usa quello selezionato nel selectbox
