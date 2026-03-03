@@ -220,7 +220,7 @@ if st.session_state.connected:
     st.divider()
 
     # --- SEZIONE STATISTICHE E SALDO AGGIORNATO ---
-    st.subheader("📋 Trading Journal & Esiti")
+    st.subheader("📋 Trading Journal")
     
     if st.session_state.signal_history:
         wins = sum(1 for s in st.session_state.signal_history if "✅" in str(s.get('result', '')))
