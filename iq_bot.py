@@ -28,7 +28,7 @@ if 'active_trades' not in st.session_state: st.session_state.active_trades = {}
 if 'signal_history' not in st.session_state: st.session_state.signal_history = []
 
 with st.sidebar:
-    st.header("⚙️ IQ TRADING PLATFORM")
+    st.header("⚙️ AI TRADING PLATFORM")
     if not st.session_state.connected:
         email = st.text_input("Email", value="mago_magoz@libero.it")
         password = st.text_input("Password", type="password")
@@ -63,10 +63,12 @@ if st.session_state.connected:
         timeframe = st.selectbox("Timeframe", [60, 300], index=0)
 
     # 2. SCANNER MULTI-PAIR
-    st.session_state.scanner = st.toggle("🔍 Attiva Scanner Aggressivo", value=True)
+    st.subheader("👁️ Scanner FOREX")
+    
+    st.session_state.scanner = st.toggle("🔍 Attiva Scansione", value=True)
     
     if st.session_state.scanner:
-        ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "EURJPY", "GBPJPY"]
+        ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"]
         placeholder = st.empty()
         
         for pair in ALL_PAIRS:
