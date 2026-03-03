@@ -93,8 +93,8 @@ with st.sidebar:
                 st.rerun()
     else:
         st.success(f"🟢 {st.session_state.account_type} ATTIVO")
-        st.session_state.stake = st.number_input("💰 Stake ($)", value=100.0)
-        if st.button("🔴 SCOLLEGA"):
+        st.session_state.stake = st.number_input("💰 Stake (€)", value=100.0)
+        if st.button("🔴 DISCONNETTI"):
             st.session_state.connected = False
             st.rerun()
 
@@ -320,7 +320,7 @@ if st.session_state.connected:
             st.metric("📊 Score", f"W: {wins} | L: {losses}")
         with m3:
             # Questo è il saldo che si aggiorna con i tuoi calcoli Win/Loss
-            st.metric(f"💰 Saldo {st.session_state.account_type}", f"{st.session_state.local_balance:.2f} $")    
+            st.metric(f"💰 Saldo {st.session_state.account_type}", f"{st.session_state.local_balance:.2f} €")    
         
     # --- 4. TABELLA SEGNALI (ULTIMO IN ALTO) ---    
     if st.session_state.signal_history:
@@ -343,16 +343,10 @@ if st.session_state.connected:
                 'price': '💰 ENTRATA',
                 'rsi': '📊 RSI',
                 'macd': '📉 MACD',
-                'bb_dist': '↔️ BB DIST',
+                'bb_dist': '↔️ BB DISTANZA',
                 'result': '🔍 ESITO'
             }
             
-            st.dataframe(
-                df_reversed.rename(columns=rename_map).style.applymap(style_result, subset=['🔍 ESITO']),
-                use_container_width=True, 
-                hide_index=True
-            )
-    
         # Funzione per colorare l'esito
         def style_result(val):
             color = 'white'
