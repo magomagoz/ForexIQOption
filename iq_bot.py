@@ -130,10 +130,10 @@ if st.session_state.connected:
 
             except: continue
 
-    st.subheader("📈 Grafico FOREX")
+    st.subheader("📈 Grafico & RSI")
     
     # 3. GRAFICO (Il tuo Plotly originale)
-    pair_display = st.selectbox("Seleziona Grafico", ALL_PAIRS)
+    pair_display = st.selectbox("Seleziona valute", ALL_PAIRS)
     candles = Iq.get_candles(pair_display, 60, 100, time_module.time())
     df_plot = pd.DataFrame(candles)
     df_plot['RSI'] = ta.rsi(df_plot['close'], length=7)
