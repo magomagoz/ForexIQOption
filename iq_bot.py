@@ -49,7 +49,7 @@ if 'local_balance' not in st.session_state: st.session_state.local_balance = 0
 with st.sidebar:
     st.header("⚙️ CONFIGURAZIONE")
     if not st.session_state.connected:
-        email = st.text_input("Email", value="tua_email@esempio.it")
+        email = st.text_input("Email", value="mago_magoz@libero.it")
         password = st.text_input("Password", type="password")
         tipo_conto = st.radio("Conto", ["DEMO", "REALE"])
         
