@@ -171,34 +171,34 @@ if st.session_state.connected:
 
     
     for pair, trade in list(st.session_state.active_trades.items()):
-    # Se sono passati 60 secondi
-    if now_ts - trade['entry_time'] >= 60:
-        try:
-            res = Iq.get_candles(pair, 60, 1, now_ts)
-            exit_price = res[0]['close']
-            
-            # Calcola Win/Loss
-            if trade['direction'] == "BUY":
-                win = exit_price > trade['entry_price']
-            else:
-                win = exit_price < trade['entry_price']
-            
-            # Aggiorna il Saldo Locale
-            stake = st.session_state.get('stake', 100.0)
-            if win:
-                st.session_state.local_balance += (stake * 0.85)
-            else:
-                st.session_state.local_balance -= stake
-
-            # Aggiorna la riga nella tabella
-            for s in reversed(st.session_state.signal_history):
-                if s['pair'] == pair and s['result'] == "⏳ In corso...":
-                    s['result'] = "✅ WIN" if win else "❌ LOSS"
-                    break
-            
-            # Rimuovi dai trade attivi
-            del st.session_state.active_trades[pair]
-        except: continue
+        # Se sono passati 60 secondi
+        if now_ts - trade['entry_time'] >= 60:
+            try:
+                res = Iq.get_candles(pair, 60, 1, now_ts)
+                exit_price = res[0]['close']
+                
+                # Calcola Win/Loss
+                if trade['direction'] == "BUY":
+                    win = exit_price > trade['entry_price']
+                else:
+                    win = exit_price < trade['entry_price']
+                
+                # Aggiorna il Saldo Locale
+                stake = st.session_state.get('stake', 100.0)
+                if win:
+                    st.session_state.local_balance += (stake * 0.85)
+                else:
+                    st.session_state.local_balance -= stake
+    
+                # Aggiorna la riga nella tabella
+                for s in reversed(st.session_state.signal_history):
+                    if s['pair'] == pair and s['result'] == "⏳ In corso...":
+                        s['result'] = "✅ WIN" if win else "❌ LOSS"
+                        break
+                
+                # Rimuovi dai trade attivi
+                del st.session_state.active_trades[pair]
+            except: continue
 
     st.divider()
 
