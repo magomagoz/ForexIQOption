@@ -94,6 +94,9 @@ with st.sidebar:
     else:
         st.success(f"🟢 Conto {st.session_state.account_type} ATTIVO")
         st.session_state.stake = st.number_input("💰 Stake (€)", value=100.0)
+        
+        timeframe = st.selectbox("⏱️ SELEZIONA TIMEFRAME OPERATIVO", [60, 300], index=0)
+    
         if st.button("🔴 DISCONNETTI"):
             st.session_state.connected = False
             st.rerun()
@@ -116,9 +119,9 @@ with st.sidebar:
         stress_test = st.toggle("🚀 STRESS TEST MODE", value=False, help="Attiva segnali frequenti per testare notifiche e suoni")
         
         if stress_test:
-            st.warning("⚠️ Modalità TEST:\n\nno BB - RSI (45/55) - no MACD")
+            st.warning("⚠️ **Modalità TEST:\n\nno BB - RSI (45/55) - no MACD**")
         else:
-            st.success("🟢 Modalità REALE:\n\nBB (20,2.0) - RSI (28/72) - MACD (8,17,9)")
+            st.success("🟢 **Modalità REALE:\n\nBB (20,2.0) - RSI (28/72) - MACD (8,17,9)**")
 
         st.divider()
         if st.button("🗑️ PULISCI STORICO", use_container_width=True):
@@ -144,11 +147,9 @@ if st.session_state.connected:
     ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"]
 
     # --- SEZIONE COMANDI SCANNER (PULSANTI VERTICALI) ---
-    # 1. Selettore Timeframe (ora occupa tutta la larghezza)
-    timeframe = st.selectbox("⏱️ SELEZIONA TIMEFRAME OPERATIVO", [60, 300], index=0)
     
     # Spazio estetico
-    st.write("")
+    #st.write("")
 
     # 2. Pulsante START/STOP (Sotto al timeframe, a tutta larghezza)
     if 'scanner_on' not in st.session_state:
