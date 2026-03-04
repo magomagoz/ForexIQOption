@@ -169,7 +169,8 @@ if st.session_state.connected:
         st.markdown("<h4 style='text-align: center; color: #FFFFFF;'>⚪ SCANNER IN STANDBY</h4>", unsafe_allow_html=True)
     
     # Ora cambiamo il controllo principale
-    if scanner_attivo:
+    #if scanner_attivo:
+    if.st.session_state.scanner:    
         ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"]
     
         # --- 2. DEFINIZIONE PARAMETRI AUTOMATICA ---
