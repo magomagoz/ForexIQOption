@@ -264,7 +264,7 @@ if st.session_state.connected:
             fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBU'], line=dict(color='rgba(0,71,171,0.4)', dash='dot'), name="BBU"), row=1, col=1)
             fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBM'], line=dict(color='rgba(255,255,255,0.3)', width=1), name="BBM"), row=1, col=1)
             fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBL'], line=dict(color='rgba(0,71,171,0.4)', dash='dot'), 
-                                     fill='tonexty', fillcolor='rgba(153, 203, 255, 0.05)', name="BBL"), row=1, col=1)
+                                     fill='tonexty', fillcolor='rgba(58, 117, 196, 0.05)', name="BBL"), row=1, col=1)
     
             # --- PANNELLO 2: RSI ---
             fig.add_trace(go.Scatter(x=df_final.index, y=df_final['RSI'], line=dict(color='#AB63FA'), name="RSI"), row=2, col=1)
