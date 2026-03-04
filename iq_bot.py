@@ -173,12 +173,6 @@ if st.session_state.connected:
     # Usiamo una variabile di comodo per il resto del codice
     scanner_attivo = st.session_state.scanner_on
     
-    # Messaggio di stato colorato sotto i pulsanti
-    if scanner_attivo:
-        st.markdown("<h4 style='text-align: center; color: #FF4B4B;'>🔴 SCANNER IN ESECUZIONE...</h4>", unsafe_allow_html=True)
-    else:
-        st.markdown("<h4 style='text-align: center; color: #FFFFFF;'>⚪ SCANNER IN STANDBY</h4>", unsafe_allow_html=True)
-    
     if scanner_attivo:
     #if st.session_state.scanner:    
     
