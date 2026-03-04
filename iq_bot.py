@@ -207,7 +207,7 @@ if st.session_state.connected:
         st.info("Riposa. Il mercato sarà qui anche domani.")
     elif scanner_attivo and not is_trading_time and not stress_test:
         st.warning("🛡️ PROTEZIONE ORARIA: Mercato in bassa volatilità.")
-        st.info(f"⏰ Prossima finestra: {window_1[0] if now_time > window_1[0] else window_2[0]}")
+        st.success(f"⏰ Prossima finestra: {window_1[0] if now_time > window_1[0] else window_2[0]}")
     
     # 5. Esecuzione Scanner
     if scanner_autorizzato:
