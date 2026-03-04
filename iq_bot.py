@@ -143,23 +143,32 @@ if st.session_state.connected:
     
     ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"]
 
-    # --- SEZIONE COMANDI SCANNER ---
-    col_tf, col_btn = st.columns([1, 1])
+    # --- SEZIONE COMANDI SCANNER (PULSANTI VERTICALI) ---
+    # 1. Selettore Timeframe (ora occupa tutta la larghezza)
+    timeframe = st.selectbox("⏱️ SELEZIONA TIMEFRAME OPERATIVO", [60, 300], index=0)
     
-    with col_tf:
-        timeframe = st.selectbox("⏱️ Timeframe Operativo", [60, 300], index=0)
+    # Spazio estetico
+    st.write("")
+
+    # 2. Pulsante START/STOP (Sotto al timeframe, a tutta larghezza)
+    if 'scanner_on' not in st.session_state:
+        st.session_state.scanner_on = False
+
+    label = "🛑 STOP SCANNER" if st.session_state.scanner_on else "🚀 AVVIA SCANNER"
     
-    with col_btn:
-        # Inizializziamo lo stato dello scanner se non esiste
-        if 'scanner_on' not in st.session_state:
-            st.session_state.scanner_on = False
-    
-        # Pulsante dinamico: cambia testo e "colore" percepito tramite icone e stile
-        label = "🛑 STOP SCANNER" if st.session_state.scanner_on else "🚀 AVVIA SCANNER"
-        
-        if st.button(label, use_container_width=True, type="primary" if not st.session_state.scanner_on else "secondary"):
-            st.session_state.scanner_on = not st.session_state.scanner_on
-            st.rerun()
+    # 'type' cambia il look: primario (colorato) o secondario (bianco/nero)
+    if st.button(label, use_container_width=True, type="primary" if not st.session_state.scanner_on else "secondary", help="Attiva o disattiva la scansione degli asset"):
+        st.session_state.scanner_on = not st.session_state.scanner_on
+        st.rerun()
+
+    scanner_attivo = st.session_state.scanner_on
+
+    # 3. Indicatore di stato gigante
+    if scanner_attivo:
+        st.error("📡 SISTEMA IN SCANSIONE ATTIVA", icon="🔥")
+    else:
+        st.warning("💤 SISTEMA IN STANDBY", icon="⚪")
+
     
     # Usiamo una variabile di comodo per il resto del codice
     scanner_attivo = st.session_state.scanner_on
