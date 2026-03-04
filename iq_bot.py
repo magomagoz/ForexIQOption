@@ -280,18 +280,40 @@ if st.session_state.connected:
             fig.add_hline(y=rsi_buy, line_color="green", row=2, col=1, line_dash="dash")
             fig.add_hline(y=rsi_sell, line_color="red", row=2, col=1, line_dash="dash")
     
+            # --- CALCOLO COLORI MACD DINAMICI (Stile TradingView) ---
+            macd_colors = []
+            hist_diff = df_final['HIST'].diff() # Calcola la differenza con la barra precedente
+            
+            for i in range(len(df_final)):
+                val = df_final['HIST'].iloc[i]
+                diff = hist_diff.iloc[i]
+                
+                if pd.isna(diff): # Per la primissima candela
+                    macd_colors.append('rgba(255,255,255,0.2)')
+                elif val > 0 and diff > 0:
+                    macd_colors.append('#26A69A') # Verde Forte (Momentum rialzista in crescita)
+                elif val > 0 and diff <= 0:
+                    macd_colors.append('#B2DFDB') # Verde Chiaro (Momentum rialzista in esaurimento)
+                elif val < 0 and diff < 0:
+                    macd_colors.append('#EF5350') # Rosso Forte (Momentum ribassista in crescita)
+                elif val < 0 and diff >= 0:
+                    macd_colors.append('#FFCDD2') # Rosso Chiaro (Momentum ribassista in esaurimento)
+
             # --- PANNELLO 3: MACD ---
-            fig.add_trace(go.Bar(x=df_final.index, y=df_final['HIST'], name="Momentum", marker_color='rgba(255,255,255,0.2)'), row=3, col=1)
-            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['MACD'], line=dict(color='cyan'), name="MACD"), row=3, col=1)
-            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['SIGNAL'], line=dict(color='orange'), name="Signal"), row=3, col=1)
+            # Sostituiamo il colore fisso con la nostra lista macd_colors
+            fig.add_trace(go.Bar(x=df_final.index, y=df_final['HIST'], name="Momentum", marker_color=macd_colors), row=3, col=1)
+            
+            # (Opzionale) Ho reso le linee del MACD e del Signal un po' più spesse e visibili
+            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['MACD'], line=dict(color='#00E5FF', width=2), name="MACD"), row=3, col=1)
+            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['SIGNAL'], line=dict(color='#FF9100', width=2), name="Signal"), row=3, col=1)
             
             for i in fig['layout']['annotations']:
-                i['font'] = dict(size=14, color='#000000') # Ricordati il bianco!
+                i['font'] = dict(size=14, color='#000000')
 
             # --- AGGIUNGI QUESTO PER LE RIGHE VERTICALI E IL MIRINO ---
             fig.update_xaxes(
                 showgrid=True, 
-                gridcolor='rgba(255,255,255,0.08)', # Righe verticali fisse leggere
+                gridcolor='rgba(180,180,180,0.08)', # Righe verticali fisse leggere
                 showspikes=True, 
                 spikecolor="white", 
                 spikethickness=1, 
