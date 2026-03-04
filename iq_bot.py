@@ -193,12 +193,16 @@ if st.session_state.connected:
                 curr_macd = macd['MACD'].iloc[-1]
                 curr_sig = macd['SIGNAL'].iloc[-1]
             
-                # LOGICA DI TRIGGER (Triple Confirmation)
-                #is_buy = (curr_rsi < rsi_buy) and (price <= curr_bb_low) and (curr_macd > curr_sig)
-                #is_sell = (curr_rsi > rsi_sell) and (price >= curr_bb_up) and (curr_macd < curr_sig)
-
-                is_buy = (curr_rsi < 52) # Praticamente sempre vero
-                is_sell = (curr_rsi > 48) # Praticamente sempre vero
+                # --- LOGICA DINAMICA (CONSIGLIO 3) ---
+                if stress_test:
+                    # In modalità Stress Test, basta un RSI leggermente fuori equilibrio
+                    # per generare una raffica di segnali tecnici
+                    is_buy = curr_rsi < 52
+                    is_sell = curr_rsi > 48
+                else:
+                    # In modalità Reale, usiamo la Triple Confirmation rigida
+                    is_buy = (curr_rsi < rsi_buy) and (price <= curr_bb_low) and (curr_macd > curr_sig)
+                    is_sell = (curr_rsi > rsi_sell) and (price >= curr_bb_up) and (curr_macd < curr_sig)
 
                 if (is_buy or is_sell) and pair not in st.session_state.active_trades:
                     direction = "BUY" if is_buy else "SELL"
