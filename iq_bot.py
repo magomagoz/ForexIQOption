@@ -278,9 +278,15 @@ if st.session_state.connected:
                                      fill='tonexty', fillcolor='rgba(100, 100, 255, 0.05)', name="BBL"), row=1, col=1)
     
             # --- PANNELLO 2: RSI ---
+            # Definiamo le soglie visive in base alla modalità attiva
+            grafico_rsi_buy = 45 if stress_test else 28
+            grafico_rsi_sell = 55 if stress_test else 72
+
             fig.add_trace(go.Scatter(x=df_final.index, y=df_final['RSI'], line=dict(color='#AB63FA'), name="RSI"), row=2, col=1)
-            fig.add_hline(y=rsi_buy, line_color="green", row=2, col=1, line_dash="dash")
-            fig.add_hline(y=rsi_sell, line_color="red", row=2, col=1, line_dash="dash")
+            
+            # Linee tratteggiate dinamiche
+            fig.add_hline(y=grafico_rsi_buy, line_color="green", row=2, col=1, line_dash="dash")
+            fig.add_hline(y=grafico_rsi_sell, line_color="red", row=2, col=1, line_dash="dash")
     
             # --- CALCOLO COLORI MACD DINAMICI (Stile TradingView) ---
             macd_colors = []
