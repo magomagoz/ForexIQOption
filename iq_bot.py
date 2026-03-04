@@ -194,12 +194,21 @@ if st.session_state.connected:
                 curr_sig = macd['SIGNAL'].iloc[-1]
             
                 # LOGICA DI TRIGGER (Triple Confirmation)
-                is_buy = (curr_rsi < rsi_buy) and (price <= curr_bb_low) and (curr_macd > curr_sig)
-                is_sell = (curr_rsi > rsi_sell) and (price >= curr_bb_up) and (curr_macd < curr_sig)
-            
+                #is_buy = (curr_rsi < rsi_buy) and (price <= curr_bb_low) and (curr_macd > curr_sig)
+                #is_sell = (curr_rsi > rsi_sell) and (price >= curr_bb_up) and (curr_macd < curr_sig)
+
+                is_buy = (curr_rsi < 52) # Praticamente sempre vero
+                is_sell = (curr_rsi > 48) # Praticamente sempre vero
+
                 if (is_buy or is_sell) and pair not in st.session_state.active_trades:
                     direction = "BUY" if is_buy else "SELL"
-                    
+
+                    st.session_state.active_trades[pair] = {
+                        'entry_price': price,
+                        'entry_time': time_module.time(),
+                        'direction': direction
+                    }
+
                     # Salvataggio dati nel Journal con dettagli tecnici
                     st.session_state.signal_history.append({
                         'time': datetime.now().strftime("%H:%M:%S"),
