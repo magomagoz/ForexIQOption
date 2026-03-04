@@ -289,7 +289,7 @@ if st.session_state.connected:
                 diff = hist_diff.iloc[i]
                 
                 if pd.isna(diff): # Per la primissima candela
-                    macd_colors.append('rgba(255,255,255,0.2)')
+                    macd_colors.append('rgba(0,0,0,0.2)')
                 elif val > 0 and diff > 0:
                     macd_colors.append('#26A69A') # Verde Forte (Momentum rialzista in crescita)
                 elif val > 0 and diff <= 0:
