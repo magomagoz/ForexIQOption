@@ -207,18 +207,15 @@ if st.session_state.connected:
         st.info("Riposa. Il mercato sarà qui anche domani.")
     elif scanner_attivo and not is_trading_time and not stress_test:
         st.warning("🛡️ PROTEZIONE ORARIA: Mercato in bassa volatilità.")
-        st.info(f"⏰ Prossima finestra: {window_1[0] if now_time < window_1[0] else window_2[0]}")
-    elif scanner_attivo:
-        scanner_autorizzato = True
-        st.error("📡 SISTEMA IN SCANSIONE ATTIVA", icon="🔥")
-
+        st.info(f"⏰ Prossima finestra: {window_1[0] if now_time > window_1[0] else window_2[0]}")
+    
     # 5. Esecuzione Scanner
     if scanner_autorizzato:
     # Qui inizia il tuo ALL_PAIRS e il ciclo FOR per ogni coppia...
 
         # 3. Indicatore di stato gigante
         if scanner_attivo:
-            st.error("📡 SISTEMA IN SCANSIONE ATTIVA", icon="🔥")
+            st.success("📡 SISTEMA IN SCANSIONE ATTIVA", icon="🔥")
             
             # --- NUOVA SEZIONE: MONITOR DELLE VALUTE ---
             st.subheader("🕵️ Asset in Monitoraggio")
