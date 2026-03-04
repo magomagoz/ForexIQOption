@@ -376,7 +376,7 @@ if st.session_state.connected:
                 'price': '💰 ENTRATA',
                 'rsi': '📊 RSI',
                 'macd': '📉 MACD',
-                'bb_dist': '↔️ BB DISTANZA',
+                'bb_dist': '↔️ BB',
                 'result': '🔍 ESITO'
             }
             
