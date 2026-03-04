@@ -280,11 +280,29 @@ if st.session_state.connected:
             fig.add_trace(go.Bar(x=df_final.index, y=df_final['HIST'], name="Momentum", marker_color='rgba(255,255,255,0.2)'), row=3, col=1)
             fig.add_trace(go.Scatter(x=df_final.index, y=df_final['MACD'], line=dict(color='cyan'), name="MACD"), row=3, col=1)
             fig.add_trace(go.Scatter(x=df_final.index, y=df_final['SIGNAL'], line=dict(color='orange'), name="Signal"), row=3, col=1)
-    
+            
             for i in fig['layout']['annotations']:
-                i['font'] = dict(size=14, color='#000000') 
-                    
-            fig.update_layout(height=850, template="plotly_dark", xaxis_rangeslider_visible=False, margin=dict(l=10,r=10,b=10,t=40))
+                i['font'] = dict(size=14, color='#000000') # Ricordati il bianco!
+
+            # --- AGGIUNGI QUESTO PER LE RIGHE VERTICALI E IL MIRINO ---
+            fig.update_xaxes(
+                showgrid=True, 
+                gridcolor='rgba(255,255,255,0.08)', # Righe verticali fisse leggere
+                showspikes=True, 
+                spikecolor="white", 
+                spikethickness=1, 
+                spikedash="dot",
+                spikemode="across" # Linea interattiva che taglia tutti i 3 grafici
+            )
+            
+            fig.update_layout(
+                hovermode="x unified", # Ti mostra il valore esatto di Prezzo, RSI e MACD in un unico box!
+                height=850, 
+                template="plotly_dark", 
+                xaxis_rangeslider_visible=False, 
+                margin=dict(l=10,r=10,b=10,t=40)
+            )
+            
             st.plotly_chart(fig, use_container_width=True)
     
         except Exception as e:
