@@ -132,7 +132,7 @@ with st.sidebar:
 if st.session_state.connected:
     Iq = st.session_state.iq
     
-    st.divider()
+    #st.divider()
 
     st.header("👁️ Scanner FOREX")
 
