@@ -69,7 +69,7 @@ if 'signal_history' not in st.session_state: st.session_state.signal_history = [
 if 'local_balance' not in st.session_state: st.session_state.local_balance = 0
 
 with st.sidebar:
-    st.header("⚙️ IQ TRADING PLATFORM")
+    st.header("⚙️ IQ FOREX TRADING PLATFORM")
     if not st.session_state.connected:
         email = st.text_input("Email", value="mago_magoz@libero.it")
         password = st.text_input("Password", type="password")
@@ -93,9 +93,9 @@ with st.sidebar:
                 st.rerun()
     else:
         st.success(f"🟢 Conto {st.session_state.account_type} ATTIVO")
-        st.session_state.stake = st.number_input("💰 Stake (€)", value=100.0)
+        st.session_state.stake = st.number_input("💰 INVESTIMENTO (€)", value=100.0)
         
-        timeframe = st.selectbox("⏱️ SELEZIONA TIMEFRAME OPERATIVO", [60, 300], index=0)
+        timeframe = st.selectbox("⏱️ SELEZIONA TIMEFRAME OPERATIVO (s)", [60, 300], index=0)
     
         if st.button("🔴 DISCONNETTI"):
             st.session_state.connected = False
