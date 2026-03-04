@@ -141,16 +141,35 @@ if st.session_state.connected:
 
     st.header("👁️ Scanner FOREX")
 
-    # --- 1. SEZIONE PARAMETRI (Nascosta all'utente, gestita dal sistema) ---
-    with st.container():
-        # Lasciamo solo il selettore del Timeframe e lo switch dello Scanner
-        c1, c2 = st.columns([1, 1])
-        with c1:
-            timeframe = st.selectbox("⏱️ Timeframe Operativo", [60, 300], index=0)
-        with c2:
-            st.session_state.scanner = st.toggle("🔍 Attiva Scansione Live", value=True)
+    # --- SEZIONE COMANDI SCANNER ---
+    col_tf, col_btn = st.columns([1, 1])
     
-    if st.session_state.scanner:
+    with col_tf:
+        timeframe = st.selectbox("⏱️ Timeframe Operativo", [60, 300], index=0)
+    
+    with col_btn:
+        # Inizializziamo lo stato dello scanner se non esiste
+        if 'scanner_on' not in st.session_state:
+            st.session_state.scanner_on = False
+    
+        # Pulsante dinamico: cambia testo e "colore" percepito tramite icone e stile
+        label = "🛑 STOP SCANNER" if st.session_state.scanner_on else "🚀 AVVIA SCANNER"
+        
+        if st.button(label, use_container_width=True, type="primary" if not st.session_state.scanner_on else "secondary"):
+            st.session_state.scanner_on = not st.session_state.scanner_on
+            st.rerun()
+    
+    # Usiamo una variabile di comodo per il resto del codice
+    scanner_attivo = st.session_state.scanner_on
+    
+    # Messaggio di stato colorato sotto i pulsanti
+    if scanner_attivo:
+        st.markdown("<h4 style='text-align: center; color: #FF4B4B;'>🔴 SCANNER IN ESECUZIONE...</h4>", unsafe_allow_html=True)
+    else:
+        st.markdown("<h4 style='text-align: center; color: #FFFFFF;'>⚪ SCANNER IN STANDBY</h4>", unsafe_allow_html=True)
+    
+    # Ora cambiamo il controllo principale
+    if scanner_attivo:
         ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"]
     
         # --- 2. DEFINIZIONE PARAMETRI AUTOMATICA ---
