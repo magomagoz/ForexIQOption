@@ -170,7 +170,7 @@ if st.session_state.connected:
     
     # Ora cambiamo il controllo principale
     #if scanner_attivo:
-    if.st.session_state.scanner:    
+    if st.session_state.scanner:    
         ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"]
     
         # --- 2. DEFINIZIONE PARAMETRI AUTOMATICA ---
