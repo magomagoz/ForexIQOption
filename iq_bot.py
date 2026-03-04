@@ -116,7 +116,7 @@ with st.sidebar:
         stress_test = st.toggle("🚀 STRESS TEST MODE", value=False, help="Attiva segnali frequenti per testare notifiche e suoni")
         
         if stress_test:
-            st.warning("⚠️ Parametri TEST:\n\nBB (10,1.0) - RSI (45/55) - MACD (3,10,2)")
+            st.warning("⚠️ Parametri TEST:\n\nsolo RSI (45/55)")
         else:
             st.success("🟢 Parametri REALI:\n\nBB (20,2.0) - RSI (30/70) - MACD (8,17,9)")
 
