@@ -165,10 +165,14 @@ if st.session_state.connected:
         # -----------------------------------------------
    
         for pair in ALL_PAIRS:
+            
             try:
                 # 1. Recupero dati minimo
                 candles = Iq.get_candles(pair, current_tf, 100, time_module.time())
                 df = pd.DataFrame(candles)
+                df['time'] = pd.to_datetime(df['from'], unit='s')
+                df.set_index('time', inplace=True)
+                
                 df['RSI'] = ta.rsi(df['close'], length=7)
                 
                 curr_rsi = df['RSI'].iloc[-1]
