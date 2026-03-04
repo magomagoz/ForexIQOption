@@ -134,7 +134,7 @@ if st.session_state.connected:
     
     st.divider()
 
-    st.subheader("👁️ Scanner FOREX")
+    st.header("👁️ Scanner FOREX")
 
     # 1. PARAMETRI AGGRESSIVI (MODIFICATI PER RILEVARE DI PIÙ)
     col1, col2, col3 = st.columns(3)
@@ -222,7 +222,7 @@ if st.session_state.connected:
                 continue
 
     st.divider()
-    st.subheader("📈 Analisi Tecnica (BB + RSI + MACD)")
+    st.header("📈 Analisi Tecnica")
     
     pair_display = st.selectbox("Seleziona asset", ALL_PAIRS)
     
@@ -276,9 +276,8 @@ if st.session_state.connected:
             fig.add_trace(go.Scatter(x=df_final.index, y=df_final['MACD'], line=dict(color='cyan'), name="MACD"), row=3, col=1)
             fig.add_trace(go.Scatter(x=df_final.index, y=df_final['SIGNAL'], line=dict(color='orange'), name="Signal"), row=3, col=1)
     
-            # Personalizzazione dei font: Colore BIANCO per i titoli
             for i in fig['layout']['annotations']:
-                i['font'] = dict(size=14, color='#FFFFFF') 
+                i['font'] = dict(size=14, color='#000000') 
             
             fig.update_layout(height=850, template="plotly_dark", xaxis_rangeslider_visible=False, margin=dict(l=10,r=10,b=10,t=40))
             st.plotly_chart(fig, use_container_width=True)
