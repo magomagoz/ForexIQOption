@@ -109,7 +109,7 @@ with st.sidebar:
             st.write(f"{city} {status}")
 
         # Visualizzazione
-        #st.info(get_market_status())
+        st.info(get_market_status())
 
         st.divider()
         st.header("🛠️ STRUMENTI DI TEST")
@@ -154,10 +154,19 @@ if st.session_state.connected:
 
     if st.session_state.scanner:
         ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"]
+
+        # --- VARIABILI FONDAMENTALI (Mancavano qui!) ---
+        if stress_test:
+            current_tf = 60 
+        else:
+            current_tf = timeframe 
+            bb_period, bb_std = 20, 2.0
+            m_fast, m_slow, m_sig = 8, 17, 9
+        # -----------------------------------------------
    
         for pair in ALL_PAIRS:
             try:
-                # 1. Recupero dati minimo (100 candele bastano per l'RSI)
+                # 1. Recupero dati minimo
                 candles = Iq.get_candles(pair, current_tf, 100, time_module.time())
                 df = pd.DataFrame(candles)
                 df['RSI'] = ta.rsi(df['close'], length=7)
@@ -167,10 +176,10 @@ if st.session_state.connected:
 
                 # --- LOGICA OTTIMIZZATA ---
                 if stress_test:
-                    # Stress Test: Trigger immediato solo su RSI (nessun calcolo BB/MACD)
-                    is_buy = curr_rsi < 55
-                    is_sell = curr_rsi > 45
-                    curr_macd, curr_bb_status = 0, "TEST" # Valori segnaposto
+                    # In test forziamo un trigger praticamente certo
+                    is_buy = curr_rsi < 60  # Alzato per fare trigger garantito
+                    is_sell = curr_rsi > 40 # Abbassato per fare trigger garantito
+                    curr_macd, curr_bb_status = 0.0, "TEST" 
                 else:
                     # Modalità Reale: Calcoliamo il resto solo qui
                     bb = ta.bbands(df['close'], length=bb_period, std=bb_std)
@@ -274,11 +283,6 @@ if st.session_state.connected:
     
             for i in fig['layout']['annotations']:
                 i['font'] = dict(size=14, color='#000000') 
-
-            # Griglia verticale ogni 5 minuti
-            for t in p_df.index:
-                if t.minute % 5 == 0:
-                    fig.add_vline(x=t, line_width=0.8, line_dash="solid", line_color="rgba(170, 170, 170, 0.1)", layer="below")
                     
             fig.update_layout(height=850, template="plotly_dark", xaxis_rangeslider_visible=False, margin=dict(l=10,r=10,b=10,t=40))
             st.plotly_chart(fig, use_container_width=True)
