@@ -376,7 +376,7 @@ if st.session_state.connected:
                 'price': '💰 ENTRATA',
                 'rsi': '📊 RSI',
                 'macd': '📉 MACD',
-                'bb': '↔️ BB',
+                'bb': '↔️ BOLLINGER',
                 'result': '🔍 ESITO'
             }
             
