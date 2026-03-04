@@ -123,10 +123,15 @@ with st.sidebar:
         st.divider()
         if st.button("🗑️ PULISCI STORICO", use_container_width=True):
             st.session_state.signal_history = []
-            st.session_state.local_balance = Iq.get_balance() if st.session_state.connected else 0
-            st.success("Storico resettato!")
+            
+            # CORREZIONE: Usiamo st.session_state.iq invece di Iq
+            if st.session_state.connected and 'iq' in st.session_state:
+                st.session_state.local_balance = st.session_state.iq.get_balance()
+            else:
+                st.session_state.local_balance = 0
+                
+            st.success("✅ Storico resettato e saldo aggiornato!")
             st.rerun()
-
 
 # --- MAIN DASHBOARD ---
 if st.session_state.connected:
