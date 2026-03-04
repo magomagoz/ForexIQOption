@@ -274,7 +274,12 @@ if st.session_state.connected:
     
             for i in fig['layout']['annotations']:
                 i['font'] = dict(size=14, color='#000000') 
-            
+
+            # Griglia verticale ogni 5 minuti
+            for t in p_df.index:
+                if t.minute % 5 == 0:
+                    fig.add_vline(x=t, line_width=0.8, line_dash="solid", line_color="rgba(170, 170, 170, 0.1)", layer="below")
+                    
             fig.update_layout(height=850, template="plotly_dark", xaxis_rangeslider_visible=False, margin=dict(l=10,r=10,b=10,t=40))
             st.plotly_chart(fig, use_container_width=True)
     
