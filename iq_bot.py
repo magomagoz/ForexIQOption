@@ -197,8 +197,8 @@ if st.session_state.connected:
                 if stress_test:
                     # In modalità Stress Test, basta un RSI leggermente fuori equilibrio
                     # per generare una raffica di segnali tecnici
-                    is_buy = curr_rsi < 52
-                    is_sell = curr_rsi > 48
+                    is_buy = curr_rsi < 55
+                    is_sell = curr_rsi > 45
                 else:
                     # In modalità Reale, usiamo la Triple Confirmation rigida
                     is_buy = (curr_rsi < rsi_buy) and (price <= curr_bb_low) and (curr_macd > curr_sig)
