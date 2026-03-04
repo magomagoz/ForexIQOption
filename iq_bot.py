@@ -140,6 +140,8 @@ if st.session_state.connected:
     #st.divider()
 
     st.header("👁️ Scanner FOREX")
+    
+    ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"]
 
     # --- SEZIONE COMANDI SCANNER ---
     col_tf, col_btn = st.columns([1, 1])
@@ -170,7 +172,6 @@ if st.session_state.connected:
     
     if scanner_attivo:
     #if st.session_state.scanner:    
-        ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"]
     
         # --- 2. DEFINIZIONE PARAMETRI AUTOMATICA ---
         if stress_test:
