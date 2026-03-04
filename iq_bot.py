@@ -67,6 +67,9 @@ if 'connected' not in st.session_state: st.session_state.connected = False
 if 'active_trades' not in st.session_state: st.session_state.active_trades = {}
 if 'signal_history' not in st.session_state: st.session_state.signal_history = []
 if 'local_balance' not in st.session_state: st.session_state.local_balance = 0
+if 'initial_balance' not in st.session_state: st.session_state.initial_balance = 0.0
+if 'daily_stop_hit' not in st.session_state: st.session_state.daily_stop_hit = False
+
 
 with st.sidebar:
     st.header("⚙️ IQ FOREX TRADING PLATFORM")
@@ -93,8 +96,17 @@ with st.sidebar:
                 st.rerun()
     else:
         st.success(f"🟢 Conto {st.session_state.account_type} ATTIVO")
-        st.session_state.stake = st.number_input("💰 INVESTIMENTO (€)", value=100.0)
+        #st.session_state.stake = st.number_input("💰 INVESTIMENTO (€)", value=100.0)
         
+        st.divider()
+        st.header("🛡️ RISK MANAGEMENT")
+        risk_percent = st.slider("⚖️ Rischio per Operazione (%)", 0.5, 5.0, 1.0, help="Percentuale del capitale da investire per singolo trade")
+        max_loss = st.number_input("📉 Stop Loss Giornaliero (€)", value=200.0, step=50.0)
+        
+        # Calcolo dinamico dello Stake basato sul saldo attuale
+        st.session_state.stake = (st.session_state.local_balance * risk_percent) / 100
+        st.caption(f"💰 INVESTIMENTO CALCOLATO: {st.session_state.stake:.2f} €")
+
         timeframe = st.selectbox("⏱️ SELEZIONA TIMEFRAME OPERATIVO (s)", [60, 300], index=0)
     
         if st.button("🔴 DISCONNETTI"):
@@ -170,6 +182,38 @@ if st.session_state.connected:
         st.rerun()
 
     scanner_attivo = st.session_state.scanner_on
+
+    # 1. Calcolo del bilancio iniziale alla prima connessione reale
+    if st.session_state.initial_balance == 0.0 and st.session_state.local_balance > 0:
+        st.session_state.initial_balance = st.session_state.local_balance
+
+    # 2. Controllo Drawdown (Perdita attuale)
+    perdita_attuale = st.session_state.initial_balance - st.session_state.local_balance
+    if perdita_attuale >= max_loss:
+        st.session_state.daily_stop_hit = True
+
+    # 3. Filtro Orario
+    now_time = datetime.now().time()
+    window_1 = (time(9, 0), time(12, 0))
+    window_2 = (time(14, 0), time(18, 30))
+    is_trading_time = (window_1[0] <= now_time <= window_1[1]) or (window_2[0] <= now_time <= window_2[1])
+
+    # 4. Semaforo Operativo (Logica di Autorizzazione)
+    scanner_autorizzato = False
+
+    if st.session_state.daily_stop_hit:
+        st.error(f"🚫 SESSIONE BLOCCATA: Stop Loss Giornaliero raggiunto (-{perdita_attuale:.2f}€)")
+        st.info("Riposa. Il mercato sarà qui anche domani.")
+    elif scanner_attivo and not is_trading_time and not stress_test:
+        st.warning("🛡️ PROTEZIONE ORARIA: Mercato in bassa volatilità.")
+        st.info(f"⏰ Prossima finestra: {window_1[0] if now_time < window_1[0] else window_2[0]}")
+    elif scanner_attivo:
+        scanner_autorizzato = True
+        st.error("📡 SISTEMA IN SCANSIONE ATTIVA", icon="🔥")
+
+    # 5. Esecuzione Scanner
+    if scanner_autorizzato:
+    # Qui inizia il tuo ALL_PAIRS e il ciclo FOR per ogni coppia...
 
     # 3. Indicatore di stato gigante
     if scanner_attivo:
