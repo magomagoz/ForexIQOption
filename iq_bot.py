@@ -313,9 +313,9 @@ if st.session_state.connected:
             # --- AGGIUNGI QUESTO PER LE RIGHE VERTICALI E IL MIRINO ---
             fig.update_xaxes(
                 showgrid=True, 
-                gridcolor='rgba(180,180,180,0.08)', # Righe verticali fisse leggere
+                gridcolor='rgba(130,130,130,0.08)', # Righe verticali fisse leggere
                 showspikes=True, 
-                spikecolor="white", 
+                spikecolor="black", 
                 spikethickness=1, 
                 spikedash="dot",
                 spikemode="across" # Linea interattiva che taglia tutti i 3 grafici
