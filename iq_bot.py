@@ -145,6 +145,13 @@ if st.session_state.connected:
     st.header("👁️ Scanner FOREX")
     
     ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"]
+    
+    # Lista icone per la griglia
+    icons = {
+        "EURUSD": "🇪🇺🇺🇸", "GBPUSD": "🇬🇧🇺🇸", "USDJPY": "🇺🇸🇯🇵", 
+        "AUDUSD": "🇦🇺🇺🇸", "USDCAD": "🇺🇸🇨🇦", "USDCHF": "🇺🇸🇨🇭", 
+        "NZDUSD": "🇳🇿🇺🇸", "EURGBP": "🇪🇺🇬🇧", "EURJPY": "🇪🇺🇯🇵", "GBPJPY": "🇬🇧🇯🇵"
+    }
 
     # --- SEZIONE COMANDI SCANNER (PULSANTI VERTICALI) ---
     
@@ -175,7 +182,7 @@ if st.session_state.connected:
         cols = st.columns(5)
         for i, pair in enumerate(ALL_PAIRS):
             with cols[i % 5]:
-                st.code(f"🔍 {pair}") # Mostra la valuta in un box grigio tecnico
+                st.code(f"{icons.get(pair, '🔍')} {pair}") # Mostra la valuta in un box grigio tecnico
 
     else:
         st.info("💤 SISTEMA IN STANDBY", icon="⚪")
