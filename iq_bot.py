@@ -116,9 +116,9 @@ with st.sidebar:
         stress_test = st.toggle("🚀 STRESS TEST MODE", value=False, help="Attiva segnali frequenti per testare notifiche e suoni")
         
         if stress_test:
-            st.warning("⚠️ Parametri TEST:\n\nBB (0) - RSI (45/55) - MACD (0)")
+            st.warning("⚠️ Modalità TEST:\n\nno BB - RSI (45/55) - no MACD")
         else:
-            st.success("🟢 Parametri REALI:\n\nBB (20,2.0) - RSI (30/70) - MACD (8,17,9)")
+            st.success("🟢 Modalità REALE:\n\nBB (20,2.0) - RSI (28/72) - MACD (8,17,9)")
 
         st.divider()
         if st.button("🗑️ PULISCI STORICO", use_container_width=True):
@@ -144,9 +144,9 @@ if st.session_state.connected:
     # 1. PARAMETRI AGGRESSIVI (MODIFICATI PER RILEVARE DI PIÙ)
     col1, col2, col3 = st.columns(3)
     with col1: 
-        rsi_buy = st.number_input("🟢 RSI Buy (Soglia Alta = +Segnali)", value=30) # Alzato da 28
+        rsi_buy = st.number_input("🟢 RSI Buy (Soglia Alta = +Segnali)", value=28) # Alzato da 28
     with col2: 
-        rsi_sell = st.number_input("🔴 RSI Sell (Soglia Bassa = +Segnali)", value=70) # Abbassato da 72
+        rsi_sell = st.number_input("🔴 RSI Sell (Soglia Bassa = +Segnali)", value=72) # Abbassato da 72
     with col3:
         timeframe = st.selectbox("Timeframe", [60, 300], index=0)
 
@@ -154,23 +154,7 @@ if st.session_state.connected:
 
     if st.session_state.scanner:
         ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"]
-
-        # --- PUNTO 2: DEFINIZIONE PARAMETRI DINAMICI ---
-        
-        if stress_test:
-            # Parametri "Sporchi" per inondare lo scanner di segnali
-            rsi_buy, rsi_sell = 45, 55
-            bb_period, bb_std = 10, 1.0  # Bande strettissime e nervose
-            m_fast, m_slow, m_sig = 3, 10, 2 # MACD ultra-rapido
-            current_tf = 60 
-        else:
-            # Parametri "Gold" per Trading Reale (da input sidebar o fissi)
-            rsi_buy = 30
-            rsi_sell = 70
-            bb_period, bb_std = 20, 2.0
-            m_fast, m_slow, m_sig = 8, 17, 9
-            current_tf = timeframe # Usa quello selezionato nel selectbox
-           
+   
         for pair in ALL_PAIRS:
                 
             try:
