@@ -156,42 +156,36 @@ if st.session_state.connected:
         ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"]
    
         for pair in ALL_PAIRS:
-                
             try:
-                # Recupero candele con il timeframe corrente
+                # 1. Recupero dati minimo (100 candele bastano per l'RSI)
                 candles = Iq.get_candles(pair, current_tf, 100, time_module.time())
                 df = pd.DataFrame(candles)
-                
-                # Calcolo RSI
                 df['RSI'] = ta.rsi(df['close'], length=7)
                 
-                # Calcolo Bollinger (Usa i parametri dinamici del Punto 2)
-                bb = ta.bbands(df['close'], length=bb_period, std=bb_std)
-                # Rinominiamo per evitare errori e includere la Media (BBM)
-                bb.columns = ['BBL', 'BBM', 'BBU', 'BBB', 'BBP']
-                
-                # Calcolo MACD (Usa i parametri dinamici del Punto 2)
-                macd = ta.macd(df['close'], fast=m_fast, slow=m_slow, signal=m_sig)
-                macd.columns = ['MACD', 'HIST', 'SIGNAL']
-                
-                # Valori attuali per il trigger
-                price = df['close'].iloc[-1]
                 curr_rsi = df['RSI'].iloc[-1]
-                curr_bb_low = bb['BBL'].iloc[-1]
-                curr_bb_up = bb['BBU'].iloc[-1]
-                curr_macd = macd['MACD'].iloc[-1]
-                curr_sig = macd['SIGNAL'].iloc[-1]
-            
-                # --- LOGICA DINAMICA (CONSIGLIO 3) ---
+                price = df['close'].iloc[-1]
+
+                # --- LOGICA OTTIMIZZATA ---
                 if stress_test:
-                    # In modalità Stress Test, basta un RSI leggermente fuori equilibrio
-                    # per generare una raffica di segnali tecnici
+                    # Stress Test: Trigger immediato solo su RSI (nessun calcolo BB/MACD)
                     is_buy = curr_rsi < 55
                     is_sell = curr_rsi > 45
+                    curr_macd, curr_bb_status = 0, "TEST" # Valori segnaposto
                 else:
-                    # In modalità Reale, usiamo la Triple Confirmation rigida
+                    # Modalità Reale: Calcoliamo il resto solo qui
+                    bb = ta.bbands(df['close'], length=bb_period, std=bb_std)
+                    bb.columns = ['BBL', 'BBM', 'BBU', 'BBB', 'BBP']
+                    macd = ta.macd(df['close'], fast=m_fast, slow=m_slow, signal=m_sig)
+                    macd.columns = ['MACD', 'HIST', 'SIGNAL']
+                    
+                    curr_bb_low = bb['BBL'].iloc[-1]
+                    curr_bb_up = bb['BBU'].iloc[-1]
+                    curr_macd = macd['MACD'].iloc[-1]
+                    curr_sig = macd['SIGNAL'].iloc[-1]
+                    
                     is_buy = (curr_rsi < rsi_buy) and (price <= curr_bb_low) and (curr_macd > curr_sig)
                     is_sell = (curr_rsi > rsi_sell) and (price >= curr_bb_up) and (curr_macd < curr_sig)
+                    curr_bb_status = "OUT" if (price <= curr_bb_low or price >= curr_bb_up) else "IN"
 
                 if (is_buy or is_sell) and pair not in st.session_state.active_trades:
                     direction = "BUY" if is_buy else "SELL"
