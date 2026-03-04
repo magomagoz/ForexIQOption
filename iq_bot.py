@@ -222,69 +222,69 @@ if st.session_state.connected:
                 continue
 
     st.divider()
-st.subheader("📈 Analisi Tecnica (BB + RSI + MACD)")
-
-pair_display = st.selectbox("Seleziona asset", ALL_PAIRS)
-
-if st.session_state.connected:
-    Iq = st.session_state.iq
+    st.subheader("📈 Analisi Tecnica (BB + RSI + MACD)")
     
-    try:
-        # 1. Recupero Dati - Aumentiamo a 160 per far partire gli indicatori da sinistra
-        candles = Iq.get_candles(pair_display, timeframe, 160, time_module.time())
-        df_raw = pd.DataFrame(candles)
+    pair_display = st.selectbox("Seleziona asset", ALL_PAIRS)
+    
+    if st.session_state.connected:
+        Iq = st.session_state.iq
         
-        # 2. Calcolo Indicatori
-        df_raw['RSI'] = ta.rsi(df_raw['close'], length=7)
-        
-        # Bollinger con nomi colonne forzati
-        bb = ta.bbands(df_raw['close'], length=20, std=2)
-        bb.columns = ['BBL', 'BBM', 'BBU', 'BBB', 'BBP'] 
-        
-        # MACD con nomi colonne forzati
-        macd = ta.macd(df_raw['close'], fast=8, slow=17, signal=9)
-        macd.columns = ['MACD', 'HIST', 'SIGNAL']
-        
-        # Unione e taglio per visualizzare solo le ultime 100 candele (senza buchi a sx)
-        df_final = pd.concat([df_raw, bb[['BBL', 'BBM', 'BBU']], macd], axis=1).tail(100)
-
-        # 3. Creazione Subplots - CORRETTO: subplot_titles
-        fig = make_subplots(
-            rows=3, cols=1, 
-            shared_xaxes=True, 
-            row_heights=[0.5, 0.25, 0.25], 
-            vertical_spacing=0.07,
-            subplot_titles=("📊 Analisi Prezzo & Volatilità", "📉 Oscillatore RSI", "🚀 Momentum MACD")
-        )
-
-        # --- PANNELLO 1: Candele + Bollinger ---
-        fig.add_trace(go.Candlestick(x=df_final.index, open=df_final['open'], high=df_final['max'], 
-                                     low=df_final['min'], close=df_final['close'], name="Prezzo"), row=1, col=1)
-        
-        fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBU'], line=dict(color='rgba(0,71,171,0.4)', dash='dot'), name="BBU"), row=1, col=1)
-        fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBM'], line=dict(color='rgba(255,255,255,0.3)', width=1), name="BBM"), row=1, col=1)
-        fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBL'], line=dict(color='rgba(0,71,171,0.4)', dash='dot'), 
-                                 fill='tonexty', fillcolor='rgba(153, 203, 255, 0.05)', name="BBL"), row=1, col=1)
-
-        # --- PANNELLO 2: RSI ---
-        fig.add_trace(go.Scatter(x=df_final.index, y=df_final['RSI'], line=dict(color='#AB63FA'), name="RSI"), row=2, col=1)
-        fig.add_hline(y=rsi_buy, line_color="green", row=2, col=1, line_dash="dash")
-        fig.add_hline(y=rsi_sell, line_color="red", row=2, col=1, line_dash="dash")
-
-        # --- PANNELLO 3: MACD ---
-        fig.add_trace(go.Bar(x=df_final.index, y=df_final['HIST'], name="Momentum", marker_color='rgba(255,255,255,0.2)'), row=3, col=1)
-        fig.add_trace(go.Scatter(x=df_final.index, y=df_final['MACD'], line=dict(color='cyan'), name="MACD"), row=3, col=1)
-        fig.add_trace(go.Scatter(x=df_final.index, y=df_final['SIGNAL'], line=dict(color='orange'), name="Signal"), row=3, col=1)
-
-        # Personalizzazione dei font: Colore BIANCO per i titoli
-        for i in fig['layout']['annotations']:
-            i['font'] = dict(size=14, color='#FFFFFF') 
-        
-        fig.update_layout(height=850, template="plotly_dark", xaxis_rangeslider_visible=False, margin=dict(l=10,r=10,b=10,t=40))
-        st.plotly_chart(fig, use_container_width=True)
-
-    except Exception as e:
-        st.error(f"⚠️ Errore durante il rendering del grafico: {e}")
+        try:
+            # 1. Recupero Dati - Aumentiamo a 160 per far partire gli indicatori da sinistra
+            candles = Iq.get_candles(pair_display, timeframe, 160, time_module.time())
+            df_raw = pd.DataFrame(candles)
+            
+            # 2. Calcolo Indicatori
+            df_raw['RSI'] = ta.rsi(df_raw['close'], length=7)
+            
+            # Bollinger con nomi colonne forzati
+            bb = ta.bbands(df_raw['close'], length=20, std=2)
+            bb.columns = ['BBL', 'BBM', 'BBU', 'BBB', 'BBP'] 
+            
+            # MACD con nomi colonne forzati
+            macd = ta.macd(df_raw['close'], fast=8, slow=17, signal=9)
+            macd.columns = ['MACD', 'HIST', 'SIGNAL']
+            
+            # Unione e taglio per visualizzare solo le ultime 100 candele (senza buchi a sx)
+            df_final = pd.concat([df_raw, bb[['BBL', 'BBM', 'BBU']], macd], axis=1).tail(100)
+    
+            # 3. Creazione Subplots - CORRETTO: subplot_titles
+            fig = make_subplots(
+                rows=3, cols=1, 
+                shared_xaxes=True, 
+                row_heights=[0.5, 0.25, 0.25], 
+                vertical_spacing=0.07,
+                subplot_titles=("📊 Analisi Prezzo & Volatilità", "📉 Oscillatore RSI", "🚀 Momentum MACD")
+            )
+    
+            # --- PANNELLO 1: Candele + Bollinger ---
+            fig.add_trace(go.Candlestick(x=df_final.index, open=df_final['open'], high=df_final['max'], 
+                                         low=df_final['min'], close=df_final['close'], name="Prezzo"), row=1, col=1)
+            
+            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBU'], line=dict(color='rgba(0,71,171,0.4)', dash='dot'), name="BBU"), row=1, col=1)
+            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBM'], line=dict(color='rgba(255,255,255,0.3)', width=1), name="BBM"), row=1, col=1)
+            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBL'], line=dict(color='rgba(0,71,171,0.4)', dash='dot'), 
+                                     fill='tonexty', fillcolor='rgba(153, 203, 255, 0.05)', name="BBL"), row=1, col=1)
+    
+            # --- PANNELLO 2: RSI ---
+            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['RSI'], line=dict(color='#AB63FA'), name="RSI"), row=2, col=1)
+            fig.add_hline(y=rsi_buy, line_color="green", row=2, col=1, line_dash="dash")
+            fig.add_hline(y=rsi_sell, line_color="red", row=2, col=1, line_dash="dash")
+    
+            # --- PANNELLO 3: MACD ---
+            fig.add_trace(go.Bar(x=df_final.index, y=df_final['HIST'], name="Momentum", marker_color='rgba(255,255,255,0.2)'), row=3, col=1)
+            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['MACD'], line=dict(color='cyan'), name="MACD"), row=3, col=1)
+            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['SIGNAL'], line=dict(color='orange'), name="Signal"), row=3, col=1)
+    
+            # Personalizzazione dei font: Colore BIANCO per i titoli
+            for i in fig['layout']['annotations']:
+                i['font'] = dict(size=14, color='#FFFFFF') 
+            
+            fig.update_layout(height=850, template="plotly_dark", xaxis_rangeslider_visible=False, margin=dict(l=10,r=10,b=10,t=40))
+            st.plotly_chart(fig, use_container_width=True)
+    
+        except Exception as e:
+            st.error(f"⚠️ Errore durante il rendering del grafico: {e}")
     
     # --- LOGICA DI VERIFICA ESITI (Dopo lo scanner) ---
 if st.session_state.connected:
