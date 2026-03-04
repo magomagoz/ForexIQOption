@@ -100,8 +100,10 @@ with st.sidebar:
         
         st.divider()
         st.header("🛡️ RISK MANAGEMENT")
-        risk_percent = st.slider("⚖️ Rischio per Operazione (%)", 0.5, 5.0, 1.0, help="Percentuale del capitale da investire per singolo trade")
-        max_loss = st.number_input("📉 Stop Loss Giornaliero (€)", value=200.0, step=50.0)
+        #risk_percent = st.slider("⚖️ Rischio per Operazione (%)", 0.5, 5.0, 1.0, help="Percentuale del capitale da investire per singolo trade")
+        risk_percent = st.number_input("⚖️ Rischio per Operazione (%)", value=1.0%, step=0.5%, help="Percentuale del capitale da investire per singolo trade")
+
+        max_loss = st.number_input("📉 Stop Loss Giornaliero (€)", value=500.0, step=50.0)
         
         # Calcolo dinamico dello Stake basato sul saldo attuale
         st.session_state.stake = (st.session_state.local_balance * risk_percent) / 100
