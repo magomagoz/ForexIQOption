@@ -141,51 +141,53 @@ if st.session_state.connected:
 
     st.header("👁️ Scanner FOREX")
 
-    # 1. PARAMETRI AGGRESSIVI (MODIFICATI PER RILEVARE DI PIÙ)
-    col1, col2, col3 = st.columns(3)
-    with col1: 
-        rsi_buy = st.number_input("🟢 RSI Buy (Soglia Alta = +Segnali)", value=28) # Alzato da 28
-    with col2: 
-        rsi_sell = st.number_input("🔴 RSI Sell (Soglia Bassa = +Segnali)", value=72) # Abbassato da 72
-    with col3:
-        timeframe = st.selectbox("Timeframe", [60, 300], index=0)
-
-    st.session_state.scanner = st.toggle("🔍 Attiva Scansione", value=True)
-
+    # --- 1. SEZIONE PARAMETRI (Nascosta all'utente, gestita dal sistema) ---
+    with st.container():
+        # Lasciamo solo il selettore del Timeframe e lo switch dello Scanner
+        c1, c2 = st.columns([1, 1])
+        with c1:
+            timeframe = st.selectbox("⏱️ Timeframe Operativo", [60, 300], index=0)
+        with c2:
+            st.session_state.scanner = st.toggle("🔍 Attiva Scansione Live", value=True)
+    
     if st.session_state.scanner:
         ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"]
-
-        # --- VARIABILI FONDAMENTALI (Mancavano qui!) ---
+    
+        # --- 2. DEFINIZIONE PARAMETRI AUTOMATICA ---
         if stress_test:
-            current_tf = 60 
+            current_tf = 60 # Forza 1 minuto in modalità test
+            # Soglie RSI larghe per generare raffiche di segnali (Consiglio 3)
+            rsi_buy_trigger = 55
+            rsi_sell_trigger = 45
         else:
-            current_tf = timeframe 
+            current_tf = timeframe
+            rsi_buy_trigger = 28 # Valori reali protetti
+            rsi_sell_trigger = 72
             bb_period, bb_std = 20, 2.0
             m_fast, m_slow, m_sig = 8, 17, 9
-        # -----------------------------------------------
-   
+    
+        # --- 3. CICLO SCANNER ---
         for pair in ALL_PAIRS:
-            
             try:
-                # 1. Recupero dati minimo
+                # Recupero candele (Minimo 100 per RSI)
                 candles = Iq.get_candles(pair, current_tf, 100, time_module.time())
                 df = pd.DataFrame(candles)
-                df['time'] = pd.to_datetime(df['from'], unit='s')
-                df.set_index('time', inplace=True)
-                
                 df['RSI'] = ta.rsi(df['close'], length=7)
                 
-                curr_rsi = df['RSI'].iloc[-1]
                 price = df['close'].iloc[-1]
-
-                # --- LOGICA OTTIMIZZATA ---
+                curr_rsi = df['RSI'].iloc[-1]
+    
+                # --- LOGICA DI SEGNALE BLINDATA ---
                 if stress_test:
-                    # In test forziamo un trigger praticamente certo
-                    is_buy = curr_rsi < 60  # Alzato per fare trigger garantito
-                    is_sell = curr_rsi > 40 # Abbassato per fare trigger garantito
-                    curr_macd, curr_bb_status = 0.0, "TEST" 
+                    # VERIFICA TEST: Solo RSI, ignora tutto il resto
+                    is_buy = curr_rsi < rsi_buy_trigger
+                    is_sell = curr_rsi > rsi_sell_trigger
+                    
+                    # Variabili segnaposto per non far crashare la tabella
+                    curr_macd = 0.0
+                    curr_bb_status = "TEST"
                 else:
-                    # Modalità Reale: Calcoliamo il resto solo qui
+                    # MODALITÀ REALE: Calcolo completo indicatori pesanti
                     bb = ta.bbands(df['close'], length=bb_period, std=bb_std)
                     bb.columns = ['BBL', 'BBM', 'BBU', 'BBB', 'BBP']
                     macd = ta.macd(df['close'], fast=m_fast, slow=m_slow, signal=m_sig)
@@ -196,20 +198,22 @@ if st.session_state.connected:
                     curr_macd = macd['MACD'].iloc[-1]
                     curr_sig = macd['SIGNAL'].iloc[-1]
                     
-                    is_buy = (curr_rsi < rsi_buy) and (price <= curr_bb_low) and (curr_macd > curr_sig)
-                    is_sell = (curr_rsi > rsi_sell) and (price >= curr_bb_up) and (curr_macd < curr_sig)
+                    # Triple Confirmation
+                    is_buy = (curr_rsi < rsi_buy_trigger) and (price <= curr_bb_low) and (curr_macd > curr_sig)
+                    is_sell = (curr_rsi > rsi_sell_trigger) and (price >= curr_bb_up) and (curr_macd < curr_sig)
                     curr_bb_status = "OUT" if (price <= curr_bb_low or price >= curr_bb_up) else "IN"
-
+    
+                # --- ESECUZIONE SEGNALE (Se confermato) ---
                 if (is_buy or is_sell) and pair not in st.session_state.active_trades:
                     direction = "BUY" if is_buy else "SELL"
-
+                    
+                    # Registrazione trade e notifiche
                     st.session_state.active_trades[pair] = {
                         'entry_price': price,
                         'entry_time': time_module.time(),
                         'direction': direction
                     }
-
-                    # Salvataggio dati nel Journal con dettagli tecnici
+    
                     st.session_state.signal_history.append({
                         'time': datetime.now().strftime("%H:%M:%S"),
                         'pair': pair, 
@@ -217,17 +221,15 @@ if st.session_state.connected:
                         'price': f"{price:.5f}",
                         'rsi': round(curr_rsi, 1),
                         'macd': round(curr_macd, 6),
-                        'bb': "OUT" if (price <= curr_bb_low or price >= curr_bb_up) else "IN",
+                        'bb': curr_bb_status,
                         'result': "⏳ In corso..."
                     })
                     
-                    # Feedback e Suono
                     st.session_state.last_signal = f"🔥 SEGNALE {direction} su {pair}!"
                     play_trade_sound("buy")
                     send_telegram_signal(direction, pair, price, curr_rsi, curr_macd)
             
             except Exception as e:
-                # Se una coppia non ha dati, passa alla successiva senza crashare
                 continue
 
     st.divider()
