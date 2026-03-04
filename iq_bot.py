@@ -538,15 +538,15 @@ if st.session_state.connected:
     else:
         st.info("⏳ In attesa di segnali... Scanner attivo!")
 
-    # --- LOGICA DI REFRESH AUTOMATICO ---
+        # --- LOGICA DI REFRESH AUTOMATICO ---
+        
+        # 1. Messaggio discreto di stato dello scanner
+        st.caption(f"🔄 Scanner in esecuzione... Ultimo check: {datetime.now().strftime('%H:%M:%S')}")
     
-    # 1. Messaggio discreto di stato dello scanner
-    st.caption(f"🔄 Scanner in esecuzione... Ultimo check: {datetime.now().strftime('%H:%M:%S')}")
-
-    # 2. Pausa tecnica (fondamentale per non bloccare il browser)
-    # Imposta 2 o 3 secondi: è il tempo perfetto per l'API di IQ Option
-    time_module.sleep(3) 
-
-    # 3. Il comando magico che resetta lo script dall'alto
-    st.rerun() 
+        # 2. Pausa tecnica (fondamentale per non bloccare il browser)
+        # Imposta 2 o 3 secondi: è il tempo perfetto per l'API di IQ Option
+        time_module.sleep(3) 
+    
+        # 3. Il comando magico che resetta lo script dall'alto
+        st.rerun() 
 
