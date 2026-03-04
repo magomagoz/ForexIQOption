@@ -119,9 +119,9 @@ with st.sidebar:
         stress_test = st.toggle("🚀 STRESS TEST MODE", value=False, help="Attiva segnali frequenti per testare notifiche e suoni")
         
         if stress_test:
-            st.warning("⚠️ **Modalità TEST:\n\nno BB - RSI (45/55) - no MACD**")
+            st.warning("⚠️ Modalità TEST:\n\nno BB - RSI (45/55) - no MACD")
         else:
-            st.success("🟢 **Modalità REALE:\n\nBB (20,2.0) - RSI (28/72) - MACD (8,17,9)**")
+            st.success("🟢 Modalità REALE:\n\nBB (20,2.0) - RSI (28/72) - MACD (8,17,9)")
 
         st.divider()
         if st.button("🗑️ PULISCI STORICO", use_container_width=True):
