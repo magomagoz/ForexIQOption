@@ -96,14 +96,14 @@ with st.sidebar:
                 st.rerun()
     else:
         st.success(f"🟢 Conto {st.session_state.account_type} ATTIVO")
-        #st.session_state.stake = st.number_input("💰 INVESTIMENTO (€)", value=100.0)
+        st.session_state.stake = st.number_input("💰 INVESTIMENTO (€)", value=100.0)
         
         st.divider()
         st.header("🛡️ RISK MANAGEMENT")
         
         st.metric(f"💰 Saldo {st.session_state.account_type}", f"{st.session_state.local_balance:.2f} €")
         
-        risk_percent = st.slider("⚖️ Rischio per Operazione (%)", 0.5, 5.0, 1.0, help="Percentuale del capitale da investire per singolo trade")
+        #risk_percent = st.slider("⚖️ Rischio per Operazione (%)", 0.5, 5.0, 1.0, help="Percentuale del capitale da investire per singolo trade")
         
         max_loss = st.number_input("📉 Stop Loss Giornaliero (€)", value=500.0, step=50.0)
         
