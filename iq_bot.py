@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import pandas_ta as ta
+import pytz
 import time as time_module
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -37,9 +38,14 @@ def play_trade_sound(sound_type="buy"):
 
 def get_market_status():
 
-    # Prende l'ora del server e aggiunge 1 ora per Roma (CET)
-    now_roma = datetime.now() + timedelta(hours=1)
+    # --- LOGICA ORARIA SINCRONIZZATA SU ROMA ---
+    fuso_roma = pytz.timezone('Europe/Rome')
+    now_roma = datetime.now(fuso_roma)
     now_time = now_roma.time()
+
+    # Prende l'ora del server e aggiunge 1 ora per Roma (CET)
+    #now_roma = datetime.now() + timedelta(hours=1)
+    #now_time = now_roma.time()
 
 # Definiamo gli orari
     londra = (time(9,0), time(18,0))
