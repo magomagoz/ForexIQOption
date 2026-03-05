@@ -281,7 +281,7 @@ if st.session_state.connected:
         now_roma_map = datetime.now(fuso_roma)
         h_float = now_roma_map.hour + (now_roma_map.minute / 60)
         
-        st.plotly_chart(draw_market_map(hour_float), use_container_width=True, config={'displayModeBar': False})
+        st.plotly_chart(draw_market_map(h_float), use_container_width=True, config={'displayModeBar': False})
     
         st.divider()
         # --- NUOVA SEZIONE: MONITOR DELLE VALUTE ---
