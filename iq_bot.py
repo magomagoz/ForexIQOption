@@ -140,29 +140,29 @@ with st.sidebar:
 
         st.divider()
         #🛠️ 
-            if st.button("🔔 TEST CANALI (Audio + Telegram)", use_container_width=True):
-                # 1. Test Audio
-                play_trade_sound("buy")
+        if st.button("🔔 TEST CANALI (Audio + Telegram)", use_container_width=True):
+            # 1. Test Audio
+            play_trade_sound("buy")
                 
-                # 2. Test Telegram
-                test_message = "✅ **SENTINEL AI: SYSTEM CHECK**\nIl bot è online e sincronizzato con l'ora di Roma.\nPronto per la sessione! 🚀"
-                url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+            # 2. Test Telegram
+            test_message = "✅ **SENTINEL AI: SYSTEM CHECK**\nIl bot è online e sincronizzato con l'ora di Roma.\nPronto per la sessione! 🚀"
+            url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
                 
-                try:
-                    response = requests.post(url, data={
-                        "chat_id": TELEGRAM_CHAT_ID, 
-                        "text": test_message, 
-                        "parse_mode": "Markdown"
-                    }, timeout=5)
+            try:
+                response = requests.post(url, data={
+                    "chat_id": TELEGRAM_CHAT_ID, 
+                    "text": test_message, 
+                    "parse_mode": "Markdown"
+                }, timeout=5)
+                
+                if response.status_code == 200:
+                    st.toast("Telegram OK! Controlla il tuo telefono.", icon="📲")
+                else:
+                    st.error(f"Errore Telegram: {response.status_code}")
+            except Exception as e:
+                st.error(f"Errore connessione: {e}")
                     
-                    if response.status_code == 200:
-                        st.toast("Telegram OK! Controlla il tuo telefono.", icon="📲")
-                    else:
-                        st.error(f"Errore Telegram: {response.status_code}")
-                except Exception as e:
-                    st.error(f"Errore connessione: {e}")
-                    
-                st.success("Test Audio inviato al browser!")
+            st.success("Test Audio inviato al browser!")
 
         st.divider()
         if st.button("🗑️ PULISCI STORICO", use_container_width=True):
