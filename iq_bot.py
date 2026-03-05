@@ -540,7 +540,7 @@ if st.session_state.connected:
             )
     else:
         st.info("⏳ In attesa di segnali... Scanner attivo!")
-
+        
         # --- LOGICA DI REFRESH AUTOMATICO ---
         
         # 1. Messaggio discreto di stato dello scanner
