@@ -238,7 +238,7 @@ if st.session_state.connected:
             # Nota: L'immagine fornita (image_1.png) deve essere accessibile via URL.
             # In alternativa, se è un file locale, deve essere codificata in base64.
             # Qui usiamo un URL segnaposto per image_1.png. Sostituiscilo con l'URL reale.
-            world_map_url = "https://path/to/your/image_1.png" # <--- SOSTITUISCI CON L'URL REALE DI image_1.png
+            world_map_url = "https://i.pinimg.com/originals/88/cf/bf/88cfbffd7adc4048a587376607859acf.jpg" # <--- SOSTITUISCI CON L'URL REALE DI image_1.png
         
             fig.add_layout_image(
                 dict(
