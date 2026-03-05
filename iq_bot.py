@@ -220,14 +220,14 @@ if st.session_state.connected:
         if scanner_attivo:
             st.success("📡 SISTEMA IN SCANSIONE ATTIVA", icon="🔥")
             
-            # --- NUOVA SEZIONE: MONITOR DELLE VALUTE ---
-            st.subheader("🕵️ Asset in Monitoraggio")
+        # --- NUOVA SEZIONE: MONITOR DELLE VALUTE ---
+        st.subheader("🕵️ Asset in Monitoraggio")
             
-            # Creiamo una griglia di 5 colonne per mostrare le valute in modo compatto
-            cols = st.columns(5)
-            for i, pair in enumerate(ALL_PAIRS):
-                with cols[i % 5]:
-                    st.code(f"{icons.get(pair, '🔍')} {pair}") # Mostra la valuta in un box grigio tecnico
+        # Creiamo una griglia di 5 colonne per mostrare le valute in modo compatto
+        cols = st.columns(5)
+        for i, pair in enumerate(ALL_PAIRS):
+            with cols[i % 5]:
+                st.code(f"{icons.get(pair, '🔍')} {pair}") # Mostra la valuta in un box grigio tecnico
 
     else:
         st.info("💤 SISTEMA IN STANDBY", icon="⚪")
