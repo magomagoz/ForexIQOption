@@ -127,7 +127,7 @@ with st.sidebar:
             st.write(f"{city} {status}")
 
         # Visualizzazione
-        #st.info(get_market_status())
+        st.info(get_market_status())
 
         st.divider()
         st.header("🛠️ STRUMENTI DI TEST")
