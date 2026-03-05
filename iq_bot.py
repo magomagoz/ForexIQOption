@@ -249,7 +249,7 @@ if st.session_state.connected:
         
             # Configurazione Grafica
             st.divider()
-            st.header("🌍 LIVE MARKET FLOW 24h")
+            st.subheader("🌍 LIVE MARKET FLOW 24h")
             
             fig.update_layout(
                 #title=dict(text=f"🌍 LIVE MARKET FLOW {'(🔥 OVERLAP ATTIVO)' if is_overlap else ''}", x=0.5, font=dict(color="orange" if is_overlap else "white")),
