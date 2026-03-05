@@ -218,73 +218,58 @@ if st.session_state.connected:
 
         st.subheader("🌍 Live Market Flow 24h")
             
-        def draw_market_map(current_hour_float):
+        def draw_market_map_inverted(current_hour_float):
             fig = go.Figure()
         
-            # --- LOGICA DEL LOOP INFINITO (DOUBLE IMAGE) ---
-            # Calcoliamo lo spostamento basato sull'ora (0-24)
-            # Convertiamo l'ora in una percentuale di spostamento (0.0 a 1.0)
-            shift_percent = current_hour_float / 24
+            # URL di una mappa Pacific-Centered (Australia a destra)
+            # Questa è una mappa ad alta risoluzione che funge da base perfetta
+            world_map_url = "https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/World_map_with_nations_-_Pacific_centered.svg/1280px-World_map_with_nations_-_Pacific_centered.svg.png"
         
-            # Carichiamo l'immagine da GitHub (URL RAW)
-            world_map_url = "https://raw.githubusercontent.com/TUO_UTENTE/TUO_REPO/main/mappa_stilizzata.png"
-        
-            # PRIMA COPIA DELLA MAPPA
             fig.add_layout_image(
                 dict(
                     source=world_map_url,
-                    xref="paper", yref="paper",
-                    x=-shift_percent, # Si sposta verso sinistra
-                    y=1, sizex=1, sizey=1,
-                    sizing="stretch", opacity=0.4, layer="below"
+                    xref="x", yref="y",
+                    x=24, y=4.5, # Inizia dal bordo destro (24)
+                    sizex=24, sizey=4.5,
+                    sizing="stretch", opacity=0.3, layer="below"
                 )
             )
         
-            # SECONDA COPIA DELLA MAPPA (Attaccata alla destra della prima)
-            fig.add_layout_image(
-                dict(
-                    source=world_map_url,
-                    xref="paper", yref="paper",
-                    x=1 - shift_percent, # Inizia dove finisce la prima
-                    y=1, sizex=1, sizey=1,
-                    sizing="stretch", opacity=0.4, layer="below"
-                )
-            )
+            # --- POSIZIONAMENTO CITTÀ (Coordinate invertite 24-0) ---
+            # Più l'ora è piccola, più sono a DESTRA nella mappa
+            cities = [
+                {"name": "SYDNEY", "x": 1},   # Molto a destra
+                {"name": "TOKYO", "x": 3},    # Vicino a Sydney
+                {"name": "LONDRA", "x": 11},  # Centro-Sinistra
+                {"name": "NEW YORK", "x": 17} # Molto a sinistra
+            ]
         
-            # --- LINEA DI ROMA (FISSA AL CENTRO) ---
-            # La posizioniamo esattamente a metà del grafico (x=0.5 in coordinate paper o x=12 in ore)
-            fig.add_vline(x=12, line_width=5, line_color="gold", layer="above")
-            
-            # Etichetta "ROMA" fissa sopra la linea
-            fig.add_annotation(
-                x=12, y=4.2, text="📍 ORA DI ROMA", 
-                showarrow=False, font=dict(color="gold", size=14, family="Arial Black")
-            )
+            for city in cities:
+                fig.add_trace(go.Scatter(
+                    x=[city['x']], y=[2], 
+                    mode="markers+text",
+                    marker=dict(color="red", size=10, symbol="circle"),
+                    text=[city['name']], textposition="top center",
+                    textfont=dict(color="white", size=10),
+                    showlegend=False
+                ))
         
-            # --- AGGIUSTAMENTO SCALE E TESTI ---
-            # Le ore sotto devono scorrere in sincrono con la mappa
-            hours_labels = []
-            for i in range(25):
-                h = (int(current_hour_float) - 12 + i) % 24
-                hours_labels.append(f"{h:02d}:00")
+            # --- LINEA ORO DINAMICA ---
+            # In un asse 24->0, l'ora attuale si posiziona così:
+            fig.add_vline(x=current_hour_float, line_width=4, line_color="gold")
         
             fig.update_layout(
                 xaxis=dict(
-                    range=[0, 24], 
-                    tickmode="array",
-                    tickvals=list(range(25)),
-                    ticktext=hours_labels,
-                    showgrid=False,
-                    fixedrange=True
+                    range=[24, 0], # ASSE INVERTITO
+                    dtick=1, showgrid=False, color="white", title="Ore (CET)"
                 ),
-                yaxis=dict(range=[0, 4.5], visible=False, fixedrange=True),
-                height=400,
-                margin=dict(l=0, r=0, t=50, b=0),
+                yaxis=dict(range=[0, 4.5], visible=False),
                 template="plotly_dark",
+                paper_bgcolor="rgba(0,0,0,0)",
                 plot_bgcolor="rgba(0,0,0,0)",
-                paper_bgcolor="rgba(0,0,0,0)"
+                margin=dict(l=10, r=10, t=10, b=10),
+                height=400
             )
-            
             return fig
     
         st.divider()
