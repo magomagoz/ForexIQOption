@@ -222,16 +222,16 @@ if st.session_state.connected:
         def draw_market_map(current_hour_float):
             # 1. Definiamo PRIMA il testo del titolo e lo stato Overlap
             is_overlap = 14 <= current_hour_float <= 18
-            title_text = f"🌍 LIVE MARKET FLOW {'(🔥 OVERLAP ATTIVO)' if is_overlap else ''}"
+            #title_text = f"🌍 LIVE MARKET FLOW {'(🔥 OVERLAP ATTIVO)' if is_overlap else ''}"
             title_color = "orange" if is_overlap else "white"
             plot_bg_color = "rgba(100, 50, 0, 0.15)" if is_overlap else "rgba(0,0,0,0)"
 
             # 2. Definizione Sessioni (Orari Roma)
             markets = [
-                dict(name="SYDNEY", start=0, end=6, level=1, color="rgba(240, 230, 140, 0.2)"),
-                dict(name="TOKYO", start=1, end=7, level=1.8, color="rgba(152, 251, 152, 0.2)"),
-                dict(name="LONDRA", start=9, end=18, level=2.6, color="rgba(255, 160, 122, 0.4)"),
-                dict(name="NEW YORK", start=15, end=22, level=3.4, color="rgba(224, 255, 255, 0.4)")
+                dict(name="SYDNEY", start=0, end=6, level=1, color="rgba(240, 230, 140, 0.05)"),
+                dict(name="TOKYO", start=1, end=7, level=1.8, color="rgba(152, 251, 152, 0.05)"),
+                dict(name="LONDRA", start=9, end=18, level=2.6, color="rgba(255, 160, 122, 0.05)"),
+                dict(name="NEW YORK", start=15, end=22, level=3.4, color="rgba(224, 255, 255, 0.05)")
             ]
             
             fig = go.Figure()
