@@ -190,7 +190,7 @@ if st.session_state.connected:
     else:
         st.info("💤 SISTEMA IN STANDBY", icon="⚪")
 
-            st.divider()
+        #st.divider()
     
     if scanner_attivo:
     #if st.session_state.scanner:    
