@@ -508,7 +508,7 @@ if st.session_state.connected:
     # --- LOGICA DI REFRESH AUTOMATICO ---
     
     # 1. Messaggio discreto di stato dello scanner
-    st.caption(f"🔄 Scanner in esecuzione... Ultimo check: {datetime.now().strftime('%H:%M:%S')}")
+    st.caption(f"🔄 Scanner in esecuzione... Ultimo check: {datetime.now() + timedelta(hours=1).strftime('%H:%M:%S')}")
 
     # 2. Pausa tecnica (fondamentale per non bloccare il browser)
     # Imposta 2 o 3 secondi: è il tempo perfetto per l'API di IQ Option
