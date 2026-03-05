@@ -31,7 +31,7 @@ def play_trade_sound(sound_type="buy"):
         with placeholder:
             # autoplay=True è fondamentale
             st.audio(sounds.get(sound_type, sounds["buy"]), autoplay=True)
-        time_module.sleep(0.2) # Leggermente aumentato per dare tempo al buffer
+        time_module.sleep(2.0) # Leggermente aumentato per dare tempo al buffer
     except:
         pass
     placeholder.empty()
