@@ -217,17 +217,17 @@ if st.session_state.connected:
     # Qui inizia il tuo ALL_PAIRS e il ciclo FOR per ogni coppia...
 
         # 3. Indicatore di stato gigante
-        if st.session_state.scanner_on:
-            st.success("📡 SCANSIONE ATTIVA" if scanner_autorizzato else "⏳ IN ATTESA DI FINESTRA ORARIA", icon="🔥")
-
-            # --- NUOVA SEZIONE: MONITOR DELLE VALUTE ---
-            st.subheader("🕵️ Asset in Monitoraggio")
-            
-            # Creiamo una griglia di 5 colonne per mostrare le valute in modo compatto
-            cols = st.columns(5)
-            for i, pair in enumerate(ALL_PAIRS):
-                with cols[i % 5]:
-                    st.code(f"{icons.get(pair, '🔍')} {pair}") # Mostra la valuta in un box grigio tecnico
+    if scanner_attivo:
+        st.error("📡 SISTEMA IN SCANSIONE ATTIVA", icon="🔥")
+        
+        # --- NUOVA SEZIONE: MONITOR DELLE VALUTE ---
+        st.subheader("🕵️ Asset in Monitoraggio")
+        
+        # Creiamo una griglia di 5 colonne per mostrare le valute in modo compatto
+        cols = st.columns(5)
+        for i, pair in enumerate(ALL_PAIRS):
+            with cols[i % 5]:
+                st.code(f"{icons.get(pair, '🔍')} {pair}") # Mostra la valuta in un box grigio tecnico
 
     else:
         st.info("💤 SISTEMA IN STANDBY", icon="⚪")
