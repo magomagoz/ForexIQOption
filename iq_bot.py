@@ -278,7 +278,7 @@ if st.session_state.connected:
                 title=dict(text=title_text, x=0.5, font=dict(color=title_color)),
                 xaxis=dict(range=[0, 24], dtick=1, gridcolor="rgba(255,255,255,0.05)", title="Ore (Roma CET)"),
                 yaxis=dict(range=[0, 4.5], showticklabels=False, fixedrange=True),
-                height=220,
+                height=400,
                 margin=dict(l=0, r=0, t=40, b=0),
                 template="plotly_dark",
                 plot_bgcolor=plot_bg_color, # Sfondo dinamico
