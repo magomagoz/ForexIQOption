@@ -238,27 +238,27 @@ if st.session_state.connected:
 
     scanner_attivo = st.session_state.scanner_on
 
-        # --- FILTRO ORARIO PROFESSIONALE ---
-        now_time = datetime.now().time()
+    # --- FILTRO ORARIO PROFESSIONALE ---
+    now_time = datetime.now().time()
         
-        # Definiamo le finestre di trading (Mattina e Pomeriggio)
-        window_1 = (time(9, 0), time(12, 0))   # 09:00 - 12:00
-        window_2 = (time(14, 0), time(17, 0)) # 14:00 - 18:00
+    # Definiamo le finestre di trading (Mattina e Pomeriggio)
+    window_1 = (time(9, 0), time(12, 0))   # 09:00 - 12:00
+    window_2 = (time(14, 0), time(17, 0)) # 14:00 - 18:00
         
-        # Controllo se siamo in una finestra operativa
-        is_trading_time = (window_1[0] <= now_time <= window_1[1]) or (window_2[0] <= now_time <= window_2[1])
+    # Controllo se siamo in una finestra operativa
+    is_trading_time = (window_1[0] <= now_time <= window_1[1]) or (window_2[0] <= now_time <= window_2[1])
     
-        # Se lo scanner è acceso ma siamo fuori orario, lo mettiamo in "Protezione"
-        if scanner_attivo and not is_trading_time and not stress_test:
-            st.warning("🛡️ PROTEZIONE ATTIVA: Mercato fuori orario ottimale. Lo scanner è in pausa per evitare falsi segnali.")
-            st.info(f"⏰ Prossima finestra utile: {window_1[0] if now_time < window_1[0] else window_2[0]}")
-            trading_autorizzato = False
-        else:
-            trading_autorizzato = True
+    # Se lo scanner è acceso ma siamo fuori orario, lo mettiamo in "Protezione"
+    if scanner_attivo and not is_trading_time and not stress_test:
+        st.warning("🛡️ PROTEZIONE ATTIVA: Mercato fuori orario ottimale. Lo scanner è in pausa per evitare falsi segnali.")
+        st.info(f"⏰ Prossima finestra utile: {window_1[0] if now_time < window_1[0] else window_2[0]}")
+        trading_autorizzato = False
+    else:
+        trading_autorizzato = True
     
-        # Lo scanner parte solo se autorizzato (o se sei in Stress Test)
-        if scanner_attivo and trading_autorizzato:
-        # Qui metti tutto il tuo ciclo for pair in ALL_PAIRS...
+    # Lo scanner parte solo se autorizzato (o se sei in Stress Test)
+    if scanner_attivo and trading_autorizzato:
+    # Qui metti tutto il tuo ciclo for pair in ALL_PAIRS...
 
     # 3. Indicatore di stato gigante
     if scanner_attivo:
