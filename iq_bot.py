@@ -7,7 +7,7 @@ from plotly.subplots import make_subplots
 from iqoptionapi.stable_api import IQ_Option
 from PIL import Image
 import requests
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 
 # --- CONFIGURAZIONI E TELEGRAM (Tuo codice originale) ---
 TELEGRAM_TOKEN = st.secrets.get("TELEGRAM_TOKEN", "")
@@ -36,8 +36,12 @@ def play_trade_sound(sound_type="buy"):
     placeholder.empty()
 
 def get_market_status():
-    now = datetime.now().time()
-    # Definiamo gli orari
+
+# Prende l'ora del server e aggiunge 1 ora per Roma (CET)
+now_roma = datetime.now() + timedelta(hours=1)
+now_time = now_roma.time()
+
+# Definiamo gli orari
     londra = (time(9,0), time(18,0))
     new_york = (time(14,0), time(23,0))
     
@@ -106,9 +110,11 @@ with st.sidebar:
 
         st.divider()
         
-        # --- SESSIONI DI MERCATO ---
-        now_cet = datetime.now().time()
-        st.header("🌍 SESSIONI DI MERCATO")
+        # --- SESSIONI DI MERCATO (CORRETTE PER ROMA) ---
+        now_roma = datetime.now() + timedelta(hours=1)
+        now_cet = now_roma.time()
+        
+        st.header("🌍 SESSIONI DI MERCATO (Roma)")
         
         for city, (start, end) in {"🇬🇧 LONDRA:": (time(9,0), time(18,0)), "🇺🇸 NEW YORK:": (time(14,0), time(23,0)), "🇦🇺 SYDNEY:": (time(23,0), time(8,0)), "🇯🇵 TOKYO:": (time(1,0), time(10,0))}.items():
             status = "Open 🟢" if start <= now_cet <= end else "Closed 🔴"
@@ -460,6 +466,10 @@ if st.session_state.connected:
         
         # Invertiamo l'ordine: l'ultimo aggiunto finisce in prima riga [::-1]
         df_reversed = df_journal.iloc[::-1].copy()
+
+        # All'interno del ciclo dello scanner, quando aggiungi al Journal:
+        'time': (datetime.now() + timedelta(hours=1)).strftime("%H:%M:%S"),
+
         
         # Assicuriamoci che tutte le colonne esistano (per evitare errori se il segnale è nuovo)
         for col in ['time', 'pair', 'dir', 'price', 'rsi', 'result']:
