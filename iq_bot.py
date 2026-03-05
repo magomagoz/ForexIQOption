@@ -216,7 +216,7 @@ if st.session_state.connected:
     if scanner_attivo:
         st.success("SISTEMA IN SCANSIONE ATTIVA 🔥🔥🔥", icon="📡")
     
-        # --- MAPPA OPERATIVA MONDIALE (PROIEZIONE TEMPORALE) ---
+        # --- FUNZIONE AGGIORNATA PER MAPPA OPERATIVA MONDIALE ---
         def draw_market_map(current_hour_float):
             # Definizione Sessioni
             markets = [
@@ -228,58 +228,76 @@ if st.session_state.connected:
             
             # Controllo Overlap (Londra + NY) per Alert Visivo
             is_overlap = 14 <= current_hour_float <= 18
-            bg_color = "rgba(100, 50, 0, 0.15)" if is_overlap else "rgba(0,0,0,0)"
+            
+            # Colore di sfondo dinamico: ambrato in overlap, trasparente altrimenti
+            plot_bg_color = "rgba(100, 50, 0, 0.15)" if is_overlap else "rgba(0,0,0,0)"
         
             fig = go.Figure()
         
-            # Disegniamo le fasce colorate
+            # --- AGGIUNTA IMMAGINE MAPPA MONDO COME SFONDO ---
+            # Nota: L'immagine fornita (image_1.png) deve essere accessibile via URL.
+            # In alternativa, se è un file locale, deve essere codificata in base64.
+            # Qui usiamo un URL segnaposto per image_1.png. Sostituiscilo con l'URL reale.
+            world_map_url = "https://path/to/your/image_1.png" # <--- SOSTITUISCI CON L'URL REALE DI image_1.png
+        
+            fig.add_layout_image(
+                dict(
+                    source=world_map_url,
+                    xref="paper", yref="paper",
+                    x=0, y=1,
+                    sizex=1, sizey=1,
+                    sizing="stretch", # Allunga l'immagine per coprire il grafico
+                    opacity=0.15,      # Regola l'opacità per non disturbare
+                    layer="below"      # Posiziona sotto fasce e linea
+                )
+            )
+        
+            # Disegniamo le fasce colorate delle sessioni
             for m in markets:
-                if m['start'] > m['end']: # Sydney/NY scavallamento
-                    fig.add_vrect(x0=m['start'], x1=24, fillcolor=m['Color'] if 'Color' in m else m['color'], line_width=0)
-                    fig.add_vrect(x0=0, x1=m['end'], fillcolor=m['Color'] if 'Color' in m else m['color'], line_width=0)
+                if m['start'] > m['end']: # Gestione scavallamento mezzanotte (Sydney/NY)
+                    fig.add_vrect(x0=m['start'], x1=24, fillcolor=m['color'], line_width=0)
+                    fig.add_vrect(x0=0, x1=m['end'], fillcolor=m['color'], line_width=0)
                 else:
-                    fig.add_vrect(x0=m['start'], x1=m['end'], fillcolor=m['Color'] if 'Color' in m else m['color'], line_width=0)
+                    fig.add_vrect(x0=m['start'], x1=m['end'], fillcolor=m['color'], line_width=0)
                 
+                # Etichette nomi sessioni
                 fig.add_annotation(x=(m['start']+m['end'])/2 if m['start']<m['end'] else 2, 
                                    y=m['level'], text=m['name'], showarrow=False, font=dict(color="rgba(255,255,255,0.6)", size=10))
         
-            # Linea Ora di Roma (Bianca e pulsante se in Overlap)
-            fig.add_vline(x=current_hour_float, line_width=4 if is_overlap else 2, 
-                         line_color="white" if not is_overlap else "#FFD700")
+            # Linea Ora di Roma (Bianca/Oro pulsante in Overlap)
+            line_color = "#FFD700" if is_overlap else "white"
+            line_width = 4 if is_overlap else 2
+            
+            fig.add_vline(x=current_hour_float, line_width=line_width, line_color=line_color)
         
             # Configurazione Grafica
-            st.divider()
-            st.subheader("🌍 Live Market Flow 24h")
-            
+            title_text = f"🌍 LIVE MARKET FLOW {'(🔥 OVERLAP ATTIVO)' if is_overlap else ''}"
+            title_color = "orange" if is_overlap else "white"
+        
             fig.update_layout(
-                #title=dict(text=f"🌍 LIVE MARKET FLOW {'(🔥 OVERLAP ATTIVO)' if is_overlap else ''}", x=0.5, font=dict(color="orange" if is_overlap else "white")),
+                title=dict(text=title_text, x=0.5, font=dict(color=title_color)),
                 xaxis=dict(range=[0, 24], dtick=1, gridcolor="rgba(255,255,255,0.05)", title="Ore (Roma CET)"),
                 yaxis=dict(range=[0, 4.5], showticklabels=False, fixedrange=True),
                 height=220,
                 margin=dict(l=0, r=0, t=40, b=0),
                 template="plotly_dark",
-                plot_bgcolor=bg_color, # Colore dinamico dello sfondo
+                plot_bgcolor=plot_bg_color, # Sfondo dinamico
                 paper_bgcolor="rgba(0,0,0,0)"
-            )
-            
-            # Aggiunta immagine Mercatore stilizzata in background (opzionale se disponibile URL)
-            fig.add_layout_image(
-                dict(
-                    source="https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/Mercator-projection.jpg/800px-Mercator-projection.jpg",
-                    xref="paper", yref="paper", x=0, y=1, sizex=1, sizey=1,
-                    sizing="stretch", opacity=0.1, layer="below"
-                )
             )
         
             return fig
         
-        # Posizionamento nel Main (Sotto il Banner)
+        # --- CODICE NEL MAIN (Sotto il Banner, prima dello Scanner) ---
+        # Assicurati di aver definito 'now_roma' prima.
         fuso_roma = pytz.timezone('Europe/Rome')
         now_roma = datetime.now(fuso_roma)
+        
+        # Calcolo ora decimale (es: 14:30 -> 14.5) per posizionare la linea con precisione
         hour_float = now_roma.hour + (now_roma.minute / 60)
         
+        # Visualizzazione della mappa aggiornata
         st.plotly_chart(draw_market_map(hour_float), use_container_width=True, config={'displayModeBar': False})
-
+    
         st.divider()
         # --- NUOVA SEZIONE: MONITOR DELLE VALUTE ---
         st.subheader("🕵️ Coppia di valute in Monitoraggio")
