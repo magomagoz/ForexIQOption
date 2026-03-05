@@ -289,7 +289,7 @@ if st.session_state.connected:
     
         st.divider()
         # --- NUOVA SEZIONE: MONITOR DELLE VALUTE ---
-        st.subheader("🕵️ Coppia di valute in Monitoraggio")
+        st.subheader("🕵️ Coppie di valute osservate")
         
         # Creiamo una griglia di 5 colonne per mostrare le valute in modo compatto
         cols = st.columns(5)
