@@ -94,7 +94,7 @@ with st.sidebar:
     else:
         st.success(f"🟢 Conto {st.session_state.account_type} ATTIVO")
         
-        st.metric(f"💰 Saldo {st.session_state.account_type}", f"{st.session_state.get_balance:.2f} €")    
+        st.metric(f"💰 Saldo {st.session_state.account_type}", f"{st.session_state.local_balance:.2f} €")    
         
         st.session_state.stake = st.number_input("💰 INVESTIMENTO (€)", value=100.0)
         
