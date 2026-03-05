@@ -9,17 +9,43 @@ from iqoptionapi.stable_api import IQ_Option
 from PIL import Image
 import requests
 from datetime import datetime, time, timedelta
+import uuid
 
 # --- CONFIGURAZIONI E TELEGRAM (Tuo codice originale) ---
 TELEGRAM_TOKEN = st.secrets.get("TELEGRAM_TOKEN", "")
 TELEGRAM_CHAT_ID = st.secrets.get("TELEGRAM_CHAT_ID", "")
 
+def genera_trade_id():
+    # Crea un ID basato sull'orario attuale (ultime 6 cifre del timestamp)
+    return f"TRD-{int(datetime.now().timestamp()) % 1000000}"
+
 def send_telegram_signal(signal_type, pair, price, rsi, macd):
     timestamp = datetime.now().strftime("%H:%M:%S")
-    message = f"🚀 *SENTINEL AI*\n*{signal_type} - {pair}*\n💰 Prezzo: `{price:.5f}`\n📊 RSI: `{rsi:.1f}`\n⏰ Ora: {timestamp}"
+
+    trade_id = genera_trade_id()
+    message = (
+        f"🚀 *NUOVA OPERAZIONE*\n*{signal_type}*"
+        f"🆔 ID: `{trade_id}`\n"
+        f"📊 Asset: {pair}\n"
+        f"💰 Prezzo: `{price:.5f}`\n"
+        f"📊 RSI: `{rsi:.1f}`"
+        f"🔔 Segnale: {direction}\n"
+        f"⏰ Ora: {timestamp}"
+    )
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     try: requests.post(url, data={"chat_id": TELEGRAM_CHAT_ID, "text": message, "parse_mode": "Markdown"}, timeout=5)
     except: pass
+
+def invia_telegram(messaggio):
+    token = "TELEGRAM_TOKEN"
+    chat_id = "TELEGRAM_CHAT_ID"
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    data = {"chat_id": chat_id, "text": messaggio, "parse_mode": "Markdown"}
+    try:
+        requests.post(url, data=data)
+    except Exception as e:
+        print(f"Errore Telegram: {e}")
+
 
 def play_trade_sound(sound_type="buy"):
     sounds = {
@@ -127,7 +153,7 @@ with st.sidebar:
             st.write(f"{city} {status}")
 
         # Visualizzazione
-        #st.info(get_market_status())
+        st.info(get_market_status())
 
         st.divider()
         st.header("🔧 STRUMENTI DI TEST")
@@ -212,10 +238,34 @@ if st.session_state.connected:
 
     scanner_attivo = st.session_state.scanner_on
 
+        # --- FILTRO ORARIO PROFESSIONALE ---
+        now_time = datetime.now().time()
+        
+        # Definiamo le finestre di trading (Mattina e Pomeriggio)
+        window_1 = (time(9, 0), time(12, 0))   # 09:00 - 12:00
+        window_2 = (time(14, 0), time(17, 0)) # 14:00 - 18:00
+        
+        # Controllo se siamo in una finestra operativa
+        is_trading_time = (window_1[0] <= now_time <= window_1[1]) or (window_2[0] <= now_time <= window_2[1])
+    
+        # Se lo scanner è acceso ma siamo fuori orario, lo mettiamo in "Protezione"
+        if scanner_attivo and not is_trading_time and not stress_test:
+            st.warning("🛡️ PROTEZIONE ATTIVA: Mercato fuori orario ottimale. Lo scanner è in pausa per evitare falsi segnali.")
+            st.info(f"⏰ Prossima finestra utile: {window_1[0] if now_time < window_1[0] else window_2[0]}")
+            trading_autorizzato = False
+        else:
+            trading_autorizzato = True
+    
+        # Lo scanner parte solo se autorizzato (o se sei in Stress Test)
+        if scanner_attivo and trading_autorizzato:
+        # Qui metti tutto il tuo ciclo for pair in ALL_PAIRS...
+
     # 3. Indicatore di stato gigante
     if scanner_attivo:
         st.success("SISTEMA IN SCANSIONE ATTIVA 🔥🔥🔥", icon="📡")
 
+        st.divider()
+        
         st.subheader("🌍 Live Market Flow 24h")
             
         def draw_market_map_inverted(current_hour_float):
@@ -511,6 +561,19 @@ if st.session_state.connected:
                         s['result'] = "✅ WIN" if win else "❌ LOSS"
                         break
 
+                # Supponiamo che 'risultato' sia 'WIN' o 'LOSS' e 'profitto' sia il valore
+                colore_esito = "✅" if risultato == "WIN" else "❌"
+                
+                messaggio_esito = (
+                    f"{colore_esito} *ESITO TRADE*\n"
+                    f"🆔 ID: `{trade_id}`\n"
+                    f"📈 Risultato: *{risultato}*\n"
+                    f"💰 Profitto: {profitto}$\n"
+                    f"🏁 Stato: Sessione Conclusa"
+                )
+                invia_telegram(messaggio_esito)
+
+                
                 # 5. Rimuovi il trade dai monitorati per liberare la coppia
                 del st.session_state.active_trades[pair]
                 
