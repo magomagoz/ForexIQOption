@@ -112,38 +112,50 @@ def get_market_status():
 
 def draw_market_map_inverted(current_hour_float, trading_autorizzato):
     fig = go.Figure()
-    world_map_url = "https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/World_map_with_nations_-_Pacific_centered.svg/1280px-World_map_with_nations_-_Pacific_centered.svg.png"
+    
+    # Prova a caricare la tua immagine locale
+    try:
+        from PIL import Image
+        bg_image = Image.open("map_bg.png")
+    except:
+        # Fallback nel caso in cui non trovi il file
+        bg_image = "https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/World_map_with_nations_-_Pacific_centered.svg/1280px-World_map_with_nations_-_Pacific_centered.svg.png"
 
+    # Imposta l'immagine come sfondo
     fig.add_layout_image(dict(
-        source=world_map_url, xref="x", yref="y", x=24, y=4.5,
-        sizex=24, sizey=4.5, sizing="stretch", opacity=0.3, layer="below"
+        source=bg_image, 
+        xref="x", yref="y", 
+        x=24, y=4.5,
+        sizex=24, sizey=4.5, 
+        sizing="stretch", 
+        opacity=0.9, # Opacità alzata per far risaltare i colori della tua mappa
+        layer="below"
     ))
 
-    # Coordinate Città Invertite (24->0)
-    cities = [
-        {"name": "SYDNEY", "x": 2}, {"name": "TOKYO", "x": 5},
-        {"name": "LONDRA", "x": 14}, {"name": "NEW YORK", "x": 19}
-    ]
-    for city in cities:
-        fig.add_trace(go.Scatter(
-            x=[city['x']], y=[2], mode="markers+text",
-            marker=dict(color="red", size=10, symbol="circle"),
-            text=[city['name']], textposition="top center",
-            textfont=dict(color="white", size=10), showlegend=False
-        ))
+    # N.B. Ho rimosso i marker delle città perché la tua immagine li ha già integrati!
 
+    # Linea Laser Dinamica (gialla se autorizzato, rossa se in pausa)
     color_laser = "#FFD700" if trading_autorizzato else "#FF4B4B"
     x_pos = 24 - current_hour_float
 
-    fig.add_shape(type="line", x0=x_pos, x1=x_pos, y0=0, y1=4.5, line=dict(color=color_laser, width=4))
+    fig.add_shape(
+        type="line", 
+        x0=x_pos, x1=x_pos, y0=0, y1=4.5, 
+        line=dict(color=color_laser, width=4)
+    )
 
+    # Aggiorna il layout (nascondo gli assi perché i numeri sono già disegnati sulla tua immagine)
     fig.update_layout(
-        xaxis=dict(range=[24, 0], showgrid=False, visible=True, title="Ore (Roma CET)"),
+        xaxis=dict(range=[24, 0], showgrid=False, visible=False),
         yaxis=dict(range=[0, 4.5], visible=False),
-        template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)", margin=dict(l=0, r=0, t=0, b=0), height=350
+        template="plotly_dark", 
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)", 
+        margin=dict(l=0, r=0, t=0, b=0), 
+        height=300 # Leggermente abbassata per non deformare troppo i cerchi della tua mappa
     )
     return fig
+
 
 # --- 2. SETUP STREAMLIT E SESSIONE ---
 st.set_page_config(page_title="Sentinel AI", page_icon="🚀", layout="wide")
