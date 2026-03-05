@@ -216,7 +216,7 @@ if st.session_state.connected:
     if scanner_attivo:
         st.success("SISTEMA IN SCANSIONE ATTIVA 🔥🔥🔥", icon="📡")
 
-        st.subheader("🌍 Live Market Flow 24h"
+        st.subheader("🌍 Live Market Flow 24h")
             
         # --- FUNZIONE AGGIORNATA PER MAPPA OPERATIVA MONDIALE ---
         def draw_market_map(current_hour_float):
