@@ -217,9 +217,9 @@ if st.session_state.connected:
     # Qui inizia il tuo ALL_PAIRS e il ciclo FOR per ogni coppia...
 
         # 3. Indicatore di stato gigante
-        if scanner_attivo:
-            st.success("📡 SISTEMA IN SCANSIONE ATTIVA", icon="🔥")
-            
+        if st.session_state.scanner_on:
+            st.success("📡 SCANSIONE ATTIVA" if scanner_autorizzato else "⏳ IN ATTESA DI FINESTRA ORARIA", icon="🔥")
+
         # --- NUOVA SEZIONE: MONITOR DELLE VALUTE ---
         st.subheader("🕵️ Asset in Monitoraggio")
             
