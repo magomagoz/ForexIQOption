@@ -37,9 +37,9 @@ def play_trade_sound(sound_type="buy"):
 
 def get_market_status():
 
-# Prende l'ora del server e aggiunge 1 ora per Roma (CET)
-now_roma = datetime.now() + timedelta(hours=1)
-now_time = now_roma.time()
+    # Prende l'ora del server e aggiunge 1 ora per Roma (CET)
+    now_roma = datetime.now() + timedelta(hours=1)
+    now_time = now_roma.time()
 
 # Definiamo gli orari
     londra = (time(9,0), time(18,0))
