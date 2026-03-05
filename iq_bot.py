@@ -474,7 +474,7 @@ if st.session_state.connected:
         df_reversed = df_journal.iloc[::-1].copy()
 
         # All'interno del ciclo dello scanner, quando aggiungi al Journal:
-        'time': (now_roma).strftime("%H:%M:%S"),
+        'time': now_roma.strftime("%H:%M:%S"),
 
         
         # Assicuriamoci che tutte le colonne esistano (per evitare errori se il segnale è nuovo)
