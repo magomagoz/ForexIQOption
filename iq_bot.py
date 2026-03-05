@@ -294,7 +294,7 @@ if st.session_state.connected:
         now_roma = datetime.now(fuso_roma)
         
         # Calcolo ora decimale (es: 14:30 -> 14.5) per posizionare la linea con precisione
-        hour_float = now_roma.hour + (now_roma.minute / 60)
+        #hour_float = now_roma.hour + (now_roma.minute / 60)
         
         # Visualizzazione della mappa aggiornata
         st.plotly_chart(draw_market_map(hour_float), use_container_width=True, config={'displayModeBar': False})
