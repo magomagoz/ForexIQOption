@@ -248,8 +248,11 @@ if st.session_state.connected:
                          line_color="white" if not is_overlap else "#FFD700")
         
             # Configurazione Grafica
+            st.divider()
+            st.header("🌍 LIVE MARKET FLOW 24h")
+            
             fig.update_layout(
-                title=dict(text=f"🌍 LIVE MARKET FLOW {'(🔥 OVERLAP ATTIVO)' if is_overlap else ''}", x=0.5, font=dict(color="orange" if is_overlap else "white")),
+                #title=dict(text=f"🌍 LIVE MARKET FLOW {'(🔥 OVERLAP ATTIVO)' if is_overlap else ''}", x=0.5, font=dict(color="orange" if is_overlap else "white")),
                 xaxis=dict(range=[0, 24], dtick=1, gridcolor="rgba(255,255,255,0.05)", title="Ore (Roma CET)"),
                 yaxis=dict(range=[0, 4.5], showticklabels=False, fixedrange=True),
                 height=220,
