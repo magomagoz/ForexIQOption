@@ -203,7 +203,7 @@ if st.session_state.connected:
     is_trading_time = (window_1[0] <= now_time <= window_1[1]) or (window_2[0] <= now_time <= window_2[1])
 
     # 4. Semaforo Operativo (Logica di Autorizzazione)
-    scanner_autorizzato = False
+    scanner_attivo = False
 
     if st.session_state.daily_stop_hit:
         st.error(f"🚫 SESSIONE BLOCCATA: Stop Loss Giornaliero raggiunto (-{perdita_attuale:.2f}€)")
@@ -213,7 +213,7 @@ if st.session_state.connected:
         st.success(f"⏰ Prossima finestra: {window_1[0] if now_time < window_1[0] else window_2[0]}")
     
     # 5. Esecuzione Scanner
-    if scanner_autorizzato:
+    if scanner_attivo:
     # Qui inizia il tuo ALL_PAIRS e il ciclo FOR per ogni coppia...
 
         # 3. Indicatore di stato gigante
