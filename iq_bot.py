@@ -473,10 +473,6 @@ if st.session_state.connected:
         # Invertiamo l'ordine: l'ultimo aggiunto finisce in prima riga [::-1]
         df_reversed = df_journal.iloc[::-1].copy()
 
-        # All'interno del ciclo dello scanner, quando aggiungi al Journal:
-        time: now_roma.strftime("%H:%M:%S"),
-
-        
         # Assicuriamoci che tutte le colonne esistano (per evitare errori se il segnale è nuovo)
         for col in ['time', 'pair', 'dir', 'price', 'rsi', 'result']:
             if col not in df_reversed.columns:
