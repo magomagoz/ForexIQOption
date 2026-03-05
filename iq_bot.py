@@ -67,9 +67,6 @@ if 'connected' not in st.session_state: st.session_state.connected = False
 if 'active_trades' not in st.session_state: st.session_state.active_trades = {}
 if 'signal_history' not in st.session_state: st.session_state.signal_history = []
 if 'local_balance' not in st.session_state: st.session_state.local_balance = 0
-if 'initial_balance' not in st.session_state: st.session_state.initial_balance = 0.0
-if 'daily_stop_hit' not in st.session_state: st.session_state.daily_stop_hit = False
-
 
 with st.sidebar:
     st.header("⚙️ IQ FOREX TRADING PLATFORM")
@@ -96,21 +93,8 @@ with st.sidebar:
                 st.rerun()
     else:
         st.success(f"🟢 Conto {st.session_state.account_type} ATTIVO")
-        #st.session_state.stake = st.number_input("💰 INVESTIMENTO (€)", value=100.0)
+        st.session_state.stake = st.number_input("💰 INVESTIMENTO (€)", value=100.0)
         
-        st.divider()
-        st.header("🛡️ RISK MANAGEMENT")
-        
-        st.metric(f"💰 Saldo {st.session_state.account_type}", f"{st.session_state.local_balance:.2f} €")
-        
-        risk_percent = st.slider("⚖️ Rischio per Operazione (%)", 0.5, 5.0, 1.0, help="Percentuale del capitale da investire per singolo trade")
-        
-        max_loss = st.number_input("📉 Stop Loss Giornaliero (€)", value=500.0, step=50.0)
-        
-        # Calcolo dinamico dello Stake basato sul saldo attuale
-        st.session_state.stake = (st.session_state.local_balance * risk_percent) / 100
-        st.caption(f"💰 INVESTIMENTO CALCOLATO: {st.session_state.stake:.2f} €")
-
         timeframe = st.selectbox("⏱️ SELEZIONA TIMEFRAME OPERATIVO (s)", [60, 300], index=0)
     
         if st.button("🔴 DISCONNETTI"):
@@ -187,50 +171,21 @@ if st.session_state.connected:
 
     scanner_attivo = st.session_state.scanner_on
 
-    # 1. Calcolo del bilancio iniziale alla prima connessione reale
-    if st.session_state.initial_balance == 0.0 and st.session_state.local_balance > 0:
-        st.session_state.initial_balance = st.session_state.local_balance
-
-    # 2. Controllo Drawdown (Perdita attuale)
-    perdita_attuale = st.session_state.initial_balance - st.session_state.local_balance
-    if perdita_attuale >= max_loss:
-        st.session_state.daily_stop_hit = True
-
-    # 3. Filtro Orario
-    now_time = datetime.now().time()
-    window_1 = (time(9, 0), time(12, 0))
-    window_2 = (time(14, 0), time(18, 30))
-    is_trading_time = (window_1[0] <= now_time <= window_1[1]) or (window_2[0] <= now_time <= window_2[1])
-
-    # 4. Semaforo Operativo (Logica di Autorizzazione)
-    scanner_attivo = False
-
-    if st.session_state.daily_stop_hit:
-        st.error(f"🚫 SESSIONE BLOCCATA: Stop Loss Giornaliero raggiunto (-{perdita_attuale:.2f}€)")
-        st.info("Riposa. Il mercato sarà qui anche domani.")
-    elif scanner_attivo and not is_trading_time and not stress_test:
-        st.warning("🛡️ PROTEZIONE ORARIA: Mercato in bassa volatilità.")
-        st.success(f"⏰ Prossima finestra: {window_1[0] if now_time < window_1[0] else window_2[0]}")
-    
-    # 5. Esecuzione Scanner
+    # 3. Indicatore di stato gigante
     if scanner_attivo:
-    # Qui inizia il tuo ALL_PAIRS e il ciclo FOR per ogni coppia...
+        st.error("📡 SISTEMA IN SCANSIONE ATTIVA", icon="🔥")
+        
+        # --- NUOVA SEZIONE: MONITOR DELLE VALUTE ---
+        st.subheader("🕵️ Asset in Monitoraggio")
+        
+        # Creiamo una griglia di 5 colonne per mostrare le valute in modo compatto
+        cols = st.columns(5)
+        for i, pair in enumerate(ALL_PAIRS):
+            with cols[i % 5]:
+                st.code(f"{icons.get(pair, '🔍')} {pair}") # Mostra la valuta in un box grigio tecnico
 
-        # 3. Indicatore di stato gigante
-        if scanner_attivo:
-            st.error("📡 SISTEMA IN SCANSIONE ATTIVA", icon="🔥")
-            
-            # --- NUOVA SEZIONE: MONITOR DELLE VALUTE ---
-            st.subheader("🕵️ Asset in Monitoraggio")
-            
-            # Creiamo una griglia di 5 colonne per mostrare le valute in modo compatto
-            cols = st.columns(5)
-            for i, pair in enumerate(ALL_PAIRS):
-                with cols[i % 5]:
-                    st.code(f"{icons.get(pair, '🔍')} {pair}") # Mostra la valuta in un box grigio tecnico
-    
-        else:
-            st.info("💤 SISTEMA IN STANDBY", icon="⚪")
+    else:
+        st.info("💤 SISTEMA IN STANDBY", icon="⚪")
 
         st.divider()
     
@@ -477,79 +432,75 @@ if st.session_state.connected:
 
     # --- SEZIONE STATISTICHE E SALDO AGGIORNATO ---
     st.subheader("📋 Trading Journal")
+    
+    if st.session_state.signal_history:
+        wins = sum(1 for s in st.session_state.signal_history if "✅" in str(s.get('result', '')))
+        losses = sum(1 for s in st.session_state.signal_history if "❌" in str(s.get('result', '')))
+        total = wins + losses
+        rate = (wins / total * 100) if total > 0 else 0
 
-    if not scanner_attivo:
-        st.error("📡 ATTIVA LO SCANNER FOREX", icon="🔥")
-            
-        if st.session_state.signal_history:
-            wins = sum(1 for s in st.session_state.signal_history if "✅" in str(s.get('result', '')))
-            losses = sum(1 for s in st.session_state.signal_history if "❌" in str(s.get('result', '')))
-            total = wins + losses
-            rate = (wins / total * 100) if total > 0 else 0
-    
-            #st.metric("🏆 PERFORMANCE LIVE", f"Win Rate: {rate:.1f}%", f"W: {wins} | L: {losses}")
-    
-            # Creiamo 3 colonne per le metriche finali
-            m1, m2, m3 = st.columns(3)
-            with m1:
-                st.metric("🏆 Win Rate", f"{rate:.1f}%")
-            with m2:
-                st.metric("📊 Score", f"W: {wins} | L: {losses}")
-            with m3:
-                # Questo è il saldo che si aggiorna con i tuoi calcoli Win/Loss
-                st.metric(f"💰 Saldo {st.session_state.account_type}", f"{st.session_state.local_balance:.2f} €")    
-            
-        # --- 4. TABELLA SEGNALI (ULTIMO IN ALTO) ---    
-        if st.session_state.signal_history:
-            # Creiamo il DataFrame
-            df_journal = pd.DataFrame(st.session_state.signal_history)
-            
-            # Invertiamo l'ordine: l'ultimo aggiunto finisce in prima riga [::-1]
-            df_reversed = df_journal.iloc[::-1].copy()
-            
-            # Assicuriamoci che tutte le colonne esistano (per evitare errori se il segnale è nuovo)
-            for col in ['time', 'pair', 'dir', 'price', 'rsi', 'result']:
-                if col not in df_reversed.columns:
-                    df_reversed[col] = "-" 
-            
-                # Rinominiamo le nuove colonne
-                rename_map = {
-                    'time': '⏰ ORA',
-                    'pair': '💱 COPPIA',
-                    'dir': '🚀 TIPO',
-                    'price': '💰 ENTRATA',
-                    'rsi': '📊 RSI',
-                    'macd': '📉 MACD',
-                    'bb': '↔️ BOLLINGER',
-                    'result': '🔍 ESITO'
-                }
-                
-            # Funzione per colorare l'esito
-            def style_result(val):
-                color = 'white'
-                if '✅' in str(val): color = '#00ff00'
-                elif '❌' in str(val): color = '#ff4b4b'
-                elif '⏳' in str(val): color = '#ffa500'
-                return f'color: {color}'
+        #st.metric("🏆 PERFORMANCE LIVE", f"Win Rate: {rate:.1f}%", f"W: {wins} | L: {losses}")
+
+        # Creiamo 3 colonne per le metriche finali
+        m1, m2, m3 = st.columns(3)
+        with m1:
+            st.metric("🏆 Win Rate", f"{rate:.1f}%")
+        with m2:
+            st.metric("📊 Score", f"W: {wins} | L: {losses}")
+        with m3:
+            # Questo è il saldo che si aggiorna con i tuoi calcoli Win/Loss
+            st.metric(f"💰 Saldo {st.session_state.account_type}", f"{st.session_state.local_balance:.2f} €")    
         
-            # Visualizzazione della tabella invertita
-            st.dataframe(
-                df_reversed.rename(columns=rename_map).style.applymap(style_result, subset=['🔍 ESITO']),
-                use_container_width=True, 
-                hide_index=True
-            )
+    # --- 4. TABELLA SEGNALI (ULTIMO IN ALTO) ---    
+    if st.session_state.signal_history:
+        # Creiamo il DataFrame
+        df_journal = pd.DataFrame(st.session_state.signal_history)
+        
+        # Invertiamo l'ordine: l'ultimo aggiunto finisce in prima riga [::-1]
+        df_reversed = df_journal.iloc[::-1].copy()
+        
+        # Assicuriamoci che tutte le colonne esistano (per evitare errori se il segnale è nuovo)
+        for col in ['time', 'pair', 'dir', 'price', 'rsi', 'result']:
+            if col not in df_reversed.columns:
+                df_reversed[col] = "-" 
+        
+            # Rinominiamo le nuove colonne
+            rename_map = {
+                'time': '⏰ ORA',
+                'pair': '💱 COPPIA',
+                'dir': '🚀 TIPO',
+                'price': '💰 ENTRATA',
+                'rsi': '📊 RSI',
+                'macd': '📉 MACD',
+                'bb': '↔️ BOLLINGER',
+                'result': '🔍 ESITO'
+            }
+            
+        # Funzione per colorare l'esito
+        def style_result(val):
+            color = 'white'
+            if '✅' in str(val): color = '#00ff00'
+            elif '❌' in str(val): color = '#ff4b4b'
+            elif '⏳' in str(val): color = '#ffa500'
+            return f'color: {color}'
+    
+        # Visualizzazione della tabella invertita
+        st.dataframe(
+            df_reversed.rename(columns=rename_map).style.applymap(style_result, subset=['🔍 ESITO']),
+            use_container_width=True, 
+            hide_index=True
+        )
     else:
         st.info("⏳ In attesa di segnali... Scanner attivo!")
-        
-        # --- LOGICA DI REFRESH AUTOMATICO ---
-        
-        # 1. Messaggio discreto di stato dello scanner
-        st.caption(f"🔄 Scanner in esecuzione... Ultimo check: {datetime.now().strftime('%H:%M:%S')}")
-    
-        # 2. Pausa tecnica (fondamentale per non bloccare il browser)
-        # Imposta 2 o 3 secondi: è il tempo perfetto per l'API di IQ Option
-        time_module.sleep(3) 
-    
-        # 3. Il comando magico che resetta lo script dall'alto
-        st.rerun() 
 
+    # --- LOGICA DI REFRESH AUTOMATICO ---
+    
+    # 1. Messaggio discreto di stato dello scanner
+    st.caption(f"🔄 Scanner in esecuzione... Ultimo check: {datetime.now().strftime('%H:%M:%S')}")
+
+    # 2. Pausa tecnica (fondamentale per non bloccare il browser)
+    # Imposta 2 o 3 secondi: è il tempo perfetto per l'API di IQ Option
+    time_module.sleep(3) 
+
+    # 3. Il comando magico che resetta lo script dall'alto
+    st.rerun() 
