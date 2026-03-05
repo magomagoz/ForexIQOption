@@ -219,71 +219,73 @@ if st.session_state.connected:
         st.subheader("🌍 Live Market Flow 24h")
             
         def draw_market_map(current_hour_float):
-            # 1. Definiamo i parametri visivi
-            is_overlap = 14 <= current_hour_float <= 18
-            
-            # RE-INSERITA LA VARIABILE TITLE_TEXT (Era commentata!)
-            title_text = f" "
-            
-            title_color = "orange" if is_overlap else "black"
-            plot_bg_color = "rgba(100, 50, 0, 0.15)" if is_overlap else "rgba(0,0,0,0)"
-
-            # 2. Definizione Sessioni con opacità calibrata (0.10 per far vedere la mappa)
-            markets = [
-                dict(name="SYDNEY", start=0, end=6, level=1, color="rgba(240, 230, 140, 0.10)"),
-                dict(name="TOKYO", start=1, end=7, level=1.8, color="rgba(152, 251, 152, 0.10)"),
-                dict(name="LONDRA", start=9, end=17, level=2.6, color="rgba(255, 160, 122, 0.10)"),
-                dict(name="NEW YORK", start=15, end=22, level=3.4, color="rgba(224, 255, 255, 0.10)")
-            ]
-            
             fig = go.Figure()
         
-            # 3. Immagine di Sfondo (Aumentata opacità a 0.40 per vederla meglio)
-            world_map_url = "https://i.pinimg.com/originals/88/cf/bf/88cfbffd7adc4048a587376607859acf.jpg"
+            # --- LOGICA DEL LOOP INFINITO (DOUBLE IMAGE) ---
+            # Calcoliamo lo spostamento basato sull'ora (0-24)
+            # Convertiamo l'ora in una percentuale di spostamento (0.0 a 1.0)
+            shift_percent = current_hour_float / 24
+        
+            # Carichiamo l'immagine da GitHub (URL RAW)
+            world_map_url = "https://raw.githubusercontent.com/TUO_UTENTE/TUO_REPO/main/mappa_stilizzata.png"
+        
+            # PRIMA COPIA DELLA MAPPA
             fig.add_layout_image(
                 dict(
                     source=world_map_url,
                     xref="paper", yref="paper",
-                    x=0, y=1, sizex=1, sizey=1,
-                    sizing="stretch", opacity=0.50, layer="below"
+                    x=-shift_percent, # Si sposta verso sinistra
+                    y=1, sizex=1, sizey=1,
+                    sizing="stretch", opacity=0.4, layer="below"
                 )
             )
         
-            # 4. Disegno Fasce
-            for m in markets:
-                if m['start'] > m['end']: 
-                    fig.add_vrect(x0=m['start'], x1=24, fillcolor=m['color'], line_width=0)
-                    fig.add_vrect(x0=0, x1=m['end'], fillcolor=m['color'], line_width=0)
-                else:
-                    fig.add_vrect(x0=m['start'], x1=m['end'], fillcolor=m['color'], line_width=0)
-                
-                fig.add_annotation(x=(m['start']+m['end'])/2 if m['start']<m['end'] else 2, 
-                                   y=m['level'], text=m['name'], showarrow=False, 
-                                   font=dict(color="rgba(255,255,255,0.7)", size=10))
+            # SECONDA COPIA DELLA MAPPA (Attaccata alla destra della prima)
+            fig.add_layout_image(
+                dict(
+                    source=world_map_url,
+                    xref="paper", yref="paper",
+                    x=1 - shift_percent, # Inizia dove finisce la prima
+                    y=1, sizex=1, sizey=1,
+                    sizing="stretch", opacity=0.4, layer="below"
+                )
+            )
         
-            # 5. Linea Ora Attuale
-            line_color = "#FFD700" if is_overlap else "white"
-            fig.add_vline(x=current_hour_float, line_width=4 if is_overlap else 2, line_color=line_color)
+            # --- LINEA DI ROMA (FISSA AL CENTRO) ---
+            # La posizioniamo esattamente a metà del grafico (x=0.5 in coordinate paper o x=12 in ore)
+            fig.add_vline(x=12, line_width=5, line_color="gold", layer="above")
+            
+            # Etichetta "ROMA" fissa sopra la linea
+            fig.add_annotation(
+                x=12, y=4.2, text="📍 ORA DI ROMA", 
+                showarrow=False, font=dict(color="gold", size=14, family="Arial Black")
+            )
         
-            # 6. Configurazione Layout
+            # --- AGGIUSTAMENTO SCALE E TESTI ---
+            # Le ore sotto devono scorrere in sincrono con la mappa
+            hours_labels = []
+            for i in range(25):
+                h = (int(current_hour_float) - 12 + i) % 24
+                hours_labels.append(f"{h:02d}:00")
+        
             fig.update_layout(
-                title=dict(text=title_text, x=0.5, font=dict(color=title_color)),
-                xaxis=dict(range=[0, 24], dtick=1, gridcolor="rgba(255,255,255,0.05)", title="Ore (Roma CET)"),
-                yaxis=dict(range=[0, 4.5], showticklabels=False, fixedrange=True),
+                xaxis=dict(
+                    range=[0, 24], 
+                    tickmode="array",
+                    tickvals=list(range(25)),
+                    ticktext=hours_labels,
+                    showgrid=False,
+                    fixedrange=True
+                ),
+                yaxis=dict(range=[0, 4.5], visible=False, fixedrange=True),
                 height=400,
-                margin=dict(l=0, r=0, t=40, b=0),
+                margin=dict(l=0, r=0, t=50, b=0),
                 template="plotly_dark",
-                plot_bgcolor=plot_bg_color,
+                plot_bgcolor="rgba(0,0,0,0)",
                 paper_bgcolor="rgba(0,0,0,0)"
             )
+            
             return fig
-        
-        # --- RENDER ---
-        fuso_roma = pytz.timezone('Europe/Rome')
-        now_roma_map = datetime.now(fuso_roma)
-        h_float = now_roma_map.hour + (now_roma_map.minute / 60)
-        
-        st.plotly_chart(draw_market_map(h_float), use_container_width=True, config={'displayModeBar': False})
     
         st.divider()
         # --- NUOVA SEZIONE: MONITOR DELLE VALUTE ---
