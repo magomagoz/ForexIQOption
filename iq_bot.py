@@ -176,8 +176,9 @@ if st.session_state.connected:
 
     # 3. Indicatore di stato gigante
     if scanner_attivo:
-        st.error("📡 SISTEMA IN SCANSIONE ATTIVA", icon="🔥")
-        
+        st.error("SISTEMA IN SCANSIONE ATTIVA 🔥🔥🔥", icon="📡")
+
+        st.divider()
         # --- NUOVA SEZIONE: MONITOR DELLE VALUTE ---
         st.subheader("🕵️ Asset in Monitoraggio")
         
@@ -190,8 +191,6 @@ if st.session_state.connected:
     else:
         st.info("💤 SISTEMA IN STANDBY", icon="⚪")
 
-        #st.divider()
-    
     if scanner_attivo:
     #if st.session_state.scanner:    
     
