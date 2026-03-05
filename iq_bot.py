@@ -10,14 +10,54 @@ from PIL import Image
 import requests
 from datetime import datetime, time, timedelta
 import uuid
+import json
+import os
 
-# --- CONFIGURAZIONI E TELEGRAM (Tuo codice originale) ---
-TELEGRAM_TOKEN = st.secrets.get("TELEGRAM_TOKEN", "")
-TELEGRAM_CHAT_ID = st.secrets.get("TELEGRAM_CHAT_ID", "")
+# --- CONFIGURAZIONI E TELEGRAM ---
+TELEGRAM_TOKEN = st.secrets.get("TELEGRAM_TOKEN", "IL_TUO_TOKEN")
+TELEGRAM_CHAT_ID = st.secrets.get("TELEGRAM_CHAT_ID", "IL_TUO_CHAT_ID")
 
 def genera_trade_id():
-    # Crea un ID basato sull'orario attuale (ultime 6 cifre del timestamp)
     return f"TRD-{int(datetime.now().timestamp()) % 1000000}"
+
+def registra_trade(trade_id, pair, direction, risultato, profitto):
+    file_path = "daily_report.json"
+    data = []
+    if os.path.exists(file_path):
+        with open(file_path, "r") as f:
+            data = json.load(f)
+    data.append({
+        "id": trade_id, "pair": pair, "direction": direction,
+        "risultato": risultato, "profitto": profitto,
+        "timestamp": datetime.now().strftime("%H:%M:%S")
+    })
+    with open(file_path, "w") as f:
+        json.dump(data, f)
+
+def genera_report_finale():
+    file_path = "daily_report.json"
+    if not os.path.exists(file_path): return
+    with open(file_path, "r") as f:
+        trades = json.load(f)
+    total = len(trades)
+    wins = len([t for t in trades if t['risultato'] == "WIN"])
+    profitto_totale = sum([t['profitto'] for t in trades])
+    report = (
+        f"📊 *REPORT GIORNALIERO SENTINEL AI*\n"
+        f"📈 Totale Trade: {total}\n"
+        f"✅ Win: {wins} | ❌ Loss: {total-wins}\n"
+        f"💰 Profitto Netto: *{profitto_totale:.2f}€*\n"
+    )
+    invia_telegram(report)
+    os.remove(file_path)
+
+def invia_telegram(messaggio):
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    try:
+        requests.post(url, data={"chat_id": TELEGRAM_CHAT_ID, "text": messaggio, "parse_mode": "Markdown"}, timeout=5)
+    except Exception as e:
+        st.error(f"Errore Telegram: {e}")
+
 
 def send_telegram_signal(signal_type, pair, price, rsi, macd):
     timestamp = datetime.now().strftime("%H:%M:%S")
@@ -35,17 +75,6 @@ def send_telegram_signal(signal_type, pair, price, rsi, macd):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     try: requests.post(url, data={"chat_id": TELEGRAM_CHAT_ID, "text": message, "parse_mode": "Markdown"}, timeout=5)
     except: pass
-
-def invia_telegram(messaggio):
-    token = "TELEGRAM_TOKEN"
-    chat_id = "TELEGRAM_CHAT_ID"
-    url = f"https://api.telegram.org/bot{token}/sendMessage"
-    data = {"chat_id": chat_id, "text": messaggio, "parse_mode": "Markdown"}
-    try:
-        requests.post(url, data=data)
-    except Exception as e:
-        print(f"Errore Telegram: {e}")
-
 
 def play_trade_sound(sound_type="buy"):
     sounds = {
@@ -268,57 +297,28 @@ if st.session_state.connected:
         
         st.subheader("🌍 Live Market Flow 24h")
             
-        def draw_market_map_inverted(current_hour_float):
+        def draw_market_map_inverted(current_hour_float, trading_autorizzato):
             fig = go.Figure()
-        
-            # URL di una mappa Pacific-Centered (Australia a destra)
-            # Questa è una mappa ad alta risoluzione che funge da base perfetta
             world_map_url = "https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/World_map_with_nations_-_Pacific_centered.svg/1280px-World_map_with_nations_-_Pacific_centered.svg.png"
         
-            fig.add_layout_image(
-                dict(
-                    source=world_map_url,
-                    xref="x", yref="y",
-                    x=24, y=4.5, # Inizia dal bordo destro (24)
-                    sizex=24, sizey=4.5,
-                    sizing="stretch", opacity=0.3, layer="below"
-                )
-            )
+            fig.add_layout_image(dict(
+                source=world_map_url, xref="x", yref="y", x=24, y=4.5,
+                sizex=24, sizey=4.5, sizing="stretch", opacity=0.3, layer="below"
+            ))
         
-            # --- POSIZIONAMENTO CITTÀ (Coordinate invertite 24-0) ---
-            # Più l'ora è piccola, più sono a DESTRA nella mappa
-            cities = [
-                {"name": "SYDNEY", "x": 1},   # Molto a destra
-                {"name": "TOKYO", "x": 3},    # Vicino a Sydney
-                {"name": "LONDRA", "x": 11},  # Centro-Sinistra
-                {"name": "NEW YORK", "x": 17} # Molto a sinistra
-            ]
+            # Colore dinamico basato sulla protezione
+            color_laser = "#FFD700" if trading_autorizzato else "#FF4B4B"
+            x_pos = 24 - current_hour_float
         
-            for city in cities:
-                fig.add_trace(go.Scatter(
-                    x=[city['x']], y=[2], 
-                    mode="markers+text",
-                    marker=dict(color="red", size=10, symbol="circle"),
-                    text=[city['name']], textposition="top center",
-                    textfont=dict(color="white", size=10),
-                    showlegend=False
-                ))
-        
-            # --- LINEA ORO DINAMICA ---
-            # In un asse 24->0, l'ora attuale si posiziona così:
-            fig.add_vline(x=current_hour_float, line_width=4, line_color="gold")
+            # Linea Laser
+            fig.add_shape(type="line", x0=x_pos, x1=x_pos, y0=0, y1=4.5,
+                          line=dict(color=color_laser, width=4))
         
             fig.update_layout(
-                xaxis=dict(
-                    range=[24, 0], # ASSE INVERTITO
-                    dtick=1, showgrid=False, color="white", title="Ore (CET)"
-                ),
+                xaxis=dict(range=[24, 0], showgrid=False, visible=True, title="Ore (Roma CET)"),
                 yaxis=dict(range=[0, 4.5], visible=False),
-                template="plotly_dark",
-                paper_bgcolor="rgba(0,0,0,0)",
-                plot_bgcolor="rgba(0,0,0,0)",
-                margin=dict(l=10, r=10, t=10, b=10),
-                height=400
+                template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)", margin=dict(l=0, r=0, t=0, b=0), height=350
             )
             return fig
     
