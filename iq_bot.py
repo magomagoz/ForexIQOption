@@ -215,15 +215,17 @@ if st.session_state.connected:
     # 3. Indicatore di stato gigante
     if scanner_attivo:
         st.success("SISTEMA IN SCANSIONE ATTIVA 🔥🔥🔥", icon="📡")
-    
+
+        st.subheader("🌍 Live Market Flow 24h"
+            
         # --- FUNZIONE AGGIORNATA PER MAPPA OPERATIVA MONDIALE ---
         def draw_market_map(current_hour_float):
             # Definizione Sessioni
             markets = [
-                dict(name="SYDNEY", start=23, end=8, level=1, color="rgba(0, 255, 100, 0.2)"),
-                dict(name="TOKYO", start=1, end=10, level=1.8, color="rgba(255, 200, 0, 0.2)"),
-                dict(name="LONDRA", start=9, end=18, level=2.6, color="rgba(0, 150, 255, 0.4)"),
-                dict(name="NEW YORK", start=14, end=23, level=3.4, color="rgba(255, 50, 50, 0.4)")
+                dict(name="SYDNEY", start=0, end=6, level=1, color="rgba(240, 230, 140, 0.2)"),
+                dict(name="TOKYO", start=1, end=7, level=1.8, color="rgba(152, 251, 152, 0.2)"),
+                dict(name="LONDRA", start=9, end=18, level=2.6, color="rgba(255, 160, 122, 0.4)"),
+                dict(name="NEW YORK", start=15, end=22, level=3.4, color="rgba(224, 255, 255, 0.4)")
             ]
             
             # Controllo Overlap (Londra + NY) per Alert Visivo
@@ -271,7 +273,6 @@ if st.session_state.connected:
             fig.add_vline(x=current_hour_float, line_width=line_width, line_color=line_color)
         
             # Configurazione Grafica
-            title_text = f"🌍 LIVE MARKET FLOW {'(🔥 OVERLAP ATTIVO)' if is_overlap else ''}"
             title_color = "orange" if is_overlap else "white"
         
             fig.update_layout(
