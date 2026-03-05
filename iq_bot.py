@@ -309,7 +309,7 @@ if st.session_state.connected:
                 st.code(f"{icons.get(pair, '🔍')} {pair}") # Mostra la valuta in un box grigio tecnico
 
     else:
-        st.info("💤 SISTEMA IN STANDBY", icon="⚪")
+        st.info("SISTEMA IN STANDBY", icon="💤")
 
     if scanner_attivo:
     #if st.session_state.scanner:    
