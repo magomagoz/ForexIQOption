@@ -283,7 +283,11 @@ if st.session_state.connected:
             st.info(f"⏰ Prossima finestra: {window_1[0] if now_time < window_1[0] else window_2[0]}")
         else:
             st.success("SISTEMA IN SCANSIONE ATTIVA 🔥🔥🔥", icon="📡")
-            
+
+            st.divider()
+            # --- NUOVA SEZIONE: MONITOR DELLE VALUTE ---
+            st.subheader("🕵️ Coppie di valute osservate")
+
             cols = st.columns(5)
             for i, pair in enumerate(ALL_PAIRS):
                 with cols[i % 5]: st.code(f"{icons.get(pair, '🔍')} {pair}")
