@@ -211,7 +211,7 @@ with st.sidebar:
         st.success(f"🟢 Conto {st.session_state.account_type} ATTIVO")
         
         st.divider()
-        st.subheader("👁️ Scanner FOREX")
+        st.subheader("👁️ SCANNER VALUTE FOREX")
     
         label = "🛑 STOP SCANNER" if st.session_state.scanner_on else "🚀 AVVIA SCANNER"
         if st.button(label, use_container_width=True, type="primary" if not st.session_state.scanner_on else "secondary"):
