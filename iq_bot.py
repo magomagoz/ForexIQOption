@@ -148,7 +148,7 @@ def draw_market_map_inverted(current_hour_float, trading_autorizzato):
 
     # --- LOGICA RITARDO (OFFSET) ---
     # Sottraiamo 30 minuti
-    ritardo_ore = 25 / 60
+    ritardo_ore = 26 / 60
     x_pos = current_hour_float - ritardo_ore
 
     # Gestione del reset: se l'ora è 00:20, sottraendo 40 min andrebbe in negativo.
