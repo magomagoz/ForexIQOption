@@ -470,18 +470,29 @@ if st.session_state.connected:
     # --- SEZIONE IMPORT / EXPORT CSV ---
     col_imp, col_exp = st.columns(2)
     
-    # IMPORT CSV (Nascosto in un bottone Popover per simmetria visiva)
+    # IMPORT CSV (All'interno del tuo popover)
     with col_imp:
         with st.popover("📤 Importa Storico", use_container_width=True):
             uploaded_file = st.file_uploader("Trascina qui il file", type=["csv"], label_visibility="collapsed")
+            
             if uploaded_file is not None:
                 try:
+                    # Legge il file caricato
                     df_import = pd.read_csv(uploaded_file)
+                    
+                    # 1. Aggiorna lo stato della sessione
                     st.session_state.signal_history = df_import.to_dict('records')
-                    save_journal(st.session_state.signal_history) 
-                    st.success("✅ Storico importato!")
-                    time_module.sleep(1)
+                    
+                    # 2. Salva fisicamente sul file JSON (persistenza)
+                    save_journal(st.session_state.signal_history)
+                    
+                    # 3. Notifica di successo
+                    st.success("✅ Storico importato! Ricarico...")
+                    
+                    # 4. Ricarica immediatamente l'intera app per aggiornare la tabella
+                    time_module.sleep(0.5)
                     st.rerun()
+                    
                 except Exception as e:
                     st.error(f"⚠️ Errore caricamento: {e}")
 
