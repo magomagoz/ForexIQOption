@@ -129,8 +129,15 @@ def draw_market_map_inverted(current_hour_float, trading_autorizzato):
         layer="below"
     ))
 
-    # Logica posizione laser (riparte da destra a 00:00)
-    x_pos = current_hour_float 
+    # --- LOGICA RITARDO (OFFSET) ---
+    # Sottraiamo 40 minuti (40/60 = 0.66 ore)
+    ritardo_ore = 40 / 60
+    x_pos = current_hour_float - ritardo_ore
+
+    # Gestione del reset: se l'ora è 00:20, sottraendo 40 min andrebbe in negativo.
+    # Con l'operatore % 24, la linea ricompare correttamente dal fondo (24).
+    x_pos = x_pos % 24
+
     color_laser = "#FFFFFF" if not trading_autorizzato else "#FFD700"
 
     fig.add_shape(
@@ -149,6 +156,7 @@ def draw_market_map_inverted(current_hour_float, trading_autorizzato):
         height=350
     )
     return fig
+
 
 # --- 2. SETUP STREAMLIT E SESSIONE ---
 st.set_page_config(page_title="Sentinel AI", page_icon="🚀", layout="wide")
