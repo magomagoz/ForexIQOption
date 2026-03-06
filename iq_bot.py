@@ -250,7 +250,7 @@ with st.sidebar:
         now_cet = now_roma.time()
         
         st.header("🌍 SESSIONI DI MERCATO")
-        for city, (start, end) in {"🇬🇧 LONDRA:": (time(9,0), time(17,0)), "🇺🇸 NEW YORK:": (time(15,0), time(22,0)), "🇦🇺 SYDNEY:": (time(0,0), time(6,0)), "🇯🇵 TOKYO:": (time(1,0), time(7,0))}.items():
+        for city, (start, end) in {"🇬🇧 LONDRA:": (time(9,0), time(17,0)), "🇺🇸 NEW YORK:": (time(14,0), time(22,0)), "🇦🇺 SYDNEY:": (time(0,0), time(6,0)), "🇯🇵 TOKYO:": (time(1,0), time(7,0))}.items():
             status = "Open 🟢" if start <= now_cet <= end else "Closed 🔴"
             st.write(f"{city} {status}")
 
@@ -290,7 +290,7 @@ if st.session_state.connected:
 
     # Finestre Operative e Report
     window_1 = (time(9, 0), time(12, 0))
-    window_2 = (time(14, 0), time(18, 30))
+    window_2 = (time(14, 0), time(18, 0))
     is_trading_time = (window_1[0] <= now_time <= window_1[1]) or (window_2[0] <= now_time <= window_2[1])
     trading_autorizzato = is_trading_time or stress_test
 
