@@ -76,6 +76,23 @@ def genera_report_finale():
     invia_telegram(report)
     os.remove(file_path)
 
+JOURNAL_FILE = "trading_journal.json"
+
+def load_journal():
+    """Carica lo storico dei trade dal file locale se esiste."""
+    if os.path.exists(JOURNAL_FILE):
+        try:
+            with open(JOURNAL_FILE, "r") as f:
+                return json.load(f)
+        except:
+            return []
+    return []
+
+def save_journal(history):
+    """Salva lo storico dei trade sul file locale."""
+    with open(JOURNAL_FILE, "w") as f:
+        json.dump(history, f)
+
 def play_trade_sound(sound_type="buy"):
     sounds = {
         "buy": "https://actions.google.com/sounds/v1/alarms/beep_short.ogg",
@@ -169,7 +186,8 @@ except:
 
 if 'connected' not in st.session_state: st.session_state.connected = False
 if 'active_trades' not in st.session_state: st.session_state.active_trades = {}
-if 'signal_history' not in st.session_state: st.session_state.signal_history = []
+if 'signal_history' not in st.session_state: 
+    st.session_state.signal_history = load_journal()
 if 'local_balance' not in st.session_state: st.session_state.local_balance = 0
 if 'scanner_on' not in st.session_state: st.session_state.scanner_on = False
 
@@ -254,6 +272,7 @@ with st.sidebar:
         st.divider()
         if st.button("🗑️ PULISCI STORICO", use_container_width=True):
             st.session_state.signal_history = []
+            save_journal([]) # <-- AGGIUNGI QUESTA RIGA
             st.session_state.local_balance = st.session_state.iq.get_balance() if st.session_state.connected else 0
             st.rerun()
 
@@ -348,6 +367,8 @@ if st.session_state.connected:
                             'rsi': round(curr_rsi, 1), 'macd': round(curr_macd, 6),
                             'bb': curr_bb_status, 'result': "⏳ In corso..."
                         })
+
+                        save_journal(st.session_state.signal_history) # <-- AGGIUNGI QUESTA RIGA
                         
                         send_telegram_signal(direction, pair, price, curr_rsi, t_id)
                         play_trade_sound("buy")
@@ -430,6 +451,7 @@ if st.session_state.connected:
                 for s in reversed(st.session_state.signal_history):
                     if s['pair'] == pair and s['result'] == "⏳ In corso...":
                         s['result'] = f"{colore_esito} {res_status}"
+                        save_journal(st.session_state.signal_history) # <-- AGGIUNGI QUESTA RIGA
                         break
                 
                 del st.session_state.active_trades[pair]
