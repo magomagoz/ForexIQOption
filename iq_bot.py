@@ -462,9 +462,45 @@ if st.session_state.connected:
         st.error(st.session_state.last_signal)
         st.session_state.last_signal = None 
 
+
     # --- 7. TABELLA JOURNAL ---
     st.divider()
     st.subheader("📋 Trading Journal")
+    
+    # --- SEZIONE IMPORT / EXPORT CSV ---
+    col_exp, col_imp = st.columns(2)
+    
+    # EXPORT CSV
+    with col_exp:
+        if st.session_state.signal_history:
+            df_export = pd.DataFrame(st.session_state.signal_history)
+            # Converte il DataFrame in CSV
+            csv_data = df_export.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label="📥 Esporta Storico in CSV",
+                data=csv_data,
+                file_name=f"journal_sentinel_{datetime.now().strftime('%Y%m%d')}.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
+            
+    # IMPORT CSV
+    with col_imp:
+        uploaded_file = st.file_uploader("📤 Carica CSV Storico", type=["csv"], label_visibility="collapsed")
+        if uploaded_file is not None:
+            try:
+                # Legge il file CSV caricato
+                df_import = pd.read_csv(uploaded_file)
+                # Sostituisce la sessione attuale con i dati del CSV
+                st.session_state.signal_history = df_import.to_dict('records')
+                save_journal(st.session_state.signal_history) # Salva su disco
+                st.success("✅ Storico importato con successo!")
+                time_module.sleep(1)
+                st.rerun()
+            except Exception as e:
+                st.error(f"⚠️ Errore durante il caricamento del CSV: {e}")
+
+    # --- METRICHE E VISUALIZZAZIONE TABELLA ---
     if st.session_state.signal_history:
         wins = sum(1 for s in st.session_state.signal_history if "✅" in str(s.get('result', '')))
         losses = sum(1 for s in st.session_state.signal_history if "❌" in str(s.get('result', '')))
