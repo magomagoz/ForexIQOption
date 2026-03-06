@@ -466,39 +466,37 @@ if st.session_state.connected:
     # --- 7. TABELLA JOURNAL ---
     st.divider()
     st.subheader("📋 Trading Journal")
-    
+                
     # --- SEZIONE IMPORT / EXPORT CSV ---
     col_imp, col_exp = st.columns(2)
-                
-    # IMPORT CSV
+    
+    # IMPORT CSV (Nascosto in un bottone Popover per simmetria visiva)
     with col_imp:
-        uploaded_file = st.file_uploader("📤 Carica CSV Storico", type=["csv"], label_visibility="collapsed")
-        if uploaded_file is not None:
-            try:
-                # Legge il file CSV caricato
-                df_import = pd.read_csv(uploaded_file)
-                # Sostituisce la sessione attuale con i dati del CSV
-                st.session_state.signal_history = df_import.to_dict('records')
-                save_journal(st.session_state.signal_history) # Salva su disco
-                st.success("✅ Storico importato con successo!")
-                time_module.sleep(1)
-                st.rerun()
-            except Exception as e:
-                st.error(f"⚠️ Errore durante il caricamento del CSV: {e}")
+        with st.popover("📤 Importa Storico", use_container_width=True):
+            uploaded_file = st.file_uploader("Trascina qui il file", type=["csv"], label_visibility="collapsed")
+            if uploaded_file is not None:
+                try:
+                    df_import = pd.read_csv(uploaded_file)
+                    st.session_state.signal_history = df_import.to_dict('records')
+                    save_journal(st.session_state.signal_history) 
+                    st.success("✅ Storico importato!")
+                    time_module.sleep(1)
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"⚠️ Errore caricamento: {e}")
 
-    # EXPORT CSV
-    with col_exp:
-        if st.session_state.signal_history:
-            df_export = pd.DataFrame(st.session_state.signal_history)
-            # Converte il DataFrame in CSV
-            csv_data = df_export.to_csv(index=False).encode('utf-8')
-            st.download_button(
-                label="📥 Esporta Storico in CSV",
-                data=csv_data,
-                file_name=f"journal_sentinel_{datetime.now().strftime('%Y%m%d')}.csv",
-                mime="text/csv",
-                use_container_width=True
-            )
+        # EXPORT CSV (Bottone classico)
+        with col_exp:
+            if st.session_state.signal_history:
+                df_export = pd.DataFrame(st.session_state.signal_history)
+                csv_data = df_export.to_csv(index=False).encode('utf-8')
+                st.download_button(
+                    label="📥 Esporta Storico",
+                    data=csv_data,
+                    file_name=f"journal_sentinel_{datetime.now().strftime('%Y%m%d')}.csv",
+                    mime="text/csv",
+                    use_container_width=True
+                )
 
     # --- METRICHE E VISUALIZZAZIONE TABELLA ---
     if st.session_state.signal_history:
