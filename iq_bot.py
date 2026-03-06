@@ -209,6 +209,16 @@ with st.sidebar:
                 st.rerun()
     else:
         st.success(f"🟢 Conto {st.session_state.account_type} ATTIVO")
+        
+        st.divider()
+        st.header("👁️ Scanner FOREX")
+    
+        label = "🛑 STOP SCANNER" if st.session_state.scanner_on else "🚀 AVVIA SCANNER"
+        if st.button(label, use_container_width=True, type="primary" if not st.session_state.scanner_on else "secondary"):
+            st.session_state.scanner_on = not st.session_state.scanner_on
+            st.rerun()
+
+        st.divider
         st.metric(f"💰 Saldo {st.session_state.account_type}", f"{st.session_state.local_balance:.2f} €")    
         st.session_state.stake = st.number_input("💰 INVESTIMENTO (€)", value=100.0)
         timeframe = st.selectbox("⏱️ TIMEFRAME OPERATIVO (s)", [60, 300], index=0)
@@ -252,13 +262,6 @@ if st.session_state.connected:
     Iq = st.session_state.iq
     ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"]
     icons = {"EURUSD": "🇪🇺🇺🇸", "GBPUSD": "🇬🇧🇺🇸", "USDJPY": "🇺🇸🇯🇵", "AUDUSD": "🇦🇺🇺🇸", "USDCAD": "🇺🇸🇨🇦", "USDCHF": "🇺🇸🇨🇭", "NZDUSD": "🇳🇿🇺🇸", "EURGBP": "🇪🇺🇬🇧", "EURJPY": "🇪🇺🇯🇵", "GBPJPY": "🇬🇧🇯🇵"}
-
-    st.header("👁️ Scanner FOREX")
-    
-    label = "🛑 STOP SCANNER" if st.session_state.scanner_on else "🚀 AVVIA SCANNER"
-    if st.button(label, use_container_width=True, type="primary" if not st.session_state.scanner_on else "secondary"):
-        st.session_state.scanner_on = not st.session_state.scanner_on
-        st.rerun()
 
     # Logica Oraria
     fuso_roma = pytz.timezone('Europe/Rome')
