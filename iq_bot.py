@@ -393,7 +393,7 @@ if st.session_state.connected:
         macd_ta.columns = ['MACD', 'HIST', 'SIGNAL']
         df_final = pd.concat([df_raw, bb_ta[['BBL', 'BBM', 'BBU']], macd_ta], axis=1).tail(100)
 
-        fig = make_subplots(rows=3, cols=1, shared_xaxes=True, row_heights=[0.5, 0.25, 0.25], vertical_spacing=0.07, subplot_titles=("📊 Prezzo & volatilità", "📉 Oscillatore RSI", "🚀 Momentum MACD"))
+        fig = make_subplots(rows=3, cols=1, shared_xaxes=True, row_heights=[0.5, 0.25, 0.25], vertical_spacing=0.07, subplot_titles=("📊 Prezzo & Volatilità", "📉 Oscillatore RSI", "🚀 Momentum MACD"))
         
         # Prezzo e BB
         fig.add_trace(go.Candlestick(x=df_final.index, open=df_final['open'], high=df_final['max'], low=df_final['min'], close=df_final['close'], name="Prezzo"), row=1, col=1)
@@ -468,22 +468,8 @@ if st.session_state.connected:
     st.subheader("📋 Trading Journal")
     
     # --- SEZIONE IMPORT / EXPORT CSV ---
-    col_exp, col_imp = st.columns(2)
-    
-    # EXPORT CSV
-    with col_exp:
-        if st.session_state.signal_history:
-            df_export = pd.DataFrame(st.session_state.signal_history)
-            # Converte il DataFrame in CSV
-            csv_data = df_export.to_csv(index=False).encode('utf-8')
-            st.download_button(
-                label="📥 Esporta Storico in CSV",
-                data=csv_data,
-                file_name=f"journal_sentinel_{datetime.now().strftime('%Y%m%d')}.csv",
-                mime="text/csv",
-                use_container_width=True
-            )
-            
+    col_imp, col_exp = st.columns(2)
+                
     # IMPORT CSV
     with col_imp:
         uploaded_file = st.file_uploader("📤 Carica CSV Storico", type=["csv"], label_visibility="collapsed")
@@ -499,6 +485,20 @@ if st.session_state.connected:
                 st.rerun()
             except Exception as e:
                 st.error(f"⚠️ Errore durante il caricamento del CSV: {e}")
+
+    # EXPORT CSV
+    with col_exp:
+        if st.session_state.signal_history:
+            df_export = pd.DataFrame(st.session_state.signal_history)
+            # Converte il DataFrame in CSV
+            csv_data = df_export.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label="📥 Esporta Storico in CSV",
+                data=csv_data,
+                file_name=f"journal_sentinel_{datetime.now().strftime('%Y%m%d')}.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
 
     # --- METRICHE E VISUALIZZAZIONE TABELLA ---
     if st.session_state.signal_history:
