@@ -274,6 +274,7 @@ if st.session_state.connected:
     config={'displayModeBar': False} # È QUI che va inserito per non dare errore
     )
 
+    #https://trueforexfunds.com/wp-content/uploads/2023/05/THUMBNAIL_20_1-e1685710115417-1024x538.png
     
     # Stato Sistema
     if st.session_state.scanner_on:
