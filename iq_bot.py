@@ -196,7 +196,7 @@ with st.sidebar:
                 st.rerun()
             else:
                 # Qui appare il warning se le credenziali sono errate o il login fallisce
-                st.warning(f"⚠️ Errore di connessione: {reason}")
+                #st.warning(f"⚠️ Errore di connessione: {reason}")
                 st.error("Verifica Email e Password e riprova.")
             
             if check:
