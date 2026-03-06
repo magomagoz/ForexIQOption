@@ -281,7 +281,7 @@ if st.session_state.connected:
     if now_time < time(9, 0):
         st.session_state.report_sent = False
     
-    st.divider()
+    #st.divider()
     # Mappa Dinamica
     st.subheader("🌍 Live Market Flow 24h")
     
