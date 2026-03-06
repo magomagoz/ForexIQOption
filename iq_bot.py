@@ -283,7 +283,7 @@ if st.session_state.connected:
     
     #st.divider()
     # Mappa Dinamica
-    st.subheader("🌍 Live Market Flow 24h")
+    st.header("🌍 Live Market Flow 24h")
     
     st.plotly_chart(
     draw_market_map_inverted(h_float, trading_autorizzato), 
