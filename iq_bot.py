@@ -219,16 +219,16 @@ with st.sidebar:
         st.header("🔧 STRUMENTI TEST")
         stress_test = st.toggle("🚀 STRESS TEST MODE", value=False)
         if stress_test:
-            st.warning("⚠️ TEST: Solo RSI (45/55)")
+            st.warning("⚠️ TEST:\nno BB - RSI (45/55) - no MACD")
         else:
-            st.success("🟢 REALE: BB(20,2) - RSI(28/72) - MACD(8,17,9)")
+            st.success("🟢 REALE:\nBB(20,2) - RSI(28/72) - MACD(8,17,9)")
 
-        st.divider()
         if st.button("🔔 TEST CANALI", use_container_width=True):
             play_trade_sound("buy")
             invia_telegram("✅ **SENTINEL AI: SYSTEM CHECK**\nBot online e sincronizzato. 🚀")
             st.toast("Test completato!", icon="📲")
 
+        st.divider()
         if st.button("🗑️ PULISCI STORICO", use_container_width=True):
             st.session_state.signal_history = []
             st.session_state.local_balance = st.session_state.iq.get_balance() if st.session_state.connected else 0
