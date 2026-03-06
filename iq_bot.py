@@ -113,14 +113,12 @@ def get_market_status():
 def draw_market_map_inverted(current_hour_float, trading_autorizzato):
     fig = go.Figure()
     
-    # Caricamento immagine di sfondo
     try:
         from PIL import Image
         bg_image = Image.open("map_bg.png")
     except:
         bg_image = "https://via.placeholder.com/1200x400/220044/white?text=MAPPA+SESSIONI"
 
-    # Configurazione immagine di sfondo
     fig.add_layout_image(dict(
         source=bg_image, 
         xref="x", yref="y", 
@@ -131,49 +129,24 @@ def draw_market_map_inverted(current_hour_float, trading_autorizzato):
         layer="below"
     ))
 
-    # --- LOGICA POSIZIONE LASER ---
-    # Se sono le 00:55, current_hour_float è ~0.91
-    # La mappa va da 24 (SX) a 0 (DX).
-    # Per far sì che a 00:00 sia tutto a DESTRA, usiamo direttamente il valore dell'ora.
+    # Logica posizione laser (riparte da destra a 00:00)
     x_pos = current_hour_float 
-
-    # Colore: Bianco se mercato chiuso, Giallo Oro se operativo per risaltare
     color_laser = "#FFFFFF" if not trading_autorizzato else "#FFD700"
 
-    # Aggiunta del Laser
     fig.add_shape(
         type="line", 
         x0=x_pos, x1=x_pos, y0=0, y1=4.5, 
-        line=dict(color=color_laser, width=5, dash="solid")
+        line=dict(color=color_laser, width=5)
     )
 
-    # Aggiunta di un bagliore (Glow) per far risaltare il laser
-    fig.add_trace(go.Scatter(
-        x=[x_pos], y=[2.25],
-        mode="markers",
-        marker=dict(color=color_laser, size=15, opacity=0.5),
-        showlegend=False
-    ))
-
     fig.update_layout(
-        xaxis=dict(
-            range=[24, 0], # Mantiene l'orientamento della tua immagine
-            showgrid=False, 
-            visible=False,
-            fixedrange=True
-        ),
-        yaxis=dict(
-            range=[0, 4.5], 
-            showgrid=False, 
-            visible=False,
-            fixedrange=True
-        ),
+        xaxis=dict(range=[24, 0], showgrid=False, visible=False, fixedrange=True),
+        yaxis=dict(range=[0, 4.5], showgrid=False, visible=False, fixedrange=True),
         template="plotly_dark", 
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)", 
         margin=dict(l=0, r=0, t=0, b=0), 
-        height=350,
-        config={'displayModeBar': False} # Rimuove la barra degli strumenti di Plotly per pulizia
+        height=350
     )
     return fig
 
@@ -286,8 +259,14 @@ if st.session_state.connected:
 
     # Mappa Dinamica
     st.subheader("🌍 Live Market Flow 24h")
-    st.plotly_chart(draw_market_map_inverted(h_float, trading_autorizzato), use_container_width=True)
+    
+    st.plotly_chart(
+    draw_market_map_inverted(h_float, trading_autorizzato), 
+    use_container_width=True, 
+    config={'displayModeBar': False} # È QUI che va inserito per non dare errore
+    )
 
+    
     # Stato Sistema
     if st.session_state.scanner_on:
         if not trading_autorizzato:
