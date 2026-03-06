@@ -194,6 +194,19 @@ with st.sidebar:
                 st.session_state.account_type = tipo_conto
                 st.session_state.local_balance = Iq_obj.get_balance()
                 st.rerun()
+            else:
+                # Qui appare il warning se le credenziali sono errate o il login fallisce
+                st.warning(f"⚠️ Errore di connessione: {reason}")
+                st.error("Verifica Email e Password e riprova.")
+            
+            if check:
+                mode = "PRACTICE" if tipo_conto == "DEMO" else "REAL"
+                Iq_obj.change_balance(mode)
+                st.session_state.iq = Iq_obj 
+                st.session_state.connected = True
+                st.session_state.account_type = tipo_conto
+                st.session_state.local_balance = Iq_obj.get_balance()
+                st.rerun()
     else:
         st.success(f"🟢 Conto {st.session_state.account_type} ATTIVO")
         st.metric(f"💰 Saldo {st.session_state.account_type}", f"{st.session_state.local_balance:.2f} €")    
