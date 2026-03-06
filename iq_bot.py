@@ -113,49 +113,69 @@ def get_market_status():
 def draw_market_map_inverted(current_hour_float, trading_autorizzato):
     fig = go.Figure()
     
-    # Prova a caricare la tua immagine locale
+    # Caricamento immagine di sfondo
     try:
         from PIL import Image
         bg_image = Image.open("map_bg.png")
     except:
-        # Fallback nel caso in cui non trovi il file
-        bg_image = "https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/World_map_with_nations_-_Pacific_centered.svg/1280px-World_map_with_nations_-_Pacific_centered.svg.png"
+        bg_image = "https://via.placeholder.com/1200x400/220044/white?text=MAPPA+SESSIONI"
 
-    # Imposta l'immagine come sfondo
+    # Configurazione immagine di sfondo
     fig.add_layout_image(dict(
         source=bg_image, 
         xref="x", yref="y", 
         x=24, y=4.5,
         sizex=24, sizey=4.5, 
         sizing="stretch", 
-        opacity=0.9, # Opacità alzata per far risaltare i colori della tua mappa
+        opacity=1.0, 
         layer="below"
     ))
 
-    # N.B. Ho rimosso i marker delle città perché la tua immagine li ha già integrati!
+    # --- LOGICA POSIZIONE LASER ---
+    # Se sono le 00:55, current_hour_float è ~0.91
+    # La mappa va da 24 (SX) a 0 (DX).
+    # Per far sì che a 00:00 sia tutto a DESTRA, usiamo direttamente il valore dell'ora.
+    x_pos = current_hour_float 
 
-    # Linea Laser Dinamica (gialla se autorizzato, rossa se in pausa)
-    color_laser = "#FFD700" if trading_autorizzato else "#FF4B4B"
-    x_pos = 24 - current_hour_float
+    # Colore: Bianco se mercato chiuso, Giallo Oro se operativo per risaltare
+    color_laser = "#FFFFFF" if not trading_autorizzato else "#FFD700"
 
+    # Aggiunta del Laser
     fig.add_shape(
         type="line", 
         x0=x_pos, x1=x_pos, y0=0, y1=4.5, 
-        line=dict(color=color_laser, width=4)
+        line=dict(color=color_laser, width=5, dash="solid")
     )
 
-    # Aggiorna il layout (nascondo gli assi perché i numeri sono già disegnati sulla tua immagine)
+    # Aggiunta di un bagliore (Glow) per far risaltare il laser
+    fig.add_trace(go.Scatter(
+        x=[x_pos], y=[2.25],
+        mode="markers",
+        marker=dict(color=color_laser, size=15, opacity=0.5),
+        showlegend=False
+    ))
+
     fig.update_layout(
-        xaxis=dict(range=[24, 0], showgrid=False, visible=False),
-        yaxis=dict(range=[0, 4.5], visible=False),
+        xaxis=dict(
+            range=[24, 0], # Mantiene l'orientamento della tua immagine
+            showgrid=False, 
+            visible=False,
+            fixedrange=True
+        ),
+        yaxis=dict(
+            range=[0, 4.5], 
+            showgrid=False, 
+            visible=False,
+            fixedrange=True
+        ),
         template="plotly_dark", 
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)", 
         margin=dict(l=0, r=0, t=0, b=0), 
-        height=300 # Leggermente abbassata per non deformare troppo i cerchi della tua mappa
+        height=350,
+        config={'displayModeBar': False} # Rimuove la barra degli strumenti di Plotly per pulizia
     )
     return fig
-
 
 # --- 2. SETUP STREAMLIT E SESSIONE ---
 st.set_page_config(page_title="Sentinel AI", page_icon="🚀", layout="wide")
