@@ -219,9 +219,9 @@ with st.sidebar:
         st.header("🔧 STRUMENTI TEST")
         stress_test = st.toggle("🚀 STRESS TEST MODE", value=False)
         if stress_test:
-            st.warning("⚠️ TEST:\nno BB - RSI (45/55) - no MACD")
+            st.warning("⚠️ TEST:  \nno BB - RSI (45/55) - no MACD")
         else:
-            st.success("🟢 REALE:\nBB(20,2) - RSI(28/72) - MACD(8,17,9)")
+            st.success("🟢 REALE:  \nBB(20,2) - RSI(28/72) - MACD(8,17,9)")
 
         if st.button("🔔 TEST CANALI", use_container_width=True):
             play_trade_sound("buy")
