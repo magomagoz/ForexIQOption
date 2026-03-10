@@ -236,11 +236,11 @@ with st.sidebar:
             st.session_state.scanner_on = not st.session_state.scanner_on
             st.rerun()
 
-    # --- 8. REFRESH LOOP ---
-    if st.session_state.scanner_on:
-        st.caption(f"🔄 Scanner in esecuzione... Ultimo check: {now_roma.strftime('%H:%M:%S')}")
-        time_module.sleep(3) 
-        st.rerun()
+            # --- 8. REFRESH LOOP ---
+            if st.session_state.scanner_on:
+                st.caption(f"🔄 Scanner in esecuzione... Ultimo check: {now_roma.strftime('%H:%M:%S')}")
+                time_module.sleep(3) 
+                st.rerun()
             
         st.divider()
         st.metric(f"💰 Saldo {st.session_state.account_type}", f"{st.session_state.local_balance:.2f} €")    
