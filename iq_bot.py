@@ -250,7 +250,7 @@ with st.sidebar:
         now_cet = now_roma.time()
         
         st.header("🌍 SESSIONI DI MERCATO")
-        for city, (start, end) in {"🇬🇧 LONDRA:": (time(9,0), time(17,0)), "🇺🇸 NEW YORK:": (time(14,0), time(22,0)), "🇦🇺 SYDNEY:": (time(0,0), time(6,0)), "🇯🇵 TOKYO:": (time(1,0), time(7,0))}.items():
+        for city, (start, end) in {"🇬🇧 LONDRA:": (time(9,0), time(18,0)), "🇺🇸 NEW YORK:": (time(14,0), time(23,0)), "🇦🇺 SYDNEY:": (time(0,0), time(8,0)), "🇯🇵 TOKYO:": (time(0,0), time(9,0))}.items():
             status = "Open 🟢" if start <= now_cet <= end else "Closed 🔴"
             st.write(f"{city} {status}")
 
