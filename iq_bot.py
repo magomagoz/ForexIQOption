@@ -321,6 +321,12 @@ if st.session_state.connected:
         else:
             st.success("SISTEMA IN SCANSIONE ATTIVA 🔥🔥🔥", icon="📡")
 
+    # --- 8. REFRESH LOOP ---
+    if st.session_state.scanner_on:
+        st.caption(f"🔄 Scanner in esecuzione... Ultimo check: {now_roma.strftime('%H:%M:%S')}")
+        time_module.sleep(3) 
+        st.rerun()
+        
             st.divider()
             # --- NUOVA SEZIONE: MONITOR DELLE VALUTE ---
             st.subheader("🕵️ Coppie di valute osservate")
@@ -378,13 +384,7 @@ if st.session_state.connected:
                     continue
     else:
         st.info("SISTEMA IN STANDBY", icon="💤")
-
-    # --- 8. REFRESH LOOP ---
-    if st.session_state.scanner_on:
-        st.caption(f"🔄 Scanner in esecuzione... Ultimo check: {now_roma.strftime('%H:%M:%S')}")
-        time_module.sleep(3) 
-        st.rerun()
-
+    
     # --- 5. ANALISI TECNICA GRAFICA ---
     st.divider()
     st.header("📈 Analisi Tecnica")
