@@ -320,14 +320,8 @@ if st.session_state.connected:
             st.info(f"⏰ Prossima finestra: {window_1[0] if now_time < window_1[0] else window_2[0]}")
         else:
             st.success("SISTEMA IN SCANSIONE ATTIVA 🔥🔥🔥", icon="📡")
-
-# --- 8. REFRESH LOOP ---
-if st.session_state.scanner_on:
-    st.caption(f"🔄 Scanner in esecuzione... Ultimo check: {now_roma.strftime('%H:%M:%S')}")
-    time_module.sleep(3) 
-    st.rerun()
         
-        st.divider()
+            st.divider()
             # --- NUOVA SEZIONE: MONITOR DELLE VALUTE ---
             st.subheader("🕵️ Coppie di valute osservate")
 
@@ -538,3 +532,8 @@ if st.session_state.scanner_on:
                     use_container_width=True
                 )
                 
+    # --- 8. REFRESH LOOP ---
+    if st.session_state.scanner_on:
+        st.caption(f"🔄 Scanner in esecuzione... Ultimo check: {now_roma.strftime('%H:%M:%S')}")
+        time_module.sleep(3) 
+        st.rerun()
