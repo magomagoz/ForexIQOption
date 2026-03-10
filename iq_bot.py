@@ -174,7 +174,6 @@ def draw_market_map_inverted(current_hour_float, trading_autorizzato):
     )
     return fig
 
-
 # --- 2. SETUP STREAMLIT E SESSIONE ---
 st.set_page_config(page_title="Sentinel AI", page_icon="🚀", layout="wide")
 
@@ -234,12 +233,6 @@ with st.sidebar:
         label = "🛑 STOP SCANNER" if st.session_state.scanner_on else "🚀 AVVIA SCANNER"
         if st.button(label, use_container_width=True, type="primary" if not st.session_state.scanner_on else "secondary"):
             st.session_state.scanner_on = not st.session_state.scanner_on
-            st.rerun()
-
-        # --- 8. REFRESH LOOP ---
-        if st.session_state.scanner_on:
-            st.caption(f"🔄 Scanner in esecuzione... Ultimo check: {now_roma.strftime('%H:%M:%S')}")
-            time_module.sleep(3) 
             st.rerun()
             
         st.divider()
@@ -308,6 +301,12 @@ if st.session_state.connected:
     if now_time < time(9, 0):
         st.session_state.report_sent = False
     
+    # --- 8. REFRESH LOOP ---
+    if st.session_state.scanner_on:
+        st.caption(f"🔄 Scanner in esecuzione... Ultimo check: {now_roma.strftime('%H:%M:%S')}")
+        time_module.sleep(3) 
+        st.rerun()
+
     #st.divider()
     # Mappa Dinamica
     st.header("🌍 Live Market Flow 24h")
