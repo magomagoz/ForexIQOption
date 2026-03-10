@@ -132,7 +132,7 @@ def draw_market_map_inverted(current_hour_float, trading_autorizzato):
     
     try:
         from PIL import Image
-        bg_image = Image.open("map_bg.png")
+        bg_image = Image.open("mondo.png")
     except:
         bg_image = "https://via.placeholder.com/1200x400/220044/white?text=MAPPA+SESSIONI"
 
