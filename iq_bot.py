@@ -148,14 +148,14 @@ def draw_market_map_inverted(current_hour_float, trading_autorizzato):
 
     # --- LOGICA RITARDO (OFFSET) ---
     # Sottraiamo 30 minuti
-    ritardo_ore = 27 / 60
+    ritardo_ore = 0 / 60
     x_pos = current_hour_float - ritardo_ore
 
     # Gestione del reset: se l'ora è 00:20, sottraendo 40 min andrebbe in negativo.
     # Con l'operatore % 24, la linea ricompare correttamente dal fondo (24).
     x_pos = x_pos % 24
 
-    color_laser = "#FFFFFF" if not trading_autorizzato else "#FFD700"
+    color_laser = "#000000" if not trading_autorizzato else "#FFD700"
 
     fig.add_shape(
         type="line", 
