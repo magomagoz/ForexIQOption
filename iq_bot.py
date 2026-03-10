@@ -276,6 +276,8 @@ with st.sidebar:
             st.session_state.local_balance = st.session_state.iq.get_balance() if st.session_state.connected else 0
             st.rerun()
 
+        st.divider()
+
 # --- 4. MAIN DASHBOARD ---
 if st.session_state.connected:
     Iq = st.session_state.iq
