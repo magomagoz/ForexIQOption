@@ -155,7 +155,7 @@ def draw_market_map_inverted(current_hour_float, trading_autorizzato):
     # Con l'operatore % 24, la linea ricompare correttamente dal fondo (24).
     x_pos = x_pos % 24
 
-    color_laser = "#000000" if not trading_autorizzato else "#FFD700"
+    color_laser = "#0F3ADA" if not trading_autorizzato else "#FFD700"
 
     fig.add_shape(
         type="line", 
