@@ -192,7 +192,7 @@ if 'scanner_on' not in st.session_state: st.session_state.scanner_on = False
 
 # --- 3. SIDEBAR ---
 with st.sidebar:
-    st.header("⚙️ IQ FOREX TRADING")
+    st.title("⚙️ IQ FOREX TRADING")
     if not st.session_state.connected:
         email = st.text_input("Email", value="mago_magoz@libero.it")
         password = st.text_input("Password", type="password")
