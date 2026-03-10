@@ -464,11 +464,33 @@ if st.session_state.connected:
         st.error(st.session_state.last_signal)
         st.session_state.last_signal = None 
 
-
     # --- 7. TABELLA JOURNAL ---
     st.divider()
     st.subheader("📋 Trading Journal")
                 
+    # --- METRICHE E VISUALIZZAZIONE TABELLA ---
+    if st.session_state.signal_history:
+        wins = sum(1 for s in st.session_state.signal_history if "✅" in str(s.get('result', '')))
+        losses = sum(1 for s in st.session_state.signal_history if "❌" in str(s.get('result', '')))
+        total = wins + losses
+        rate = (wins / total * 100) if total > 0 else 0
+
+        m1, m2, m3 = st.columns(3)
+        m1.metric("🏆 Win Rate", f"{rate:.1f}%")
+        m2.metric("📊 Score", f"W: {wins} | L: {losses}")
+        m3.metric(f"💰 Saldo {st.session_state.account_type}", f"{st.session_state.local_balance:.2f} €")    
+        
+        df_journal = pd.DataFrame(st.session_state.signal_history).iloc[::-1]
+        rename_map = {'time': '⏰ ORA', 'pair': '💱 COPPIA', 'dir': '🚀 TIPO', 'price': '💰 ENTRATA', 'rsi': '📊 RSI', 'macd': '📉 MACD', 'bb': '↔️ BOLLINGER', 'result': '🔍 ESITO'}
+        
+        def style_result(val):
+            color = '#00ff00' if '✅' in str(val) else '#ff4b4b' if '❌' in str(val) else '#ffa500' if '⏳' in str(val) else 'white'
+            return f'color: {color}'
+    
+        st.dataframe(df_journal.rename(columns=rename_map).style.applymap(style_result, subset=['🔍 ESITO']), use_container_width=True, hide_index=True)
+    else:
+        st.info("⏳ In attesa di segnali...")
+
     # --- SEZIONE IMPORT / EXPORT CSV ---
     col_imp, col_exp = st.columns(2)
     
@@ -510,30 +532,7 @@ if st.session_state.connected:
                     mime="text/csv",
                     use_container_width=True
                 )
-
-    # --- METRICHE E VISUALIZZAZIONE TABELLA ---
-    if st.session_state.signal_history:
-        wins = sum(1 for s in st.session_state.signal_history if "✅" in str(s.get('result', '')))
-        losses = sum(1 for s in st.session_state.signal_history if "❌" in str(s.get('result', '')))
-        total = wins + losses
-        rate = (wins / total * 100) if total > 0 else 0
-
-        m1, m2, m3 = st.columns(3)
-        m1.metric("🏆 Win Rate", f"{rate:.1f}%")
-        m2.metric("📊 Score", f"W: {wins} | L: {losses}")
-        m3.metric(f"💰 Saldo {st.session_state.account_type}", f"{st.session_state.local_balance:.2f} €")    
-        
-        df_journal = pd.DataFrame(st.session_state.signal_history).iloc[::-1]
-        rename_map = {'time': '⏰ ORA', 'pair': '💱 COPPIA', 'dir': '🚀 TIPO', 'price': '💰 ENTRATA', 'rsi': '📊 RSI', 'macd': '📉 MACD', 'bb': '↔️ BOLLINGER', 'result': '🔍 ESITO'}
-        
-        def style_result(val):
-            color = '#00ff00' if '✅' in str(val) else '#ff4b4b' if '❌' in str(val) else '#ffa500' if '⏳' in str(val) else 'white'
-            return f'color: {color}'
-    
-        st.dataframe(df_journal.rename(columns=rename_map).style.applymap(style_result, subset=['🔍 ESITO']), use_container_width=True, hide_index=True)
-    else:
-        st.info("⏳ In attesa di segnali...")
-
+                
     # --- 8. REFRESH LOOP ---
     if st.session_state.scanner_on:
         st.caption(f"🔄 Scanner in esecuzione... Ultimo check: {now_roma.strftime('%H:%M:%S')}")
