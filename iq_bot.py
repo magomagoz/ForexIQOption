@@ -301,12 +301,6 @@ if st.session_state.connected:
     if now_time < time(9, 0):
         st.session_state.report_sent = False
     
-    # --- 8. REFRESH LOOP ---
-    if st.session_state.scanner_on:
-        st.caption(f"🔄 Scanner in esecuzione... Ultimo check: {now_roma.strftime('%H:%M:%S')}")
-        time_module.sleep(3) 
-        st.rerun()
-
     #st.divider()
     # Mappa Dinamica
     st.header("🌍 Live Market Flow 24h")
@@ -538,3 +532,8 @@ if st.session_state.connected:
                     use_container_width=True
                 )
                 
+    # --- 8. REFRESH LOOP ---
+    if st.session_state.scanner_on:
+        st.caption(f"🔄 Scanner in esecuzione... Ultimo check: {now_roma.strftime('%H:%M:%S')}")
+        time_module.sleep(3) 
+        st.rerun()
