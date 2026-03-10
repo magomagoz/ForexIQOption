@@ -327,7 +327,7 @@ if st.session_state.scanner_on:
     time_module.sleep(3) 
     st.rerun()
         
-            st.divider()
+        st.divider()
             # --- NUOVA SEZIONE: MONITOR DELLE VALUTE ---
             st.subheader("🕵️ Coppie di valute osservate")
 
