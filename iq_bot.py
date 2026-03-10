@@ -160,7 +160,7 @@ def draw_market_map_inverted(current_hour_float, trading_autorizzato):
     fig.add_shape(
         type="line", 
         x0=x_pos, x1=x_pos, y0=0, y1=4.5, 
-        line=dict(color=color_laser, width=5)
+        line=dict(color=color_laser, width=3)
     )
 
     fig.update_layout(
