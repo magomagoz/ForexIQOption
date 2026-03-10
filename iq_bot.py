@@ -379,6 +379,12 @@ if st.session_state.connected:
     else:
         st.info("SISTEMA IN STANDBY", icon="💤")
 
+    # --- 8. REFRESH LOOP ---
+    if st.session_state.scanner_on:
+        st.caption(f"🔄 Scanner in esecuzione... Ultimo check: {now_roma.strftime('%H:%M:%S')}")
+        time_module.sleep(3) 
+        st.rerun()
+
     # --- 5. ANALISI TECNICA GRAFICA ---
     st.divider()
     st.header("📈 Analisi Tecnica")
@@ -532,8 +538,3 @@ if st.session_state.connected:
                     use_container_width=True
                 )
                 
-    # --- 8. REFRESH LOOP ---
-    if st.session_state.scanner_on:
-        st.caption(f"🔄 Scanner in esecuzione... Ultimo check: {now_roma.strftime('%H:%M:%S')}")
-        time_module.sleep(3) 
-        st.rerun()
