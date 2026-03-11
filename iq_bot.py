@@ -366,7 +366,7 @@ if st.session_state.connected:
                         play_trade_sound("buy")
                 except: continue
     
-    # --- 5. ANALISI TECNICA GRAFICA (CORRETTA) ---
+    # --- 5. ANALISI TECNICA GRAFICA (FIX CANDELSTICK + LINEE VERTICALI) ---
     st.divider()
     st.header("📈 Analisi Tecnica")
     pair_display = st.selectbox("Seleziona asset per grafico", ALL_PAIRS)
@@ -374,59 +374,68 @@ if st.session_state.connected:
     try:
         token = st.session_state.get("oanda_token", "")
         candles_ta = get_oanda_candles(pair_display, timeframe, 160, token)
+        
         if candles_ta:
             df_raw = pd.DataFrame(candles_ta)
-            
             df_raw['RSI'] = ta.rsi(df_raw['close'], length=7)
             bb_ta = ta.bbands(df_raw['close'], length=20, std=2)
             bb_ta.columns = ['BBL', 'BBM', 'BBU', 'BBB', 'BBP'] 
             
-            # Usiamo i parametri dinamici della sidebar anche qui!
-            macd_ta = ta.macd(df_raw['close'], 
-                              fast=custom_macd_fast, 
-                              slow=custom_macd_slow, 
-                              signal=custom_macd_sig)
+            macd_ta = ta.macd(df_raw['close'], fast=custom_macd_fast, slow=custom_macd_slow, signal=custom_macd_sig)
             macd_ta.columns = ['MACD', 'HIST', 'SIGNAL']
             
             df_final = pd.concat([df_raw, bb_ta[['BBL', 'BBM', 'BBU']], macd_ta], axis=1).tail(100)
 
-
-
-            fig = make_subplots(rows=3, cols=1, shared_xaxes=True, row_heights=[0.5, 0.25, 0.25], vertical_spacing=0.07, subplot_titles=("📊 Prezzo & Volatilità", "📉 Oscillatore RSI", "🚀 Momentum MACD"))
+            fig = make_subplots(rows=3, cols=1, shared_xaxes=True, 
+                                row_heights=[0.5, 0.25, 0.25], 
+                                vertical_spacing=0.07, 
+                                subplot_titles=("📊 Prezzo & Volatilità", "📉 Oscillatore RSI", "🚀 Momentum MACD"))
             
-            fig.add_trace(go.Candlestick(x=df_final.index, open=df_final['open'], high=df_final['max'], low=df_final['min'], close=df_final['close'], name="Prezzo"), row=1, col=1)
+            # 1. CANDLESTICK (con colori espliciti per renderle visibili)
+            fig.add_trace(go.Candlestick(
+                x=df_final.index, open=df_final['open'], high=df_final['max'], 
+                low=df_final['min'], close=df_final['close'], name="Prezzo",
+                increasing_line_color='#26A69A', decreasing_line_color='#EF5350'
+            ), row=1, col=1)
             
-            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBU'], line=dict(color='rgba(0,71,171,0.4)', dash='dot'), name="BBU"), row=1, col=1)
-            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBM'], line=dict(color='rgba(170,170,170,0.3)', width=1), name="BBM"), row=1, col=1)
-            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBL'], line=dict(color='rgba(0,71,171,0.4)', dash='dot'), fill='tonexty', fillcolor='rgba(100, 100, 255, 0.05)', name="BBL"), row=1, col=1)
+            # Bollinger Bands
+            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBU'], line=dict(color='rgba(0,71,171,0.3)', width=1, dash='dot'), name="BBU"), row=1, col=1)
+            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBL'], line=dict(color='rgba(0,71,171,0.3)', width=1, dash='dot'), fill='tonexty', name="BBL"), row=1, col=1)
+            
+            # 2. RSI
+            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['RSI'], line=dict(color='#AB63FA', width=2), name="RSI"), row=2, col=1)
+            fig.add_hline(y=custom_rsi_buy, line_color="green", row=2, col=1, line_dash="dash")
+            fig.add_hline(y=custom_rsi_sell, line_color="red", row=2, col=1, line_dash="dash")
 
-            # Subplot 2: RSI con soglie dinamiche
-            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['RSI'], line=dict(color='#AB63FA'), name="RSI"), row=2, col=1)
-            line_buy = 45 if stress_test else custom_rsi_buy
-            line_sell = 55 if stress_test else custom_rsi_sell
-            fig.add_hline(y=line_buy, line_color="green", row=2, col=1, line_dash="dash")
-            fig.add_hline(y=line_sell, line_color="red", row=2, col=1, line_dash="dash")
-
-            # Subplot 3: MACD con logica colori corretta
-            macd_colors = []
-            hist_diff = df_final['HIST'].diff()
-            for i in range(len(df_final)):
-                val = df_final['HIST'].iloc[i]
-                diff = hist_diff.iloc[i]
-                if pd.isna(diff): macd_colors.append('rgba(170,170,170,0.5)')
-                elif val > 0:
-                    macd_colors.append('#26A69A' if diff > 0 else '#B2DFDB') # Verde acceso / opaco
-                else:
-                    macd_colors.append('#EF5350' if diff < 0 else '#FFCDD2') # Rosso acceso / opaco
-
+            # 3. MACD
+            macd_colors = ['#26A69A' if val > 0 else '#EF5350' for val in df_final['HIST']]
             fig.add_trace(go.Bar(x=df_final.index, y=df_final['HIST'], marker_color=macd_colors, name="Istogramma"), row=3, col=1)
-            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['MACD'], line=dict(color='#00E5FF', width=2), name="MACD"), row=3, col=1)
-            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['SIGNAL'], line=dict(color='#FF9100', width=2), name="Signal"), row=3, col=1)
+            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['MACD'], line=dict(color='#00E5FF', width=1.5), name="MACD"), row=3, col=1)
+            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['SIGNAL'], line=dict(color='#FF9100', width=1.5), name="Signal"), row=3, col=1)
 
-            fig.update_layout(hovermode="x unified", height=850, template="plotly_dark", xaxis_rangeslider_visible=False, margin=dict(l=10,r=10,b=10,t=40))
+            # --- CONFIGURAZIONE ASSI E LINEE VERTICALI (SPIKELINES) ---
+            fig.update_xaxes(
+                type='category', # Risolve il problema delle candele invisibili
+                showspikes=True, # Attiva le linee verticali
+                spikemode='across', # La linea attraversa tutti i grafici
+                spikesnap='cursor',
+                spikethickness=1,
+                spikedash='dash',
+                spikecolor="rgba(255, 255, 255, 0.5)"
+            )
+            
+            fig.update_layout(
+                hovermode="x unified", 
+                height=850, 
+                template="plotly_dark", 
+                xaxis_rangeslider_visible=False,
+                margin=dict(l=10,r=10,b=10,t=40)
+            )
+            
             st.plotly_chart(fig, use_container_width=True)
     except Exception as e:
         st.error(f"Errore grafico TA: {e}")
+
 
 
     # --- 6. VERIFICA ESITI TRADE ---
