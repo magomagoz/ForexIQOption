@@ -213,12 +213,12 @@ if 'scanner_on' not in st.session_state: st.session_state.scanner_on = False
 
 # --- 3. SIDEBAR ---
 with st.sidebar:
-    st.title("⚙️ YAHOO TEST MODE")
+    st.title("⚙️ YAHOO TRADING")
     
     st.subheader("🔑 Accesso Rapido")
     st.info("In modalità Yahoo Finance non è necessario il Token API.")
     
-    if st.button("🔌 ATTIVA MODALITÀ TEST"):
+    if st.button("🔌 CONNESSIONE"):
         st.session_state.connected = True
         st.session_state.oanda_token = "YAHOO_MODE" # Dummy token
         st.success("✅ Sistema Pronto!")
