@@ -17,40 +17,43 @@ TELEGRAM_CHAT_ID = st.secrets.get("TELEGRAM_CHAT_ID", "IL_TUO_CHAT_ID_QUI")
 
 def get_oanda_candles(pair, timeframe_sec, count, api_token):
     """
-    Scarica le candele da OANDA (Open, High, Low, Close).
-    Timeframe_sec: 60 = 'M1', 300 = 'M5'
+    MODIFICATA: Ora preleva dati da Yahoo Finance invece di OANDA.
+    Mantiene lo stesso nome e parametri per non rompere il resto dello script.
     """
-    oanda_pair = f"{pair[:3]}_{pair[3:]}" if "_" not in pair else pair
-    granularity = "M1" if timeframe_sec == 60 else "M5" if timeframe_sec == 300 else "M15"
+    # Adattamento simbolo per Yahoo (es. EURUSD -> EURUSD=X)
+    symbol = f"{pair}=X"
+    # Mapping intervalli: Yahoo accetta '1m', '5m', '15m'
+    interval = "1m" if timeframe_sec <= 60 else "5m" if timeframe_sec <= 300 else "15m"
     
-    url = f"https://api-fxpractice.oanda.com/v3/instruments/{oanda_pair}/candles"
+    # URL Query API Yahoo Finance
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval={interval}&range=1d"
     headers = {
-        "Authorization": f"Bearer {api_token}",
-        "Accept-Datetime-Format": "UNIX"
-    }
-    params = {
-        "count": count,
-        "granularity": granularity,
-        "price": "M" 
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)'
     }
     
     try:
-        response = requests.get(url, headers=headers, params=params, timeout=5)
-        response.raise_for_status()
+        response = requests.get(url, headers=headers, timeout=5)
         data = response.json()
+        result = data['chart']['result'][0]
+        quote = result['indicators']['quote'][0]
         
-        # Ora restituiamo Open, High, Low, Close per far funzionare anche i grafici!
+        # Trasformazione nel formato richiesto dal tuo script
         candles = []
-        for c in data.get('candles', []):
-            candles.append({
-                'open': float(c['mid']['o']),
-                'max': float(c['mid']['h']),
-                'min': float(c['mid']['l']),
-                'close': float(c['mid']['c'])
-            })
+        # Prendiamo solo gli ultimi 'count' elementi disponibili
+        limit = min(len(quote['close']), count)
+        
+        for i in range(len(quote['close']) - limit, len(quote['close'])):
+            # Verifichiamo che il dato non sia nullo
+            if quote['close'][i] is not None:
+                candles.append({
+                    'open': float(quote['open'][i]),
+                    'max': float(quote['high'][i]),
+                    'min': float(quote['low'][i]),
+                    'close': float(quote['close'][i])
+                })
         return candles
     except Exception as e:
-        print(f"Errore OANDA per {pair}: {e}")
+        print(f"Errore Yahoo per {pair}: {e}")
         return None
 
 def genera_trade_id():
@@ -196,43 +199,34 @@ st.set_page_config(page_title="Sentinel AI", page_icon="🚀", layout="wide")
 
 try:
     logo = Image.open("banner.png")
-    st.image(logo, use_column_width=True, caption="OANDA Signals PRO")
+    st.image(logo, use_column_width=True, caption="Yahoo Finance Signals PRO")
 except:
     st.image("https://via.placeholder.com/800x100/0066cc/white?text=SENTINEL+AI", use_column_width=True)
 
 # INIZIALIZZAZIONI SICURE
 if 'connected' not in st.session_state: st.session_state.connected = False
-if 'account_type' not in st.session_state: st.session_state.account_type = "DEMO (OANDA)"
+if 'account_type' not in st.session_state: st.session_state.account_type = "TEST (YAHOO)"
 if 'active_trades' not in st.session_state: st.session_state.active_trades = {}
 if 'signal_history' not in st.session_state: st.session_state.signal_history = load_journal()
-if 'local_balance' not in st.session_state: st.session_state.local_balance = 10000.0 # Saldo fittizio iniziale
+if 'local_balance' not in st.session_state: st.session_state.local_balance = 10000.0
 if 'scanner_on' not in st.session_state: st.session_state.scanner_on = False
 
 # --- 3. SIDEBAR ---
 with st.sidebar:
-    st.title("⚙️ OANDA FOREX TRADING")
+    st.title("⚙️ YAHOO TEST MODE")
     
-    # --- CONNESSIONE OANDA ---
-    st.subheader("🔑 Connessione OANDA (Demo)")
-    oanda_token = st.text_input("API Token (Bearer)", type="password", help="Generalo dal tuo conto OANDA Practice")
+    st.subheader("🔑 Accesso Rapido")
+    st.info("In modalità Yahoo Finance non è necessario il Token API.")
     
-    if st.button("🔌 CONNETTI OANDA"):
-        if oanda_token:
-            test_data = get_oanda_candles("EURUSD", 60, 5, oanda_token)
-            if test_data:
-                st.session_state.connected = True
-                st.session_state.oanda_token = oanda_token
-                st.success("✅ OANDA Connesso!")
-                time_module.sleep(1)
-                st.rerun()
-            else:
-                st.error("⚠️ Token non valido o errore di rete.")
-        else:
-            st.warning("Inserisci il Token API.")
+    if st.button("🔌 ATTIVA MODALITÀ TEST"):
+        st.session_state.connected = True
+        st.session_state.oanda_token = "YAHOO_MODE" # Dummy token
+        st.success("✅ Sistema Pronto!")
+        time_module.sleep(1)
+        st.rerun()
 
     st.divider()
 
-    # --- PANNELLO STATISTICHE E PARAMETRI ---
     st.subheader("🎛️ Setup Indicatori (Live)")
     
     col1, col2 = st.columns(2)
@@ -242,7 +236,6 @@ with st.sidebar:
     with col2:
         custom_rsi_sell = st.number_input("RSI Sell", value=72, min_value=50, max_value=90, step=1)
         custom_macd_slow = st.number_input("MACD Slow", value=17, min_value=10, max_value=40, step=1)
-        
         custom_macd_sig = st.number_input("MACD Signal", value=9, min_value=2, max_value=20, step=1)
         
     st.divider()
@@ -277,17 +270,12 @@ with st.sidebar:
     st.divider()
     st.header("🔧 STRUMENTI TEST")
     stress_test = st.toggle("🚀 STRESS TEST MODE", value=False)
-    if stress_test:
-        st.warning("⚠️ Modalità TEST:  \nno BB - RSI (45/55) - no MACD")
-    else:
-        st.success("🟢 Modalità REALE:  \nBB(20,2) - RSI dinamico - MACD dinamico")
-
+    
     if st.button("🔔 TEST AUDIO/TEL", use_container_width=True):
         play_trade_sound("buy")
-        invia_telegram("✅ **SENTINEL AI: SYSTEM CHECK**\nBot online e sincronizzato con OANDA. 🚀")
+        invia_telegram("✅ **SENTINEL AI: SYSTEM CHECK**\nBot online e sincronizzato con Yahoo Finance. 🚀")
         st.toast("Test completato!", icon="📲")
 
-    st.divider()
     if st.button("🗑️ PULISCI STORICO", use_container_width=True):
         st.session_state.signal_history = []
         save_journal([]) 
@@ -311,25 +299,17 @@ if st.session_state.connected:
     if now_time >= time(18, 30) and not st.session_state.get('report_sent', False):
         genera_report_finale()
         st.session_state.report_sent = True
-    if now_time < time(9, 0):
-        st.session_state.report_sent = False
     
     st.header("🌍 Live Market Flow 24h")
-    st.plotly_chart(
-        draw_market_map_inverted(h_float, trading_autorizzato), 
-        use_container_width=True, 
-        config={'displayModeBar': False} 
-    )
+    st.plotly_chart(draw_market_map_inverted(h_float, trading_autorizzato), use_container_width=True, config={'displayModeBar': False})
     
     if st.session_state.scanner_on:
         if not trading_autorizzato:
             st.warning("🛡️ PROTEZIONE ATTIVA: Mercato fuori orario. Scanner in pausa.")
-            st.info(f"⏰ Prossima finestra: {window_1[0] if now_time < window_1[0] else window_2[0]}")
         else:
             st.success("SISTEMA IN SCANSIONE ATTIVA 🔥🔥🔥", icon="📡")
             st.divider()
-            st.subheader("🕵️ Coppie di valute osservate")
-
+            
             cols = st.columns(5)
             for i, pair in enumerate(ALL_PAIRS):
                 with cols[i % 5]: st.code(f"{icons.get(pair, '🔍')} {pair}")
@@ -343,11 +323,9 @@ if st.session_state.connected:
                     token = st.session_state.get("oanda_token", "")
                     candles = get_oanda_candles(pair, current_tf, 100, token)
                     
-                    if not candles or len(candles) < 30:
-                        continue
+                    if not candles or len(candles) < 30: continue
                         
                     df = pd.DataFrame(candles)
-
                     df['RSI'] = ta.rsi(df['close'], length=7)
                     price, curr_rsi = df['close'].iloc[-1], df['RSI'].iloc[-1]
 
@@ -368,11 +346,7 @@ if st.session_state.connected:
                     if (is_buy or is_sell) and pair not in st.session_state.active_trades:
                         direction = "BUY" if is_buy else "SELL"
                         t_id = genera_trade_id()
-                        
-                        st.session_state.active_trades[pair] = {
-                            'id': t_id, 'entry_price': price,
-                            'entry_time': time_module.time(), 'direction': direction
-                        }
+                        st.session_state.active_trades[pair] = {'id': t_id, 'entry_price': price, 'entry_time': time_module.time(), 'direction': direction}
                         
                         st.session_state.signal_history.append({
                             'time': datetime.now().strftime("%H:%M:%S"),
@@ -380,16 +354,10 @@ if st.session_state.connected:
                             'rsi': round(curr_rsi, 1), 'macd': round(curr_macd, 6),
                             'bb': curr_bb_status, 'result': "⏳ In corso..."
                         })
-
                         save_journal(st.session_state.signal_history)
-                        
                         send_telegram_signal(direction, pair, price, curr_rsi, t_id)
                         play_trade_sound("buy")
-                        st.session_state.last_signal = f"🔥 SEGNALE {direction} su {pair}!"
-                except Exception as e:
-                    continue
-    else:
-        st.info("SISTEMA IN STANDBY", icon="💤")
+                except: continue
     
     # --- 5. ANALISI TECNICA GRAFICA ---
     st.divider()
@@ -398,44 +366,25 @@ if st.session_state.connected:
     
     try:
         token = st.session_state.get("oanda_token", "")
-        # Usiamo OANDA per scaricare le 160 candele
         candles_ta = get_oanda_candles(pair_display, timeframe, 160, token)
         df_raw = pd.DataFrame(candles_ta)
         
         df_raw['RSI'] = ta.rsi(df_raw['close'], length=7)
         bb_ta = ta.bbands(df_raw['close'], length=20, std=2)
         bb_ta.columns = ['BBL', 'BBM', 'BBU', 'BBB', 'BBP'] 
-        macd_ta = ta.macd(df_raw['close'], fast=8, slow=17, signal=9)
+        macd_ta = ta.macd(df_raw['close'], fast=custom_macd_fast, slow=custom_macd_slow, signal=custom_macd_sig)
         macd_ta.columns = ['MACD', 'HIST', 'SIGNAL']
         df_final = pd.concat([df_raw, bb_ta[['BBL', 'BBM', 'BBU']], macd_ta], axis=1).tail(100)
 
         fig = make_subplots(rows=3, cols=1, shared_xaxes=True, row_heights=[0.5, 0.25, 0.25], vertical_spacing=0.07, subplot_titles=("📊 Prezzo & Volatilità", "📉 Oscillatore RSI", "🚀 Momentum MACD"))
-        
         fig.add_trace(go.Candlestick(x=df_final.index, open=df_final['open'], high=df_final['max'], low=df_final['min'], close=df_final['close'], name="Prezzo"), row=1, col=1)
-        
         fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBU'], line=dict(color='rgba(0,71,171,0.4)', dash='dot'), name="BBU"), row=1, col=1)
-        fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBM'], line=dict(color='rgba(170,170,170,0.3)', width=1), name="BBM"), row=1, col=1)
         fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBL'], line=dict(color='rgba(0,71,171,0.4)', dash='dot'), fill='tonexty', fillcolor='rgba(100, 100, 255, 0.05)', name="BBL"), row=1, col=1)
-        
         fig.add_trace(go.Scatter(x=df_final.index, y=df_final['RSI'], line=dict(color='#AB63FA'), name="RSI"), row=2, col=1)
-        fig.add_hline(y=(45 if stress_test else 28), line_color="green", row=2, col=1, line_dash="dash")
-        fig.add_hline(y=(55 if stress_test else 72), line_color="red", row=2, col=1, line_dash="dash")
-
-        macd_colors = []
-        hist_diff = df_final['HIST'].diff()
-        for i in range(len(df_final)):
-            val, diff = df_final['HIST'].iloc[i], hist_diff.iloc[i]
-            if pd.isna(diff): macd_colors.append('rgba(0,0,0,0.2)')
-            elif val > 0 and diff > 0: macd_colors.append('#26A69A')
-            elif val > 0 and diff <= 0: macd_colors.append('#B2DFDB')
-            elif val < 0 and diff < 0: macd_colors.append('#EF5350')
-            else: macd_colors.append('#FFCDD2')
-
-        fig.add_trace(go.Bar(x=df_final.index, y=df_final['HIST'], marker_color=macd_colors, name="HIST"), row=3, col=1)
-        fig.add_trace(go.Scatter(x=df_final.index, y=df_final['MACD'], line=dict(color='#00E5FF', width=2), name="MACD"), row=3, col=1)
-        fig.add_trace(go.Scatter(x=df_final.index, y=df_final['SIGNAL'], line=dict(color='#FF9100', width=2), name="Signal"), row=3, col=1)
-
-        fig.update_layout(hovermode="x unified", height=850, template="plotly_dark", xaxis_rangeslider_visible=False, margin=dict(l=10,r=10,b=10,t=40))
+        fig.add_hline(y=custom_rsi_buy, line_color="green", row=2, col=1, line_dash="dash")
+        fig.add_hline(y=custom_rsi_sell, line_color="red", row=2, col=1, line_dash="dash")
+        fig.add_trace(go.Bar(x=df_final.index, y=df_final['HIST'], name="HIST"), row=3, col=1)
+        fig.update_layout(height=850, template="plotly_dark", xaxis_rangeslider_visible=False, margin=dict(l=10,r=10,b=10,t=40))
         st.plotly_chart(fig, use_container_width=True)
     except Exception as e:
         st.error(f"Errore grafico TA: {e}")
@@ -443,100 +392,35 @@ if st.session_state.connected:
     # --- 6. VERIFICA ESITI TRADE ---
     now = time_module.time()
     for pair, trade in list(st.session_state.active_trades.items()):
-        if now - trade['entry_time'] >= timeframe: # Adattato al timeframe (60 o 300)
+        if now - trade['entry_time'] >= timeframe:
             try:
-                token = st.session_state.get("oanda_token", "")
-                # Richiediamo a OANDA 1 candela aggiornata
-                res = get_oanda_candles(pair, timeframe, 1, token)
+                res = get_oanda_candles(pair, timeframe, 1, "YAHOO")
                 if not res: continue
-                
                 exit_price = res[0]['close']
                 win = (exit_price > trade['entry_price']) if trade['direction'] == "BUY" else (exit_price < trade['entry_price'])
-                
                 res_status = "WIN" if win else "LOSS"
-                stake = st.session_state.get('stake', 100.0)
-                profit = (stake * 0.85) if win else -stake
-                t_id = trade.get('id', 'N/D')
-
+                profit = (st.session_state.stake * 0.85) if win else -st.session_state.stake
                 st.session_state.local_balance += profit
                 if win: play_trade_sound("win")
-
-                colore_esito = "✅" if win else "❌"
-                invia_telegram(f"{colore_esito} *ESITO TRADE*\n🆔 ID: `{t_id}`\n📈 Risultato: *{res_status}*\n💰 Profitto: {profit:.2f}€\n🏁 Stato: Conclusa")
-                registra_trade(t_id, pair, trade['direction'], res_status, profit)
-                
+                colore = "✅" if win else "❌"
+                invia_telegram(f"{colore} *ESITO*\nAsset: {pair}\nRisultato: {res_status}\nProfit: {profit:.2f}€")
+                registra_trade(trade['id'], pair, trade['direction'], res_status, profit)
                 for s in reversed(st.session_state.signal_history):
                     if s['pair'] == pair and s['result'] == "⏳ In corso...":
-                        s['result'] = f"{colore_esito} {res_status}"
-                        save_journal(st.session_state.signal_history)
+                        s['result'] = f"{colore} {res_status}"
                         break
-                
+                save_journal(st.session_state.signal_history)
                 del st.session_state.active_trades[pair]
-            except Exception as e:
-                continue
-
-    if st.session_state.get('last_signal'):
-        st.error(st.session_state.last_signal)
-        st.session_state.last_signal = None 
+            except: continue
 
     # --- 7. TABELLA JOURNAL ---
     st.divider()
     st.subheader("📋 Trading Journal")
-                
     if st.session_state.signal_history:
-        wins = sum(1 for s in st.session_state.signal_history if "✅" in str(s.get('result', '')))
-        losses = sum(1 for s in st.session_state.signal_history if "❌" in str(s.get('result', '')))
-        total = wins + losses
-        rate = (wins / total * 100) if total > 0 else 0
-
-        m1, m2, m3 = st.columns(3)
-        m1.metric("🏆 Win Rate", f"{rate:.1f}%")
-        m2.metric("📊 Score", f"W: {wins} | L: {losses}")
-        m3.metric(f"💰 Saldo {st.session_state.account_type}", f"{st.session_state.local_balance:.2f} €")    
-        
         df_journal = pd.DataFrame(st.session_state.signal_history).iloc[::-1]
-        rename_map = {'time': '⏰ ORA', 'pair': '💱 COPPIA', 'dir': '🚀 TIPO', 'price': '💰 ENTRATA', 'rsi': '📊 RSI', 'macd': '📉 MACD', 'bb': '↔️ BOLLINGER', 'result': '🔍 ESITO'}
-        
-        def style_result(val):
-            color = '#00ff00' if '✅' in str(val) else '#ff4b4b' if '❌' in str(val) else '#ffa500' if '⏳' in str(val) else 'white'
-            return f'color: {color}'
-    
-        st.dataframe(df_journal.rename(columns=rename_map).style.applymap(style_result, subset=['🔍 ESITO']), use_container_width=True, hide_index=True)
-    else:
-        st.info("⏳ In attesa di segnali...")
+        st.dataframe(df_journal, use_container_width=True, hide_index=True)
 
-    # --- SEZIONE IMPORT / EXPORT CSV ---
-    col_imp, col_exp = st.columns(2)
-    
-    with col_imp:
-        with st.popover("📤 Importa Storico", use_container_width=True):
-            uploaded_file = st.file_uploader("Trascina qui il file", type=["csv"], label_visibility="collapsed")
-            
-            if uploaded_file is not None:
-                try:
-                    df_import = pd.read_csv(uploaded_file)
-                    st.session_state.signal_history = df_import.to_dict('records')
-                    save_journal(st.session_state.signal_history)
-                    st.success("✅ Storico importato! Ricarico...")
-                    time_module.sleep(0.5)
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"⚠️ Errore caricamento: {e}")
-
-    with col_exp:
-        if st.session_state.signal_history:
-            df_export = pd.DataFrame(st.session_state.signal_history)
-            csv_data = df_export.to_csv(index=False).encode('utf-8')
-            st.download_button(
-                label="📥 Esporta Storico",
-                data=csv_data,
-                file_name=f"journal_sentinel_{datetime.now().strftime('%Y%m%d')}.csv",
-                mime="text/csv",
-                use_container_width=True
-            )
-                
     # --- 8. REFRESH LOOP ---
     if st.session_state.scanner_on:
-        st.caption(f"🔄 Scanner in esecuzione... Ultimo check: {now_roma.strftime('%H:%M:%S')}")
         time_module.sleep(3) 
         st.rerun()
