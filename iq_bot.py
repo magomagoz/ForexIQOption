@@ -236,7 +236,7 @@ with st.sidebar:
     with col2:
         custom_rsi_sell = st.number_input("RSI Sell", value=72, min_value=50, max_value=90, step=1)
         custom_macd_slow = st.number_input("MACD Slow", value=17, min_value=10, max_value=40, step=1)
-        custom_macd_sig = st.number_input("MACD Signal", value=9, min_value=2, max_value=20, step=1)
+    custom_macd_sig = st.number_input("MACD Signal", value=9, min_value=2, max_value=20, step=1)
         
     st.divider()
     st.subheader("👁️ SCANNER VALUTE FOREX")
