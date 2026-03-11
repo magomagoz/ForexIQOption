@@ -314,8 +314,9 @@ if st.session_state.connected:
             st.warning("🛡️ PROTEZIONE ATTIVA: Mercato fuori orario. Scanner in pausa.")
         else:
             st.success("SISTEMA IN SCANSIONE ATTIVA 🔥🔥🔥", icon="📡")
+
             st.divider()
-            
+            st.subheader("🕵️ Coppie di valute osservate")
             cols = st.columns(5)
             for i, pair in enumerate(ALL_PAIRS):
                 with cols[i % 5]: st.code(f"{icons.get(pair, '🔍')} {pair}")
