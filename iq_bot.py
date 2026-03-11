@@ -262,55 +262,55 @@ with st.sidebar:
         
         custom_macd_sig = st.number_input("MACD Signal", value=9, min_value=2, max_value=20, step=1)
         
-        st.divider()
-        st.subheader("👁️ SCANNER VALUTE FOREX")
+    st.divider()
+    st.subheader("👁️ SCANNER VALUTE FOREX")
     
-        label = "🛑 STOP SCANNER" if st.session_state.scanner_on else "🚀 AVVIA SCANNER"
-        if st.button(label, use_container_width=True, type="primary" if not st.session_state.scanner_on else "secondary"):
-            st.session_state.scanner_on = not st.session_state.scanner_on
-            st.rerun()
+    label = "🛑 STOP SCANNER" if st.session_state.scanner_on else "🚀 AVVIA SCANNER"
+    if st.button(label, use_container_width=True, type="primary" if not st.session_state.scanner_on else "secondary"):
+        st.session_state.scanner_on = not st.session_state.scanner_on
+        st.rerun()
             
-        st.divider()
-        st.metric(f"💰 Saldo {st.session_state.account_type}", f"{st.session_state.local_balance:.2f} €")    
-        st.session_state.stake = st.number_input("💰 INVESTIMENTO (€)", value=100.0)
-        timeframe = st.selectbox("⏱️ TIMEFRAME OPERATIVO (s)", [60, 300], index=0)
+    st.divider()
+    st.metric(f"💰 Saldo {st.session_state.account_type}", f"{st.session_state.local_balance:.2f} €")    
+    st.session_state.stake = st.number_input("💰 INVESTIMENTO (€)", value=100.0)
+    timeframe = st.selectbox("⏱️ TIMEFRAME OPERATIVO (s)", [60, 300], index=0)
     
-        if st.button("🔴 DISCONNETTI"):
-            st.session_state.connected = False
-            st.rerun()
+    if st.button("🔴 DISCONNETTI"):
+        st.session_state.connected = False
+        st.rerun()
 
-        st.divider()
-        now_roma = datetime.now(pytz.timezone('Europe/Rome'))
-        now_cet = now_roma.time()
+    st.divider()
+    now_roma = datetime.now(pytz.timezone('Europe/Rome'))
+    now_cet = now_roma.time()
         
-        st.header("🌍 SESSIONI DI MERCATO")
-        for city, (start, end) in {"🇬🇧 LONDRA:": (time(9,0), time(18,0)), "🇺🇸 NEW YORK:": (time(14,0), time(23,0)), "🇦🇺 SYDNEY:": (time(0,0), time(8,0)), "🇯🇵 TOKYO:": (time(0,0), time(9,0))}.items():
-            status = "Open 🟢" if start <= now_cet <= end else "Closed 🔴"
-            st.write(f"{city} {status}")
+    st.header("🌍 SESSIONI DI MERCATO")
+    for city, (start, end) in {"🇬🇧 LONDRA:": (time(9,0), time(18,0)), "🇺🇸 NEW YORK:": (time(14,0), time(23,0)), "🇦🇺 SYDNEY:": (time(0,0), time(8,0)), "🇯🇵 TOKYO:": (time(0,0), time(9,0))}.items():
+        status = "Open 🟢" if start <= now_cet <= end else "Closed 🔴"
+        st.write(f"{city} {status}")
 
-        st.info(get_market_status())
+    st.info(get_market_status())
 
-        st.divider()
-        st.header("🔧 STRUMENTI TEST")
-        stress_test = st.toggle("🚀 STRESS TEST MODE", value=False)
-        if stress_test:
-            st.warning("⚠️ Modalità TEST:  \nno BB - RSI (45/55) - no MACD")
-        else:
-            st.success("🟢 Modalità REALE:  \nBB(20,2) - RSI(28/72) - MACD(8,17,9)")
+    st.divider()
+    st.header("🔧 STRUMENTI TEST")
+    stress_test = st.toggle("🚀 STRESS TEST MODE", value=False)
+    if stress_test:
+        st.warning("⚠️ Modalità TEST:  \nno BB - RSI (45/55) - no MACD")
+    else:
+        st.success("🟢 Modalità REALE:  \nBB(20,2) - RSI(28/72) - MACD(8,17,9)")
 
-        if st.button("🔔 TEST TELEGRAM/AUDIO", use_container_width=True):
-            play_trade_sound("buy")
-            invia_telegram("✅ **SENTINEL AI: SYSTEM CHECK**\nBot online e sincronizzato. 🚀")
-            st.toast("Test completato!", icon="📲")
+    if st.button("🔔 TEST TELEGRAM/AUDIO", use_container_width=True):
+        play_trade_sound("buy")
+        invia_telegram("✅ **SENTINEL AI: SYSTEM CHECK**\nBot online e sincronizzato. 🚀")
+        st.toast("Test completato!", icon="📲")
 
-        st.divider()
-        if st.button("🗑️ PULISCI STORICO", use_container_width=True):
-            st.session_state.signal_history = []
-            save_journal([]) # <-- AGGIUNGI QUESTA RIGA
-            st.session_state.local_balance = st.session_state.iq.get_balance() if st.session_state.connected else 0
-            st.rerun()
+    st.divider()
+    if st.button("🗑️ PULISCI STORICO", use_container_width=True):
+        st.session_state.signal_history = []
+        save_journal([]) # <-- AGGIUNGI QUESTA RIGA
+        st.session_state.local_balance = st.session_state.iq.get_balance() if st.session_state.connected else 0
+        st.rerun()
 
-        st.divider()
+    st.divider()
 
 # --- 4. MAIN DASHBOARD ---
 if st.session_state.connected:
