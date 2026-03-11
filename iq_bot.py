@@ -367,34 +367,6 @@ if st.session_state.connected:
             # Esecuzione Scanner
             current_tf = 60 if stress_test else timeframe
             rsi_buy, rsi_sell = (55, 45) if stress_test else (28, 72)
-
-
-# ... (dentro il blocco if st.session_state.scanner_on:)
-            
-            for pair in ALL_PAIRS:
-                try:
-                    # 1. Scarica i dati da OANDA usando il token salvato in sessione
-                    closes = get_oanda_candles(pair, current_tf, 100, st.session_state.oanda_token)
-                    
-                    if not closes or len(closes) < 30:
-                        continue # Salta se non ci sono dati sufficienti
-                        
-                    df = pd.DataFrame({'close': closes})
-                    
-                    # 2. Usa i parametri DINAMICI presi dalla sidebar
-                    df['RSI'] = ta.rsi(df['close'], length=7)
-                    bb = ta.bbands(df['close'], length=20, std=2.0)
-                    macd = ta.macd(df['close'], fast=custom_macd_fast, slow=custom_macd_slow, signal=custom_macd_sig)
-                    
-                    price = df['close'].iloc[-1]
-                    curr_rsi = df['RSI'].iloc[-1]
-                    
-                    curr_bb_low, curr_bb_up = bb.iloc[-1, 0], bb.iloc[-1, 2]
-                    curr_macd, curr_sig = macd.iloc[-1, 0], macd.iloc[-1, 2]
-                    
-                    # Logica di ingresso con i limiti RSI dinamici
-                    is_buy = (curr_rsi < custom_rsi_buy) and (price <= curr_bb_low) and (curr_macd > curr_sig)
-                    is_sell = (curr_rsi > custom_rsi_sell) and (price >= curr_bb_up) and (curr_macd < curr_sig)
                     
             for pair in ALL_PAIRS:
                 try:
