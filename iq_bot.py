@@ -396,16 +396,24 @@ if st.session_state.connected:
                     is_buy = (curr_rsi < custom_rsi_buy) and (price <= curr_bb_low) and (curr_macd > curr_sig)
                     is_sell = (curr_rsi > custom_rsi_sell) and (price >= curr_bb_up) and (curr_macd < curr_sig)
                     
-# ... (resto del codice per salvare il trade, inviare a telegram, ecc.)
-
-
-
-
-            
             for pair in ALL_PAIRS:
                 try:
-                    candles = Iq.get_candles(pair, current_tf, 100, time_module.time())
-                    df = pd.DataFrame(candles)
+                    # --- 1. NUOVA LOGICA DATI OANDA ---
+                    # Recupera il token salvato in sessione (inserito dalla sidebar)
+                    token = st.session_state.get("oanda_token", "")
+                    
+                    # Scarica la lista dei prezzi di chiusura
+                    closes = get_oanda_candles(pair, current_tf, 100, token)
+                    
+                    # Controllo di sicurezza: se OANDA non risponde o i dati sono pochi, passa al prossimo pair
+                    if not closes or len(closes) < 30:
+                        continue
+                        
+                    # Creiamo il DataFrame esattamente come si aspetta pandas_ta
+                    df = pd.DataFrame({'close': closes})
+                    # --- FINE LOGICA OANDA ---
+
+                    # --- 2. CALCOLO INDICATORI ---
                     df['RSI'] = ta.rsi(df['close'], length=7)
                     price, curr_rsi = df['close'].iloc[-1], df['RSI'].iloc[-1]
 
@@ -414,7 +422,14 @@ if st.session_state.connected:
                         curr_macd, curr_bb_status = 0.0, "TEST"
                     else:
                         bb = ta.bbands(df['close'], length=20, std=2.0)
-                        macd = ta.macd(df['close'], fast=8, slow=17, signal=9)
+                        
+                        # Utilizziamo i parametri dinamici impostati dalla Sidebar (o i vecchi 8, 17, 9 come fallback)
+                        macd_f = locals().get('custom_macd_fast', 8)
+                        macd_s = locals().get('custom_macd_slow', 17)
+                        macd_sig = locals().get('custom_macd_sig', 9)
+                        
+                        macd = ta.macd(df['close'], fast=macd_f, slow=macd_s, signal=macd_sig)
+                        
                         curr_bb_low, curr_bb_up = bb.iloc[-1, 0], bb.iloc[-1, 2] # BBL, BBU
                         curr_macd, curr_sig = macd.iloc[-1, 0], macd.iloc[-1, 2] # MACD, SIGNAL
                         
@@ -422,6 +437,7 @@ if st.session_state.connected:
                         is_sell = (curr_rsi > rsi_sell) and (price >= curr_bb_up) and (curr_macd < curr_sig)
                         curr_bb_status = "OUT" if (price <= curr_bb_low or price >= curr_bb_up) else "IN"
 
+                    # --- 3. ESECUZIONE TRADE E SALVATAGGIO ---
                     if (is_buy or is_sell) and pair not in st.session_state.active_trades:
                         direction = "BUY" if is_buy else "SELL"
                         t_id = genera_trade_id()
@@ -438,12 +454,13 @@ if st.session_state.connected:
                             'bb': curr_bb_status, 'result': "⏳ In corso..."
                         })
 
-                        save_journal(st.session_state.signal_history) # <-- AGGIUNGI QUESTA RIGA
+                        save_journal(st.session_state.signal_history) # <-- SALVATAGGIO PERSISTENTE
                         
                         send_telegram_signal(direction, pair, price, curr_rsi, t_id)
                         play_trade_sound("buy")
                         st.session_state.last_signal = f"🔥 SEGNALE {direction} su {pair}!"
                 except Exception as e:
+                    # Se c'è un errore (es. disconnessione momentanea) ignora e passa alla prossima coppia
                     continue
     else:
         st.info("SISTEMA IN STANDBY", icon="💤")
