@@ -5,7 +5,6 @@ import pytz
 import time as time_module
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from iqoptionapi.stable_api import IQ_Option
 from PIL import Image
 import requests
 import json
@@ -18,13 +17,10 @@ TELEGRAM_CHAT_ID = st.secrets.get("TELEGRAM_CHAT_ID", "IL_TUO_CHAT_ID_QUI")
 
 def get_oanda_candles(pair, timeframe_sec, count, api_token):
     """
-    Scarica le candele da OANDA.
+    Scarica le candele da OANDA (Open, High, Low, Close).
     Timeframe_sec: 60 = 'M1', 300 = 'M5'
     """
-    # Converti EURUSD in EUR_USD per OANDA
     oanda_pair = f"{pair[:3]}_{pair[3:]}" if "_" not in pair else pair
-    
-    # Mappa i secondi di Streamlit nel formato OANDA (M1 = 1 minuto, M5 = 5 minuti)
     granularity = "M1" if timeframe_sec == 60 else "M5" if timeframe_sec == 300 else "M15"
     
     url = f"https://api-fxpractice.oanda.com/v3/instruments/{oanda_pair}/candles"
@@ -35,7 +31,7 @@ def get_oanda_candles(pair, timeframe_sec, count, api_token):
     params = {
         "count": count,
         "granularity": granularity,
-        "price": "M" # Chiediamo il prezzo Medio (Mid)
+        "price": "M" 
     }
     
     try:
@@ -43,9 +39,16 @@ def get_oanda_candles(pair, timeframe_sec, count, api_token):
         response.raise_for_status()
         data = response.json()
         
-        # Estraiamo i prezzi di chiusura
-        closes = [float(candle['mid']['c']) for candle in data.get('candles', [])]
-        return closes
+        # Ora restituiamo Open, High, Low, Close per far funzionare anche i grafici!
+        candles = []
+        for c in data.get('candles', []):
+            candles.append({
+                'open': float(c['mid']['o']),
+                'max': float(c['mid']['h']),
+                'min': float(c['mid']['l']),
+                'close': float(c['mid']['c'])
+            })
+        return candles
     except Exception as e:
         print(f"Errore OANDA per {pair}: {e}")
         return None
@@ -113,7 +116,6 @@ def genera_report_finale():
 JOURNAL_FILE = "trading_journal.json"
 
 def load_journal():
-    """Carica lo storico dei trade dal file locale se esiste."""
     if os.path.exists(JOURNAL_FILE):
         try:
             with open(JOURNAL_FILE, "r") as f:
@@ -123,7 +125,6 @@ def load_journal():
     return []
 
 def save_journal(history):
-    """Salva lo storico dei trade sul file locale."""
     with open(JOURNAL_FILE, "w") as f:
         json.dump(history, f)
 
@@ -163,48 +164,30 @@ def get_market_status():
 
 def draw_market_map_inverted(current_hour_float, trading_autorizzato):
     fig = go.Figure()
-    
     try:
-        from PIL import Image
         bg_image = Image.open("mondo.png")
     except:
         bg_image = "https://via.placeholder.com/1200x400/220044/white?text=MAPPA+SESSIONI"
 
     fig.add_layout_image(dict(
-        source=bg_image, 
-        xref="x", yref="y", 
-        x=24, y=4.5,
-        sizex=24, sizey=4.5, 
-        sizing="stretch", 
-        opacity=1.0, 
-        layer="below"
+        source=bg_image, xref="x", yref="y", x=24, y=4.5,
+        sizex=24, sizey=4.5, sizing="stretch", opacity=1.0, layer="below"
     ))
 
-    # --- LOGICA RITARDO (OFFSET) ---
-    # Sottraiamo 30 minuti
     ritardo_ore = 0 / 60
-    x_pos = current_hour_float - ritardo_ore
-
-    # Gestione del reset: se l'ora è 00:20, sottraendo 40 min andrebbe in negativo.
-    # Con l'operatore % 24, la linea ricompare correttamente dal fondo (24).
-    x_pos = x_pos % 24
-
+    x_pos = (current_hour_float - ritardo_ore) % 24
     color_laser = "#0F3ADA" if not trading_autorizzato else "#FFD700"
 
     fig.add_shape(
-        type="line", 
-        x0=x_pos, x1=x_pos, y0=0, y1=4.5, 
+        type="line", x0=x_pos, x1=x_pos, y0=0, y1=4.5, 
         line=dict(color=color_laser, width=2)
     )
 
     fig.update_layout(
         xaxis=dict(range=[24, 0], showgrid=False, visible=False, fixedrange=True),
         yaxis=dict(range=[0, 4.5], showgrid=False, visible=False, fixedrange=True),
-        template="plotly_dark", 
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)", 
-        margin=dict(l=0, r=0, t=0, b=0), 
-        height=350
+        template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)", margin=dict(l=0, r=0, t=0, b=0), height=350
     )
     return fig
 
@@ -213,20 +196,21 @@ st.set_page_config(page_title="Sentinel AI", page_icon="🚀", layout="wide")
 
 try:
     logo = Image.open("banner.png")
-    st.image(logo, use_column_width=True, caption="IQ Signals PRO")
+    st.image(logo, use_column_width=True, caption="OANDA Signals PRO")
 except:
     st.image("https://via.placeholder.com/800x100/0066cc/white?text=SENTINEL+AI", use_column_width=True)
 
+# INIZIALIZZAZIONI SICURE
 if 'connected' not in st.session_state: st.session_state.connected = False
+if 'account_type' not in st.session_state: st.session_state.account_type = "DEMO (OANDA)"
 if 'active_trades' not in st.session_state: st.session_state.active_trades = {}
-if 'signal_history' not in st.session_state: 
-    st.session_state.signal_history = load_journal()
-if 'local_balance' not in st.session_state: st.session_state.local_balance = 0
+if 'signal_history' not in st.session_state: st.session_state.signal_history = load_journal()
+if 'local_balance' not in st.session_state: st.session_state.local_balance = 10000.0 # Saldo fittizio iniziale
 if 'scanner_on' not in st.session_state: st.session_state.scanner_on = False
 
 # --- 3. SIDEBAR ---
 with st.sidebar:
-    st.title("⚙️ IQ FOREX TRADING")
+    st.title("⚙️ OANDA FOREX TRADING")
     
     # --- CONNESSIONE OANDA ---
     st.subheader("🔑 Connessione OANDA (Demo)")
@@ -234,7 +218,6 @@ with st.sidebar:
     
     if st.button("🔌 CONNETTI OANDA"):
         if oanda_token:
-            # Facciamo un test di connessione veloce su EUR_USD
             test_data = get_oanda_candles("EURUSD", 60, 5, oanda_token)
             if test_data:
                 st.session_state.connected = True
@@ -254,10 +237,10 @@ with st.sidebar:
     
     col1, col2 = st.columns(2)
     with col1:
-        custom_rsi_buy = st.number_input("RSI Buy Limit", value=28, min_value=10, max_value=50, step=1)
+        custom_rsi_buy = st.number_input("RSI Buy", value=28, min_value=10, max_value=50, step=1)
         custom_macd_fast = st.number_input("MACD Fast", value=8, min_value=2, max_value=20, step=1)
     with col2:
-        custom_rsi_sell = st.number_input("RSI Sell Limit", value=72, min_value=50, max_value=90, step=1)
+        custom_rsi_sell = st.number_input("RSI Sell", value=72, min_value=50, max_value=90, step=1)
         custom_macd_slow = st.number_input("MACD Slow", value=17, min_value=10, max_value=40, step=1)
         
         custom_macd_sig = st.number_input("MACD Signal", value=9, min_value=2, max_value=20, step=1)
@@ -277,6 +260,7 @@ with st.sidebar:
     
     if st.button("🔴 DISCONNETTI"):
         st.session_state.connected = False
+        st.session_state.scanner_on = False
         st.rerun()
 
     st.divider()
@@ -296,35 +280,29 @@ with st.sidebar:
     if stress_test:
         st.warning("⚠️ Modalità TEST:  \nno BB - RSI (45/55) - no MACD")
     else:
-        st.success("🟢 Modalità REALE:  \nBB(20,2) - RSI(28/72) - MACD(8,17,9)")
+        st.success("🟢 Modalità REALE:  \nBB(20,2) - RSI dinamico - MACD dinamico")
 
-    if st.button("🔔 TEST TELEGRAM/AUDIO", use_container_width=True):
+    if st.button("🔔 TEST AUDIO/TEL", use_container_width=True):
         play_trade_sound("buy")
-        invia_telegram("✅ **SENTINEL AI: SYSTEM CHECK**\nBot online e sincronizzato. 🚀")
+        invia_telegram("✅ **SENTINEL AI: SYSTEM CHECK**\nBot online e sincronizzato con OANDA. 🚀")
         st.toast("Test completato!", icon="📲")
 
     st.divider()
     if st.button("🗑️ PULISCI STORICO", use_container_width=True):
         st.session_state.signal_history = []
-        save_journal([]) # <-- AGGIUNGI QUESTA RIGA
-        st.session_state.local_balance = st.session_state.iq.get_balance() if st.session_state.connected else 0
+        save_journal([]) 
         st.rerun()
-
-    st.divider()
 
 # --- 4. MAIN DASHBOARD ---
 if st.session_state.connected:
-    Iq = st.session_state.iq
     ALL_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"]
     icons = {"EURUSD": "🇪🇺🇺🇸", "GBPUSD": "🇬🇧🇺🇸", "USDJPY": "🇺🇸🇯🇵", "AUDUSD": "🇦🇺🇺🇸", "USDCAD": "🇺🇸🇨🇦", "USDCHF": "🇺🇸🇨🇭", "NZDUSD": "🇳🇿🇺🇸", "EURGBP": "🇪🇺🇬🇧", "EURJPY": "🇪🇺🇯🇵", "GBPJPY": "🇬🇧🇯🇵"}
 
-    # Logica Oraria
     fuso_roma = pytz.timezone('Europe/Rome')
     now_roma = datetime.now(fuso_roma)
     now_time = now_roma.time()
     h_float = now_roma.hour + (now_roma.minute / 60)
 
-    # Finestre Operative e Report
     window_1 = (time(9, 0), time(12, 0))
     window_2 = (time(14, 0), time(18, 0))
     is_trading_time = (window_1[0] <= now_time <= window_1[1]) or (window_2[0] <= now_time <= window_2[1])
@@ -336,56 +314,40 @@ if st.session_state.connected:
     if now_time < time(9, 0):
         st.session_state.report_sent = False
     
-    #st.divider()
-    # Mappa Dinamica
     st.header("🌍 Live Market Flow 24h")
-    
     st.plotly_chart(
-    draw_market_map_inverted(h_float, trading_autorizzato), 
-    use_container_width=True, 
-    config={'displayModeBar': False} # È QUI che va inserito per non dare errore
+        draw_market_map_inverted(h_float, trading_autorizzato), 
+        use_container_width=True, 
+        config={'displayModeBar': False} 
     )
-
-    #https://trueforexfunds.com/wp-content/uploads/2023/05/THUMBNAIL_20_1-e1685710115417-1024x538.png
     
-    # Stato Sistema
     if st.session_state.scanner_on:
         if not trading_autorizzato:
             st.warning("🛡️ PROTEZIONE ATTIVA: Mercato fuori orario. Scanner in pausa.")
             st.info(f"⏰ Prossima finestra: {window_1[0] if now_time < window_1[0] else window_2[0]}")
         else:
             st.success("SISTEMA IN SCANSIONE ATTIVA 🔥🔥🔥", icon="📡")
-        
             st.divider()
-            # --- NUOVA SEZIONE: MONITOR DELLE VALUTE ---
             st.subheader("🕵️ Coppie di valute osservate")
 
             cols = st.columns(5)
             for i, pair in enumerate(ALL_PAIRS):
                 with cols[i % 5]: st.code(f"{icons.get(pair, '🔍')} {pair}")
 
-            # Esecuzione Scanner
             current_tf = 60 if stress_test else timeframe
-            rsi_buy, rsi_sell = (55, 45) if stress_test else (28, 72)
+            rsi_buy = 55 if stress_test else custom_rsi_buy
+            rsi_sell = 45 if stress_test else custom_rsi_sell
                     
             for pair in ALL_PAIRS:
                 try:
-                    # --- 1. NUOVA LOGICA DATI OANDA ---
-                    # Recupera il token salvato in sessione (inserito dalla sidebar)
                     token = st.session_state.get("oanda_token", "")
+                    candles = get_oanda_candles(pair, current_tf, 100, token)
                     
-                    # Scarica la lista dei prezzi di chiusura
-                    closes = get_oanda_candles(pair, current_tf, 100, token)
-                    
-                    # Controllo di sicurezza: se OANDA non risponde o i dati sono pochi, passa al prossimo pair
-                    if not closes or len(closes) < 30:
+                    if not candles or len(candles) < 30:
                         continue
                         
-                    # Creiamo il DataFrame esattamente come si aspetta pandas_ta
-                    df = pd.DataFrame({'close': closes})
-                    # --- FINE LOGICA OANDA ---
+                    df = pd.DataFrame(candles)
 
-                    # --- 2. CALCOLO INDICATORI ---
                     df['RSI'] = ta.rsi(df['close'], length=7)
                     price, curr_rsi = df['close'].iloc[-1], df['RSI'].iloc[-1]
 
@@ -394,22 +356,15 @@ if st.session_state.connected:
                         curr_macd, curr_bb_status = 0.0, "TEST"
                     else:
                         bb = ta.bbands(df['close'], length=20, std=2.0)
+                        macd = ta.macd(df['close'], fast=custom_macd_fast, slow=custom_macd_slow, signal=custom_macd_sig)
                         
-                        # Utilizziamo i parametri dinamici impostati dalla Sidebar (o i vecchi 8, 17, 9 come fallback)
-                        macd_f = locals().get('custom_macd_fast', 8)
-                        macd_s = locals().get('custom_macd_slow', 17)
-                        macd_sig = locals().get('custom_macd_sig', 9)
-                        
-                        macd = ta.macd(df['close'], fast=macd_f, slow=macd_s, signal=macd_sig)
-                        
-                        curr_bb_low, curr_bb_up = bb.iloc[-1, 0], bb.iloc[-1, 2] # BBL, BBU
-                        curr_macd, curr_sig = macd.iloc[-1, 0], macd.iloc[-1, 2] # MACD, SIGNAL
+                        curr_bb_low, curr_bb_up = bb.iloc[-1, 0], bb.iloc[-1, 2] 
+                        curr_macd, curr_sig = macd.iloc[-1, 0], macd.iloc[-1, 2] 
                         
                         is_buy = (curr_rsi < rsi_buy) and (price <= curr_bb_low) and (curr_macd > curr_sig)
                         is_sell = (curr_rsi > rsi_sell) and (price >= curr_bb_up) and (curr_macd < curr_sig)
                         curr_bb_status = "OUT" if (price <= curr_bb_low or price >= curr_bb_up) else "IN"
 
-                    # --- 3. ESECUZIONE TRADE E SALVATAGGIO ---
                     if (is_buy or is_sell) and pair not in st.session_state.active_trades:
                         direction = "BUY" if is_buy else "SELL"
                         t_id = genera_trade_id()
@@ -426,13 +381,12 @@ if st.session_state.connected:
                             'bb': curr_bb_status, 'result': "⏳ In corso..."
                         })
 
-                        save_journal(st.session_state.signal_history) # <-- SALVATAGGIO PERSISTENTE
+                        save_journal(st.session_state.signal_history)
                         
                         send_telegram_signal(direction, pair, price, curr_rsi, t_id)
                         play_trade_sound("buy")
                         st.session_state.last_signal = f"🔥 SEGNALE {direction} su {pair}!"
                 except Exception as e:
-                    # Se c'è un errore (es. disconnessione momentanea) ignora e passa alla prossima coppia
                     continue
     else:
         st.info("SISTEMA IN STANDBY", icon="💤")
@@ -443,8 +397,11 @@ if st.session_state.connected:
     pair_display = st.selectbox("Seleziona asset per grafico", ALL_PAIRS)
     
     try:
-        candles_ta = Iq.get_candles(pair_display, timeframe, 160, time_module.time())
+        token = st.session_state.get("oanda_token", "")
+        # Usiamo OANDA per scaricare le 160 candele
+        candles_ta = get_oanda_candles(pair_display, timeframe, 160, token)
         df_raw = pd.DataFrame(candles_ta)
+        
         df_raw['RSI'] = ta.rsi(df_raw['close'], length=7)
         bb_ta = ta.bbands(df_raw['close'], length=20, std=2)
         bb_ta.columns = ['BBL', 'BBM', 'BBU', 'BBB', 'BBP'] 
@@ -454,19 +411,16 @@ if st.session_state.connected:
 
         fig = make_subplots(rows=3, cols=1, shared_xaxes=True, row_heights=[0.5, 0.25, 0.25], vertical_spacing=0.07, subplot_titles=("📊 Prezzo & Volatilità", "📉 Oscillatore RSI", "🚀 Momentum MACD"))
         
-        # Prezzo e BB
         fig.add_trace(go.Candlestick(x=df_final.index, open=df_final['open'], high=df_final['max'], low=df_final['min'], close=df_final['close'], name="Prezzo"), row=1, col=1)
         
         fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBU'], line=dict(color='rgba(0,71,171,0.4)', dash='dot'), name="BBU"), row=1, col=1)
         fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBM'], line=dict(color='rgba(170,170,170,0.3)', width=1), name="BBM"), row=1, col=1)
         fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBL'], line=dict(color='rgba(0,71,171,0.4)', dash='dot'), fill='tonexty', fillcolor='rgba(100, 100, 255, 0.05)', name="BBL"), row=1, col=1)
         
-        # RSI
         fig.add_trace(go.Scatter(x=df_final.index, y=df_final['RSI'], line=dict(color='#AB63FA'), name="RSI"), row=2, col=1)
         fig.add_hline(y=(45 if stress_test else 28), line_color="green", row=2, col=1, line_dash="dash")
         fig.add_hline(y=(55 if stress_test else 72), line_color="red", row=2, col=1, line_dash="dash")
 
-        # MACD
         macd_colors = []
         hist_diff = df_final['HIST'].diff()
         for i in range(len(df_final)):
@@ -489,9 +443,13 @@ if st.session_state.connected:
     # --- 6. VERIFICA ESITI TRADE ---
     now = time_module.time()
     for pair, trade in list(st.session_state.active_trades.items()):
-        if now - trade['entry_time'] >= 60: 
+        if now - trade['entry_time'] >= timeframe: # Adattato al timeframe (60 o 300)
             try:
-                res = Iq.get_candles(pair, 60, 1, now)
+                token = st.session_state.get("oanda_token", "")
+                # Richiediamo a OANDA 1 candela aggiornata
+                res = get_oanda_candles(pair, timeframe, 1, token)
+                if not res: continue
+                
                 exit_price = res[0]['close']
                 win = (exit_price > trade['entry_price']) if trade['direction'] == "BUY" else (exit_price < trade['entry_price'])
                 
@@ -510,7 +468,7 @@ if st.session_state.connected:
                 for s in reversed(st.session_state.signal_history):
                     if s['pair'] == pair and s['result'] == "⏳ In corso...":
                         s['result'] = f"{colore_esito} {res_status}"
-                        save_journal(st.session_state.signal_history) # <-- AGGIUNGI QUESTA RIGA
+                        save_journal(st.session_state.signal_history)
                         break
                 
                 del st.session_state.active_trades[pair]
@@ -525,7 +483,6 @@ if st.session_state.connected:
     st.divider()
     st.subheader("📋 Trading Journal")
                 
-    # --- METRICHE E VISUALIZZAZIONE TABELLA ---
     if st.session_state.signal_history:
         wins = sum(1 for s in st.session_state.signal_history if "✅" in str(s.get('result', '')))
         losses = sum(1 for s in st.session_state.signal_history if "❌" in str(s.get('result', '')))
@@ -551,44 +508,32 @@ if st.session_state.connected:
     # --- SEZIONE IMPORT / EXPORT CSV ---
     col_imp, col_exp = st.columns(2)
     
-    # IMPORT CSV (All'interno del tuo popover)
     with col_imp:
         with st.popover("📤 Importa Storico", use_container_width=True):
             uploaded_file = st.file_uploader("Trascina qui il file", type=["csv"], label_visibility="collapsed")
             
             if uploaded_file is not None:
                 try:
-                    # Legge il file caricato
                     df_import = pd.read_csv(uploaded_file)
-                    
-                    # 1. Aggiorna lo stato della sessione
                     st.session_state.signal_history = df_import.to_dict('records')
-                    
-                    # 2. Salva fisicamente sul file JSON (persistenza)
                     save_journal(st.session_state.signal_history)
-                    
-                    # 3. Notifica di successo
                     st.success("✅ Storico importato! Ricarico...")
-                    
-                    # 4. Ricarica immediatamente l'intera app per aggiornare la tabella
                     time_module.sleep(0.5)
                     st.rerun()
-                    
                 except Exception as e:
                     st.error(f"⚠️ Errore caricamento: {e}")
 
-        # EXPORT CSV (Bottone classico)
-        with col_exp:
-            if st.session_state.signal_history:
-                df_export = pd.DataFrame(st.session_state.signal_history)
-                csv_data = df_export.to_csv(index=False).encode('utf-8')
-                st.download_button(
-                    label="📥 Esporta Storico",
-                    data=csv_data,
-                    file_name=f"journal_sentinel_{datetime.now().strftime('%Y%m%d')}.csv",
-                    mime="text/csv",
-                    use_container_width=True
-                )
+    with col_exp:
+        if st.session_state.signal_history:
+            df_export = pd.DataFrame(st.session_state.signal_history)
+            csv_data = df_export.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label="📥 Esporta Storico",
+                data=csv_data,
+                file_name=f"journal_sentinel_{datetime.now().strftime('%Y%m%d')}.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
                 
     # --- 8. REFRESH LOOP ---
     if st.session_state.scanner_on:
