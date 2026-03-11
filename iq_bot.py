@@ -280,7 +280,7 @@ with st.sidebar:
         invia_telegram("✅ **SENTINEL AI: SYSTEM CHECK**\nBot online e sincronizzato con Yahoo Finance. 🚀")
         st.toast("Test completato!", icon="📲")
 
-    st,divider()
+    st.divider()
     if st.button("🗑️ PULISCI STORICO", use_container_width=True):
         st.session_state.signal_history = []
         save_journal([]) 
