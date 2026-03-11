@@ -396,7 +396,7 @@ if st.session_state.connected:
 	    #fig.add_hline(y=(55 if stress_test else 72), line_color="red", row=2, col=1, line_dash="dash")
 	
 	    #macd_colors = []
-	    hist_diff = df_final['HIST'].diff()
+	    #hist_diff = df_final['HIST'].diff()
         for i in range(len(df_final)):
             val, diff = df_final['HIST'].iloc[i], hist_diff.iloc[i]
             if pd.isna(diff): macd_colors.append('rgba(0,0,0,0.2)')
