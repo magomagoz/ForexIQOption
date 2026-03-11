@@ -16,6 +16,40 @@ from datetime import datetime, time, timedelta
 TELEGRAM_TOKEN = st.secrets.get("TELEGRAM_TOKEN", "IL_TUO_TOKEN_QUI")
 TELEGRAM_CHAT_ID = st.secrets.get("TELEGRAM_CHAT_ID", "IL_TUO_CHAT_ID_QUI")
 
+def get_oanda_candles(pair, timeframe_sec, count, api_token):
+    """
+    Scarica le candele da OANDA.
+    Timeframe_sec: 60 = 'M1', 300 = 'M5'
+    """
+    # Converti EURUSD in EUR_USD per OANDA
+    oanda_pair = f"{pair[:3]}_{pair[3:]}" if "_" not in pair else pair
+    
+    # Mappa i secondi di Streamlit nel formato OANDA (M1 = 1 minuto, M5 = 5 minuti)
+    granularity = "M1" if timeframe_sec == 60 else "M5" if timeframe_sec == 300 else "M15"
+    
+    url = f"https://api-fxpractice.oanda.com/v3/instruments/{oanda_pair}/candles"
+    headers = {
+        "Authorization": f"Bearer {api_token}",
+        "Accept-Datetime-Format": "UNIX"
+    }
+    params = {
+        "count": count,
+        "granularity": granularity,
+        "price": "M" # Chiediamo il prezzo Medio (Mid)
+    }
+    
+    try:
+        response = requests.get(url, headers=headers, params=params, timeout=5)
+        response.raise_for_status()
+        data = response.json()
+        
+        # Estraiamo i prezzi di chiusura
+        closes = [float(candle['mid']['c']) for candle in data.get('candles', [])]
+        return closes
+    except Exception as e:
+        print(f"Errore OANDA per {pair}: {e}")
+        return None
+
 def genera_trade_id():
     return f"TRD-{int(datetime.now().timestamp()) % 1000000}"
 
@@ -193,39 +227,40 @@ if 'scanner_on' not in st.session_state: st.session_state.scanner_on = False
 # --- 3. SIDEBAR ---
 with st.sidebar:
     st.title("⚙️ IQ FOREX TRADING")
-    if not st.session_state.connected:
-        email = st.text_input("Email", value="mago_magoz@libero.it")
-        password = st.text_input("Password", type="password")
-        tipo_conto = st.radio("Conto", ["DEMO", "REALE"])
-        
-        if st.button("🔌 CONNETTI"):
-            from iqoptionapi.stable_api import IQ_Option
-            Iq_obj = IQ_Option(email, password)
-            check, reason = Iq_obj.connect()
-            
-            if check:
-                mode = "PRACTICE" if tipo_conto == "DEMO" else "REAL"
-                Iq_obj.change_balance(mode)
-                st.session_state.iq = Iq_obj 
+    
+    # --- CONNESSIONE OANDA ---
+    st.subheader("🔑 Connessione OANDA (Demo)")
+    oanda_token = st.text_input("API Token (Bearer)", type="password", help="Generalo dal tuo conto OANDA Practice")
+    
+    if st.button("🔌 CONNETTI OANDA"):
+        if oanda_token:
+            # Facciamo un test di connessione veloce su EUR_USD
+            test_data = get_oanda_candles("EURUSD", 60, 5, oanda_token)
+            if test_data:
                 st.session_state.connected = True
-                st.session_state.account_type = tipo_conto
-                st.session_state.local_balance = Iq_obj.get_balance()
+                st.session_state.oanda_token = oanda_token
+                st.success("✅ OANDA Connesso!")
+                time_module.sleep(1)
                 st.rerun()
             else:
-                # Qui appare il warning se le credenziali sono errate o il login fallisce
-                #st.warning(f"⚠️ Errore di connessione: {reason}")
-                st.warning("⚠️ Verifica Email e Password e riprova.")
-            
-            if check:
-                mode = "PRACTICE" if tipo_conto == "DEMO" else "REAL"
-                Iq_obj.change_balance(mode)
-                st.session_state.iq = Iq_obj 
-                st.session_state.connected = True
-                st.session_state.account_type = tipo_conto
-                st.session_state.local_balance = Iq_obj.get_balance()
-                st.rerun()
-    else:
-        st.success(f"🟢 Conto {st.session_state.account_type} ATTIVO")
+                st.error("⚠️ Token non valido o errore di rete.")
+        else:
+            st.warning("Inserisci il Token API.")
+
+    st.divider()
+
+    # --- PANNELLO STATISTICHE E PARAMETRI ---
+    st.subheader("🎛️ Setup Indicatori (Live)")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        custom_rsi_buy = st.number_input("RSI Buy Limit", value=28, min_value=10, max_value=50, step=1)
+        custom_macd_fast = st.number_input("MACD Fast", value=8, min_value=2, max_value=20, step=1)
+    with col2:
+        custom_rsi_sell = st.number_input("RSI Sell Limit", value=72, min_value=50, max_value=90, step=1)
+        custom_macd_slow = st.number_input("MACD Slow", value=17, min_value=10, max_value=40, step=1)
+        
+        custom_macd_sig = st.number_input("MACD Signal", value=9, min_value=2, max_value=20, step=1)
         
         st.divider()
         st.subheader("👁️ SCANNER VALUTE FOREX")
@@ -332,6 +367,40 @@ if st.session_state.connected:
             # Esecuzione Scanner
             current_tf = 60 if stress_test else timeframe
             rsi_buy, rsi_sell = (55, 45) if stress_test else (28, 72)
+
+
+# ... (dentro il blocco if st.session_state.scanner_on:)
+            
+            for pair in ALL_PAIRS:
+                try:
+                    # 1. Scarica i dati da OANDA usando il token salvato in sessione
+                    closes = get_oanda_candles(pair, current_tf, 100, st.session_state.oanda_token)
+                    
+                    if not closes or len(closes) < 30:
+                        continue # Salta se non ci sono dati sufficienti
+                        
+                    df = pd.DataFrame({'close': closes})
+                    
+                    # 2. Usa i parametri DINAMICI presi dalla sidebar
+                    df['RSI'] = ta.rsi(df['close'], length=7)
+                    bb = ta.bbands(df['close'], length=20, std=2.0)
+                    macd = ta.macd(df['close'], fast=custom_macd_fast, slow=custom_macd_slow, signal=custom_macd_sig)
+                    
+                    price = df['close'].iloc[-1]
+                    curr_rsi = df['RSI'].iloc[-1]
+                    
+                    curr_bb_low, curr_bb_up = bb.iloc[-1, 0], bb.iloc[-1, 2]
+                    curr_macd, curr_sig = macd.iloc[-1, 0], macd.iloc[-1, 2]
+                    
+                    # Logica di ingresso con i limiti RSI dinamici
+                    is_buy = (curr_rsi < custom_rsi_buy) and (price <= curr_bb_low) and (curr_macd > curr_sig)
+                    is_sell = (curr_rsi > custom_rsi_sell) and (price >= curr_bb_up) and (curr_macd < curr_sig)
+                    
+# ... (resto del codice per salvare il trade, inviare a telegram, ecc.)
+
+
+
+
             
             for pair in ALL_PAIRS:
                 try:
