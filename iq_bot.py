@@ -270,12 +270,17 @@ with st.sidebar:
     st.divider()
     st.header("🔧 STRUMENTI TEST")
     stress_test = st.toggle("🚀 STRESS TEST MODE", value=False)
-    
+    if stress_test:
+        st.warning("⚠️ Modalità TEST:  \nno BB - RSI (45/55) - no MACD")
+    else:
+        st.success("🟢 Modalità REALE:  \nBB(20,2) - RSI dinamico - MACD dinamico")
+
     if st.button("🔔 TEST AUDIO/TEL", use_container_width=True):
         play_trade_sound("buy")
         invia_telegram("✅ **SENTINEL AI: SYSTEM CHECK**\nBot online e sincronizzato con Yahoo Finance. 🚀")
         st.toast("Test completato!", icon="📲")
 
+    st,divider()
     if st.button("🗑️ PULISCI STORICO", use_container_width=True):
         st.session_state.signal_history = []
         save_journal([]) 
