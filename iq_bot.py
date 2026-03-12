@@ -227,15 +227,15 @@ with st.sidebar:
     
     col1, col2 = st.columns(2)
     with col1:
-        custom_rsi_buy = st.number_input("RSI Buy", value=28, min_value=10, max_value=50, step=1)
-        custom_macd_fast = st.number_input("MACD Fast", value=8, min_value=2, max_value=20, step=1)
         # Nuovi cursori BB
         bb_period = st.number_input("BB Periodo", value=20, min_value=5, max_value=50, step=1)
+        custom_rsi_buy = st.number_input("RSI Buy", value=28, min_value=10, max_value=50, step=1)
+        custom_macd_fast = st.number_input("MACD Fast", value=8, min_value=2, max_value=20, step=1)
     with col2:
-        custom_rsi_sell = st.number_input("RSI Sell", value=72, min_value=50, max_value=90, step=1)
-        custom_macd_slow = st.number_input("MACD Slow", value=17, min_value=10, max_value=40, step=1)
         # Nuovi cursori BB
         bb_std = st.number_input("BB Deviazione", value=2.0, min_value=0.1, max_value=5.0, step=0.1)
+        custom_rsi_sell = st.number_input("RSI Sell", value=72, min_value=50, max_value=90, step=1)
+        custom_macd_slow = st.number_input("MACD Slow", value=17, min_value=10, max_value=40, step=1)
         
     custom_macd_sig = st.number_input("MACD Signal", value=9, min_value=2, max_value=20, step=1)
     
