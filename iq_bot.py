@@ -274,7 +274,7 @@ with st.sidebar:
     if stress_test:
         st.warning("⚠️ Modalità TEST:  \nno BB - RSI (45/55) - no MACD")
     else:
-        st.success("🟢 Modalità REALE:  \nBB(20,2) - RSI dinamico - MACD dinamico")
+        st.success("🟢 Modalità REALE:  \nBB(20,2) - RSI (28/72) - MACD (8,17,9)")
     
     st.divider()
     if st.button("🔔 TEST AUDIO/TEL", use_container_width=True):
