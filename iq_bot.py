@@ -375,7 +375,7 @@ if st.session_state.connected:
     
     try:
         token = st.session_state.get("oanda_token", "")
-        candles_ta = get_oanda_candles(pair_display, timeframe, 160, token)
+        candles_ta = get_oanda_candles(pair_display, timeframe, 100, token)
         if candles_ta:
             df_raw = pd.DataFrame(candles_ta)
             
