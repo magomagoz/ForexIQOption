@@ -16,46 +16,29 @@ TELEGRAM_TOKEN = st.secrets.get("TELEGRAM_TOKEN", "IL_TUO_TOKEN_QUI")
 TELEGRAM_CHAT_ID = st.secrets.get("TELEGRAM_CHAT_ID", "IL_TUO_CHAT_ID_QUI")
 
 def get_oanda_candles(pair, timeframe_sec, count, api_token):
-    """
-    MODIFICATA: Ora preleva dati da Yahoo Finance invece di OANDA.
-    Mantiene lo stesso nome e parametri per non rompere il resto dello script.
-    """
-    # Adattamento simbolo per Yahoo (es. EURUSD -> EURUSD=X)
     symbol = f"{pair}=X"
-    # Mapping intervalli: Yahoo accetta '1m', '5m', '15m'
-    interval = "1m" if timeframe_sec <= 60 else "5m" if timeframe_sec <= 300 else "15m"
-    
-    # URL Query API Yahoo Finance
+    interval = "1m" if timeframe_sec <= 60 else "5m"
     url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval={interval}&range=1d"
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)'
-    }
     
     try:
-        response = requests.get(url, headers=headers, timeout=5)
+        response = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=7)
         data = response.json()
         result = data['chart']['result'][0]
-        timestamps = result['timestamp']
+        stamps = result['timestamp']
         quote = result['indicators']['quote'][0]
         
-        # Trasformazione nel formato richiesto dal tuo script
         candles = []
-        # Prendiamo solo gli ultimi 'count' elementi disponibili
-        limit = min(len(quote['close']), count)
-        
-        for i in range(len(quote['close']) - limit, len(quote['close'])):
-            # Verifichiamo che il dato non sia nullo
+        # Prendiamo gli ultimi 'count' valori reali
+        for i in range(len(stamps)):
             if quote['close'][i] is not None:
+                dt = datetime.fromtimestamp(stamps[i], pytz.timezone('Europe/Rome'))
                 candles.append({
-                    'time': dt.strftime["%H:%M"],
-                    'open': float(quote['open'][i]),
-                    'max': float(quote['high'][i]),
-                    'min': float(quote['low'][i]),
-                    'close': float(quote['close'][i])
+                    'time': dt.strftime("%H:%M"), 
+                    'open': quote['open'][i], 'max': quote['high'][i],
+                    'min': quote['low'][i], 'close': quote['close'][i]
                 })
-        return candles
-    except Exception as e:
-        print(f"Errore Yahoo per {pair}: {e}")
+        return candles[-count:] # Restituisce solo il numero richiesto
+    except:
         return None
 
 def genera_trade_id():
@@ -368,79 +351,64 @@ if st.session_state.connected:
                         play_trade_sound("buy")
                 except: continue
     
-    # --- 5. ANALISI TECNICA GRAFICA (FIX FINALE CANDELA + ORARIO + LINEE) ---
+    # --- 5. ANALISI TECNICA GRAFICA ---
     st.divider()
     st.header("📈 Analisi Tecnica Live")
-    pair_display = st.selectbox("Seleziona asset per grafico", ALL_PAIRS)
+    pair_display = st.selectbox("Seleziona asset per grafico", ALL_PAIRS, key="grafico_pair")
     
     try:
-        token = st.session_state.get("oanda_token", "")
-        candles_ta = get_oanda_candles(pair_display, timeframe, 160, token)
+        data_raw = get_oanda_candles(pair_display, timeframe, 100, "YAHOO")
         
-        if candles_ta:
-            df_final = pd.DataFrame(candles_ta)
+        if data_raw and len(data_raw) > 20:
+            df = pd.DataFrame(data_raw)
             
-            # Calcolo Indicatori tecnici
-            df_final['RSI'] = ta.rsi(df_final['close'], length=7)
-            bb_ta = ta.bbands(df_final['close'], length=20, std=2.0)
-            bb_ta.columns = ['BBL', 'BBM', 'BBU', 'BBB', 'BBP'] 
-            macd_ta = ta.macd(df_final['close'], fast=custom_macd_fast, slow=custom_macd_slow, signal=custom_macd_sig)
-            macd_ta.columns = ['MACD', 'HIST', 'SIGNAL']
-            df_final = pd.concat([df_final, bb_ta[['BBL', 'BBM', 'BBU']], macd_ta], axis=1).tail(100)
+            # Calcoli base
+            df['RSI'] = ta.rsi(df['close'], length=7)
+            macd = ta.macd(df['close'])
+            df['MACD'] = macd.iloc[:, 0]
+            df['HIST'] = macd.iloc[:, 1]
+            df['SIGNAL'] = macd.iloc[:, 2]
 
-            # L'orario per l'asse X
-            orari = df_final['time']
-
+            # Creazione Grafico Sincronizzato
             fig = make_subplots(rows=3, cols=1, shared_xaxes=True, 
-                                row_heights=[0.5, 0.25, 0.25], vertical_spacing=0.05,
-                                subplot_titles=("📊 Prezzo & Volatilità", "📉 RSI", "🚀 MACD"))
-            
-            # 1. CANDLESTICK
+                                vertical_spacing=0.05, row_heights=[0.5, 0.25, 0.25])
+
+            # Candlestick con ORARIO
             fig.add_trace(go.Candlestick(
-                x=orari, open=df_final['open'], high=df_final['max'], 
-                low=df_final['min'], close=df_final['close'], name="Prezzo",
-                increasing_line_color='#00ff88', decreasing_line_color='#ff3333'
+                x=df['time'], open=df['open'], high=df['max'], 
+                low=df['min'], close=df['close'], name="Prezzo"
             ), row=1, col=1)
-            
-            # Bollinger
-            fig.add_trace(go.Scatter(x=orari, y=df_final['BBU'], line=dict(color='rgba(255,255,255,0.2)', width=1), name="BB Up"), row=1, col=1)
-            fig.add_trace(go.Scatter(x=orari, y=df_final['BBL'], line=dict(color='rgba(255,255,255,0.2)', width=1), fill='tonexty', name="BB Low"), row=1, col=1)
-            
-            # 2. RSI
-            fig.add_trace(go.Scatter(x=orari, y=df_final['RSI'], line=dict(color='#AB63FA', width=2), name="RSI"), row=2, col=1)
-            fig.add_hline(y=custom_rsi_buy, line_color="#00ff88", row=2, col=1, line_dash="dash")
-            fig.add_hline(y=custom_rsi_sell, line_color="#ff3333", row=2, col=1, line_dash="dash")
 
-            # 3. MACD
-            colors = ['#00ff88' if v > 0 else '#ff3333' for v in df_final['HIST']]
-            fig.add_trace(go.Bar(x=orari, y=df_final['HIST'], marker_color=colors, name="Istogramma"), row=3, col=1)
-            fig.add_trace(go.Scatter(x=orari, y=df_final['MACD'], line=dict(color='#00E5FF', width=2), name="MACD"), row=3, col=1)
-            fig.add_trace(go.Scatter(x=orari, y=df_final['SIGNAL'], line=dict(color='#FF9100', width=2), name="Signal"), row=3, col=1)
+            # RSI
+            fig.add_trace(go.Scatter(x=df['time'], y=df['RSI'], name="RSI", line=dict(color='purple')), row=2, col=1)
+            
+            # MACD
+            fig.add_trace(go.Bar(x=df['time'], y=df['HIST'], name="Momentum"), row=3, col=1)
 
-            # --- FIX ASSI E LINEE VERTICALI ---
+            # --- IL FIX PER LE LINEE E L'ORARIO ---
             fig.update_xaxes(
                 type='category', 
                 tickangle=45, 
-                nticks=20, 
                 showspikes=True, 
                 spikemode='across', 
-                spikethickness=1, 
+                spikethickness=2, 
                 spikecolor="white", 
                 spikedash="solid"
             )
             
             fig.update_layout(
-                height=900, 
+                height=800, 
                 template="plotly_dark", 
                 xaxis_rangeslider_visible=False,
-                hovermode="x unified",
-                margin=dict(l=10, r=10, t=30, b=10)
+                hovermode="x unified"
             )
             
             st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.warning("Attendere il caricamento dei dati da Yahoo Finance...")
             
     except Exception as e:
-        st.error(f"Errore visualizzazione: {e}")
+        st.error(f"Errore tecnico: {e}")
 
     # --- 6. VERIFICA ESITI TRADE ---
     now = time_module.time()
