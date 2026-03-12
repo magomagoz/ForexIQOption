@@ -270,7 +270,7 @@ with st.sidebar:
 
     st.divider()
     st.header("🔧 STRUMENTI TEST")
-    stress_test = st.toggle("🚀 **STRESS TEST MODE**", value=False)
+    stress_test = st.toggle("🚀 **STRESS MODE**", value=False)
     if stress_test:
         st.warning("⚠️ **Modalità TEST:**  \nno BB - RSI (45/55) - no MACD")
     else:
