@@ -408,7 +408,7 @@ if st.session_state.connected:
                                      fill='tonexty', fillcolor='rgba(100, 100, 255, 0.05)', name="BBL"), row=1, col=1)
             
             # Subplot 2: RSI con soglie dinamiche
-            fig.add_trace(go.Scatter(x=asse_x, y=df_final['RSI'], line=dict(color='#AB63FA'), name="RSI"), row=4, col=1)
+            fig.add_trace(go.Scatter(x=asse_x, y=df_final['RSI'], line=dict(color='#AB63FA'), name="RSI"), row=2, col=1)
             line_buy = 45 if stress_test else custom_rsi_buy
             line_sell = 55 if stress_test else custom_rsi_sell
             fig.add_hline(y=line_buy, line_color="green", row=2, col=1, line_dash="dash")
