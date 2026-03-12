@@ -433,7 +433,7 @@ if st.session_state.connected:
                 showspikes=True,        # Attiva le linee verticali
                 spikemode='across',     # La linea attraversa tutti e 3 i grafici
                 spikethickness=1,
-                spikecolor="white",
+                spikecolor="black",
                 spikedash="solid"
             )
 
