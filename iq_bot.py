@@ -395,7 +395,7 @@ if st.session_state.connected:
             fig = make_subplots(rows=3, cols=1, shared_xaxes=True, 
                                 row_heights=[0.5, 0.25, 0.25], 
                                 vertical_spacing=0.07, 
-                                subplot_titles=("📊 Prezzo & Volatilità", "📉 Oscillatore RSI", "🚀 Momentum MACD"))
+                                subplot_titles=("📊 **Prezzo & Volatilità**", "📉 **Oscillatore RSI**", "🚀 **Momentum MACD**"))
             
             # Subplot 1: Candlestick e Bollinger
             fig.add_trace(go.Candlestick(x=df_final.index, open=df_final['open'], high=df_final['max'], 
