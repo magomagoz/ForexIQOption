@@ -439,6 +439,7 @@ if st.session_state.connected:
             # --- AGGIUNGI QUESTO PER LE RIGHE VERTICALI E IL MIRINO ---
             fig.update_xaxes(
 
+                #type='category',        # Trasforma l'asse in categorie per mostrare le candele larghe
 
                 showgrid=True, 
                 gridcolor='rgba(130,130,130,0.08)', # Righe verticali fisse leggere
