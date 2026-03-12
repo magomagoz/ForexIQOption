@@ -342,10 +342,13 @@ if st.session_state.connected:
                         is_buy, is_sell = curr_rsi < rsi_buy, curr_rsi > rsi_sell
                         curr_macd, curr_bb_status = 0.0, "TEST"
                     else:
-                        bb = ta.bbands(df['close'], length=20, std=2.0)
+                        bb = ta.bbands(df['close'], length=bb_period, std=bb_std)
                         macd = ta.macd(df['close'], fast=custom_macd_fast, slow=custom_macd_slow, signal=custom_macd_sig)
                         
-                        curr_bb_low, curr_bb_up = bb.iloc[-1, 0], bb.iloc[-1, 2] 
+                        # Usiamo i nomi delle colonne generati da pandas_ta per evitare errori di indice
+                        curr_bb_low = bb.filter(like='BBL').iloc[-1]
+                        curr_bb_up = bb.filter(like='BBU').iloc[-1]
+ 
                         curr_macd, curr_sig = macd.iloc[-1, 0], macd.iloc[-1, 2] 
                         
                         is_buy = (curr_rsi < rsi_buy) and (price <= curr_bb_low) and (curr_macd > curr_sig)
