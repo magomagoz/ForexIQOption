@@ -162,7 +162,7 @@ def draw_market_map_inverted(current_hour_float, trading_autorizzato):
         sizex=24, sizey=4.5, sizing="stretch", opacity=1.0, layer="below"
     ))
 
-    ritardo_ore = 0 / 60
+    ritardo_ore = -10 / 60
     x_pos = (current_hour_float - ritardo_ore) % 24
     color_laser = "#0F3ADA" if not trading_autorizzato else "#FFD700"
 
