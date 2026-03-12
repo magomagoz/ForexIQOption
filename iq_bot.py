@@ -308,7 +308,7 @@ if st.session_state.connected:
         genera_report_finale()
         st.session_state.report_sent = True
     
-    st.header("🌍 Live Market Flow 24h")
+    st.subheader("🌍 Live Market Flow 24h")
     st.plotly_chart(draw_market_map_inverted(h_float, trading_autorizzato), use_container_width=True, config={'displayModeBar': False})
     
     if st.session_state.scanner_on:
@@ -370,7 +370,7 @@ if st.session_state.connected:
     
     # --- 5. ANALISI TECNICA GRAFICA (CORRETTA) ---
     st.divider()
-    st.header("📈 Analisi Tecnica")
+    st.subheader("📈 Analisi Tecnica")
     pair_display = st.selectbox("Seleziona asset per grafico", ALL_PAIRS)
     
     try:
