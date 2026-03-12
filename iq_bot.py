@@ -375,11 +375,11 @@ if st.session_state.connected:
     
     try:
         token = st.session_state.get("oanda_token", "")
-        candles_ta = get_oanda_candles(pair_display, timeframe, 100, token)
+        candles_ta = get_oanda_candles(pair_display, timeframe, 160, token)
         if candles_ta:
             df_raw = pd.DataFrame(candles_ta)
             
-            df_raw['RSI'] = ta.rsi(df_raw['close'], length=7)
+            df_raw['RSI'] = ta.rsi(df_raw['close'], length=2)
             bb_ta = ta.bbands(df_raw['close'], length=bb_period, std=bb_std)
             bb_ta.columns = ['BBL', 'BBM', 'BBU', 'BBB', 'BBP'] 
             
