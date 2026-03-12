@@ -229,12 +229,12 @@ with st.sidebar:
     with col1:
         # Nuovi cursori BB
         bb_period = st.number_input("BB Periodo", value=20, min_value=5, max_value=50, step=1)
-        custom_rsi_buy = st.number_input("RSI Buy", value=28, min_value=10, max_value=50, step=1)
+        custom_rsi_buy = st.number_input("RSI Buy", value=30, min_value=10, max_value=50, step=1)
         custom_macd_fast = st.number_input("MACD Fast", value=8, min_value=2, max_value=20, step=1)
     with col2:
         # Nuovi cursori BB
         bb_std = st.number_input("BB Deviazione", value=1.8, min_value=0.1, max_value=5.0, step=0.1)
-        custom_rsi_sell = st.number_input("RSI Sell", value=72, min_value=50, max_value=90, step=1)
+        custom_rsi_sell = st.number_input("RSI Sell", value=70, min_value=50, max_value=90, step=1)
         custom_macd_slow = st.number_input("MACD Slow", value=17, min_value=10, max_value=40, step=1)
         
     custom_macd_sig = st.number_input("MACD Signal", value=5, min_value=2, max_value=20, step=1)
