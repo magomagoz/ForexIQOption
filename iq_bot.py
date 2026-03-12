@@ -433,16 +433,20 @@ if st.session_state.connected:
                 height=800
             )
 
-            # --- FIX MIRATO PER CANDELE VISIBILI ---
+            # --- AGGIUNGI QUESTO PER LE RIGHE VERTICALI E IL MIRINO ---
             fig.update_xaxes(
-                type='category',        # Trasforma l'asse in categorie per mostrare le candele larghe
-                showspikes=True,        # Attiva le linee verticali
-                spikemode='across',     # La linea attraversa tutti e 3 i grafici
-                spikethickness=1,
-                spikecolor="black",
-                spikedash="solid"
-            )
 
+                type='category',        # Trasforma l'asse in categorie per mostrare le candele larghe
+
+                showgrid=True, 
+                gridcolor='rgba(130,130,130,0.08)', # Righe verticali fisse leggere
+                showspikes=True, 
+                spikecolor="black", 
+                spikethickness=1, 
+                spikedash="dot",
+                spikemode="across" # Linea interattiva che taglia tutti i 3 grafici
+            )
+            
             st.plotly_chart(fig, use_container_width=True)
 
     except Exception as e:
