@@ -443,6 +443,10 @@ if st.session_state.connected:
                 type='category', 
                 tickangle=45, 
                 nticks=20, 
+                
+                showgrid=True, 
+                gridcolor='rgba(130,130,130,0.08)', # Righe verticali fisse leggere
+                
                 showspikes=True, 
                 spikemode='across', 
                 spikecolor="black", 
