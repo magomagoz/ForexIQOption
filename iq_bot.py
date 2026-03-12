@@ -439,8 +439,8 @@ if st.session_state.connected:
 
             st.plotly_chart(fig, use_container_width=True)
 
-except Exception as e:
-        st.error(f"Errore grafico TA: {e}")
+    except Exception as e:
+            st.error(f"Errore grafico TA: {e}")
 
     # --- 6. VERIFICA ESITI TRADE ---
     now = time_module.time()
