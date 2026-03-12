@@ -456,7 +456,14 @@ if st.session_state.connected:
     if st.session_state.signal_history:
         df_journal = pd.DataFrame(st.session_state.signal_history).iloc[::-1]
         st.dataframe(df_journal, use_container_width=True, hide_index=True)
+    else:
+        st.info("⏳ In attesa di segnali... Scanner attivo!")
 
+    # --- LOGICA DI REFRESH AUTOMATICO ---
+    
+    # 1. Messaggio discreto di stato dello scanner
+    st.caption(f"🔄 Scanner in esecuzione... Ultimo check: {datetime.now().strftime('%H:%M:%S')}")
+    
     # --- 8. REFRESH LOOP ---
     if st.session_state.scanner_on:
         time_module.sleep(3) 
