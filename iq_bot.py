@@ -391,23 +391,24 @@ if st.session_state.connected:
             macd_ta.columns = ['MACD', 'HIST', 'SIGNAL']
             
             df_final = pd.concat([df_raw, bb_ta[['BBL', 'BBM', 'BBU']], macd_ta], axis=1).tail(100)
-
+            asse_x = df_final['time']
+            
             fig = make_subplots(rows=3, cols=1, shared_xaxes=True, 
                                 row_heights=[0.5, 0.25, 0.25], 
                                 vertical_spacing=0.07, 
                                 subplot_titles=("📊 Prezzo & Volatilità", "📉 Oscillatore RSI", "🚀 Momentum MACD"))
             
             # --- PANNELLO 1: Candele + Bollinger ---
-            fig.add_trace(go.Candlestick(x=df_final.index, open=df_final['open'], high=df_final['max'], 
+            fig.add_trace(go.Candlestick(x=asse_x, open=df_final['open'], high=df_final['max'], 
                                          low=df_final['min'], close=df_final['close'], name="Prezzo"), row=1, col=1)
             
-            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBU'], line=dict(color='rgba(0,71,171,0.4)', width=1), name="BBU"), row=1, col=1)
-            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBM'], line=dict(color='rgba(170,170,170,0.3)', width=1), name="BBM"), row=1, col=1)
-            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBL'], line=dict(color='rgba(0,71,171,0.4)', width=1), 
+            fig.add_trace(go.Scatter(x=asse_x, y=df_final['BBU'], line=dict(color='rgba(0,71,171,0.4)', width=1), name="BBU"), row=1, col=1)
+            fig.add_trace(go.Scatter(x=asse_x, y=df_final['BBM'], line=dict(color='rgba(170,170,170,0.3)', width=1), name="BBM"), row=1, col=1)
+            fig.add_trace(go.Scatter(x=asse_x, y=df_final['BBL'], line=dict(color='rgba(0,71,171,0.4)', width=1), 
                                      fill='tonexty', fillcolor='rgba(100, 100, 255, 0.05)', name="BBL"), row=1, col=1)
             
             # Subplot 2: RSI con soglie dinamiche
-            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['RSI'], line=dict(color='#AB63FA'), name="RSI"), row=2, col=1)
+            fig.add_trace(go.Scatter(x=asse_x, y=df_final['RSI'], line=dict(color='#AB63FA'), name="RSI"), row=2, col=1)
             line_buy = 45 if stress_test else custom_rsi_buy
             line_sell = 55 if stress_test else custom_rsi_sell
             fig.add_hline(y=line_buy, line_color="green", row=2, col=1, line_dash="dash")
@@ -425,9 +426,9 @@ if st.session_state.connected:
                 else:
                     macd_colors.append('#EF5350' if diff < 0 else '#FFCDD2') # Rosso acceso / opaco
 
-            fig.add_trace(go.Bar(x=df_final.index, y=df_final['HIST'], marker_color=macd_colors, name="Istogramma"), row=3, col=1)
-            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['MACD'], line=dict(color='#00E5FF', width=2), name="MACD"), row=3, col=1)
-            fig.add_trace(go.Scatter(x=df_final.index, y=df_final['SIGNAL'], line=dict(color='#FF9100', width=2), name="Signal"), row=3, col=1)
+            fig.add_trace(go.Bar(x=asse_x, y=df_final['HIST'], marker_color=macd_colors, name="Istogramma"), row=3, col=1)
+            fig.add_trace(go.Scatter(x=asse_x, y=df_final['MACD'], line=dict(color='#00E5FF', width=2), name="MACD"), row=3, col=1)
+            fig.add_trace(go.Scatter(x=asse_x, y=df_final['SIGNAL'], line=dict(color='#FF9100', width=2), name="Signal"), row=3, col=1)
 
             fig.update_layout(
                 xaxis_rangeslider_visible=False,
@@ -449,6 +450,19 @@ if st.session_state.connected:
                 spikedash="dot",
                 spikemode="across" # Linea interattiva che taglia tutti i 3 grafici
             )
+
+
+fig.update_xaxes(
+    type='category', 
+    tickangle=45, 
+    nticks=20, 
+    showspikes=True, 
+    spikemode='across', 
+    spikecolor="white", 
+    spikethickness=1, 
+    spikedash="solid"
+)
+
             
             st.plotly_chart(fig, use_container_width=True)
 
