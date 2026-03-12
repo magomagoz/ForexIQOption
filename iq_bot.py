@@ -420,11 +420,27 @@ if st.session_state.connected:
             fig.add_trace(go.Scatter(x=df_final.index, y=df_final['MACD'], line=dict(color='#00E5FF', width=2), name="MACD"), row=3, col=1)
             fig.add_trace(go.Scatter(x=df_final.index, y=df_final['SIGNAL'], line=dict(color='#FF9100', width=2), name="Signal"), row=3, col=1)
 
-            fig.update_layout(hovermode="x unified", height=850, template="plotly_dark", xaxis_rangeslider_visible=False, margin=dict(l=10,r=10,b=10,t=40))
-            st.plotly_chart(fig, use_container_width=True)
-    except Exception as e:
-        st.error(f"Errore grafico TA: {e}")
+            fig.update_layout(
+                xaxis_rangeslider_visible=False,
+                hovermode="x unified",
+                template="plotly_dark",
+                height=800
+            )
 
+            # --- FIX MIRATO PER CANDELE VISIBILI ---
+            fig.update_xaxes(
+                type='category',        # Trasforma l'asse in categorie per mostrare le candele larghe
+                showspikes=True,        # Attiva le linee verticali
+                spikemode='across',     # La linea attraversa tutti e 3 i grafici
+                spikethickness=1,
+                spikecolor="white",
+                spikedash="solid"
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
+
+except Exception as e:
+        st.error(f"Errore grafico TA: {e}")
 
     # --- 6. VERIFICA ESITI TRADE ---
     now = time_module.time()
