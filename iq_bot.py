@@ -438,30 +438,17 @@ if st.session_state.connected:
             )
 
             # --- AGGIUNGI QUESTO PER LE RIGHE VERTICALI E IL MIRINO ---
+            
             fig.update_xaxes(
-
-                #type='category',        # Trasforma l'asse in categorie per mostrare le candele larghe
-
-                showgrid=True, 
-                gridcolor='rgba(130,130,130,0.08)', # Righe verticali fisse leggere
+                type='category', 
+                tickangle=45, 
+                nticks=20, 
                 showspikes=True, 
+                spikemode='across', 
                 spikecolor="black", 
                 spikethickness=1, 
-                spikedash="dot",
-                spikemode="across" # Linea interattiva che taglia tutti i 3 grafici
+                spikedash="solid"
             )
-
-
-fig.update_xaxes(
-    type='category', 
-    tickangle=45, 
-    nticks=20, 
-    showspikes=True, 
-    spikemode='across', 
-    spikecolor="white", 
-    spikethickness=1, 
-    spikedash="solid"
-)
 
             
             st.plotly_chart(fig, use_container_width=True)
