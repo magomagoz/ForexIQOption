@@ -462,7 +462,7 @@ if st.session_state.connected:
     # --- LOGICA DI REFRESH AUTOMATICO ---
     
     # 1. Messaggio discreto di stato dello scanner
-    st.caption(f"🔄 Scanner in esecuzione... Ultimo check: {now.time().strftime('%H:%M:%S')}")
+    st.caption(f"🔄 Scanner in esecuzione... Ultimo check: {datetime.now().strftime('%H:%M:%S')}")
     
     # --- 8. REFRESH LOOP ---
     if st.session_state.scanner_on:
