@@ -353,62 +353,50 @@ if st.session_state.connected:
     
     # --- 5. ANALISI TECNICA GRAFICA ---
     st.divider()
-    st.header("📈 Analisi Tecnica Live")
-    pair_display = st.selectbox("Seleziona asset per grafico", ALL_PAIRS, key="grafico_pair")
+    st.header("📈 Analisi Tecnica")
+    pair_display = st.selectbox("Seleziona asset per grafico", ALL_PAIRS)
     
     try:
-        data_raw = get_oanda_candles(pair_display, timeframe, 100, "YAHOO")
+        token = st.session_state.get("oanda_token", "")
+        # Usiamo OANDA per scaricare le 160 candele
+        candles_ta = get_oanda_candles(pair_display, timeframe, 160, token)
+        df_raw = pd.DataFrame(candles_ta)
         
-        if data_raw and len(data_raw) > 20:
-            df = pd.DataFrame(data_raw)
-            
-            # Calcoli base
-            df['RSI'] = ta.rsi(df['close'], length=7)
-            macd = ta.macd(df['close'])
-            df['MACD'] = macd.iloc[:, 0]
-            df['HIST'] = macd.iloc[:, 1]
-            df['SIGNAL'] = macd.iloc[:, 2]
+        df_raw['RSI'] = ta.rsi(df_raw['close'], length=7)
+        bb_ta = ta.bbands(df_raw['close'], length=20, std=2)
+        bb_ta.columns = ['BBL', 'BBM', 'BBU', 'BBB', 'BBP'] 
+        macd_ta = ta.macd(df_raw['close'], fast=8, slow=17, signal=9)
+        macd_ta.columns = ['MACD', 'HIST', 'SIGNAL']
+        df_final = pd.concat([df_raw, bb_ta[['BBL', 'BBM', 'BBU']], macd_ta], axis=1).tail(100)
 
-            # Creazione Grafico Sincronizzato
-            fig = make_subplots(rows=3, cols=1, shared_xaxes=True, 
-                                vertical_spacing=0.05, row_heights=[0.5, 0.25, 0.25])
+        fig = make_subplots(rows=3, cols=1, shared_xaxes=True, row_heights=[0.5, 0.25, 0.25], vertical_spacing=0.07, subplot_titles=("📊 Prezzo & Volatilità", "📉 Oscillatore RSI", "🚀 Momentum MACD"))
+        fig.add_trace(go.Candlestick(x=df_final.index, open=df_final['open'], high=df_final['max'], low=df_final['min'], close=df_final['close'], name="Prezzo"), row=1, col=1)
+        fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBU'], line=dict(color='rgba(0,71,171,0.4)', dash='dot'), name="BBU"), row=1, col=1)
+        fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBM'], line=dict(color='rgba(170,170,170,0.3)', width=1), name="BBM"), row=1, col=1)
+		fig.add_trace(go.Scatter(x=df_final.index, y=df_final['BBL'], line=dict(color='rgba(0,71,171,0.4)', dash='dot'), fill='tonexty', fillcolor='rgba(100, 100, 255, 0.05)', name="BBL"), row=1, col=1)
+        
+        fig.add_trace(go.Scatter(x=df_final.index, y=df_final['RSI'], line=dict(color='#AB63FA'), name="RSI"), row=2, col=1)
+        fig.add_hline(y=(45 if stress_test else 28), line_color="green", row=2, col=1, line_dash="dash")
+	    fig.add_hline(y=(55 if stress_test else 72), line_color="red", row=2, col=1, line_dash="dash")
+	
+	        macd_colors = []
+	        hist_diff = df_final['HIST'].diff()
+        for i in range(len(df_final)):
+            val, diff = df_final['HIST'].iloc[i], hist_diff.iloc[i]
+            if pd.isna(diff): macd_colors.append('rgba(0,0,0,0.2)')
+            elif val > 0 and diff > 0: macd_colors.append('#26A69A')
+            elif val > 0 and diff <= 0: macd_colors.append('#B2DFDB')
+            elif val < 0 and diff < 0: macd_colors.append('#EF5350')
+            else: macd_colors.append('#FFCDD2')
 
-            # Candlestick con ORARIO
-            fig.add_trace(go.Candlestick(
-                x=df['time'], open=df['open'], high=df['max'], 
-                low=df['min'], close=df['close'], name="Prezzo"
-            ), row=1, col=1)
+        fig.add_trace(go.Bar(x=df_final.index, y=df_final['HIST'], marker_color=macd_colors, name="HIST"), row=3, col=1)
+        fig.add_trace(go.Scatter(x=df_final.index, y=df_final['MACD'], line=dict(color='#00E5FF', width=2), name="MACD"), row=3, col=1)
+        fig.add_trace(go.Scatter(x=df_final.index, y=df_final['SIGNAL'], line=dict(color='#FF9100', width=2), name="Signal"), row=3, col=1)
 
-            # RSI
-            fig.add_trace(go.Scatter(x=df['time'], y=df['RSI'], name="RSI", line=dict(color='purple')), row=2, col=1)
-            
-            # MACD
-            fig.add_trace(go.Bar(x=df['time'], y=df['HIST'], name="Momentum"), row=3, col=1)
-
-            # --- IL FIX PER LE LINEE E L'ORARIO ---
-            fig.update_xaxes(
-                type='category', 
-                tickangle=45, 
-                showspikes=True, 
-                spikemode='across', 
-                spikethickness=2, 
-                spikecolor="white", 
-                spikedash="solid"
-            )
-            
-            fig.update_layout(
-                height=800, 
-                template="plotly_dark", 
-                xaxis_rangeslider_visible=False,
-                hovermode="x unified"
-            )
-            
-            st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.warning("Attendere il caricamento dei dati da Yahoo Finance...")
-            
+        fig.update_layout(hovermode="x unified", height=850, template="plotly_dark", xaxis_rangeslider_visible=False, margin=dict(l=10,r=10,b=10,t=40))
+        st.plotly_chart(fig, use_container_width=True)
     except Exception as e:
-        st.error(f"Errore tecnico: {e}")
+        st.error(f"Errore grafico TA: {e}")
 
     # --- 6. VERIFICA ESITI TRADE ---
     now = time_module.time()
