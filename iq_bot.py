@@ -379,7 +379,7 @@ if st.session_state.connected:
         if candles_ta:
             df_raw = pd.DataFrame(candles_ta)
             
-            df_raw['RSI'] = ta.rsi(df_raw['close'], length=2)
+            df_raw['RSI'] = ta.rsi(df_raw['close'], length=7)
             bb_ta = ta.bbands(df_raw['close'], length=bb_period, std=bb_std)
             bb_ta.columns = ['BBL', 'BBM', 'BBU', 'BBB', 'BBP'] 
             
