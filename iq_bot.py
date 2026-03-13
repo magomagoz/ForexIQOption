@@ -378,9 +378,13 @@ if st.session_state.connected:
  
                         curr_macd, curr_sig = macd.iloc[-1, 0], macd.iloc[-1, 2] 
 
-
-
-
+                        # --- LOGICA TREND FORTE (Sotto la definizione di curr_macd e curr_sig) ---
+                        # Calcoliamo la distanza tra MACD e Signal: se è troppo ampia, il trend è forte
+                        diff_macd = abs(curr_macd - curr_sig)
+                        is_trend_forte = diff_macd > (abs(curr_macd) * 0.5) # Soglia di volatilità
+                        
+                        if is_trend_forte:
+                            st.sidebar.warning("⚠️ TREND FORTE: Attenzione ai rimbalzi!")
                         
                         # Se il toggle è spento, la condizione diventa True (non blocca il segnale)
                         cond_rsi_buy = (curr_rsi < custom_rsi_buy) if use_rsi else True
