@@ -260,10 +260,10 @@ with st.sidebar:
         # 3. Parametri RSI (compaiono solo se use_rsi è True)
         if use_rsi:
             col_rsi1, col_rsi2 = st.columns(2)
-            custom_rsi_buy = col_rsi1.number_input("RSI Buy", value=30)
-            custom_rsi_sell = col_rsi2.number_input("RSI Sell", value=70)
+            custom_rsi_buy = col_rsi1.number_input("RSI Buy", value=28)
+            custom_rsi_sell = col_rsi2.number_input("RSI Sell", value=72)
         else:
-            custom_rsi_buy, custom_rsi_sell = 30, 70
+            custom_rsi_buy, custom_rsi_sell = 28, 72
         
         # 4. Parametri MACD (compaiono solo se use_macd è True)
         if use_macd:
@@ -272,7 +272,7 @@ with st.sidebar:
             custom_macd_slow = col_m2.number_input("MACD Slow", value=20)
             custom_macd_sig = st.number_input("MACD Signal", value=7)
         else:
-            custom_macd_fast, custom_macd_slow, custom_macd_sig = 12, 26, 9
+            custom_macd_fast, custom_macd_slow, custom_macd_sig = 10, 20, 7
                         
         st.divider()
         st.metric(f"💰 Saldo {st.session_state.account_type}", f"{st.session_state.local_balance:.2f} €")    
