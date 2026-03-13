@@ -238,6 +238,19 @@ with st.sidebar:
         custom_macd_slow = st.number_input("MACD Slow", value=17, min_value=10, max_value=40, step=1)
         
     custom_macd_sig = st.number_input("MACD Signal", value=5, min_value=2, max_value=20, step=1)
+
+    # --- STATISTICHE BACKTEST RAPIDO ---
+    st.divider()
+    st.subheader("📊 Statistiche Segnali (Backtest)")
+    if 'df_final' in locals():
+        n_buy = df_final['buy_sig'].count()
+        n_sell = df_final['sell_sig'].count()
+        st.write(f"🟢 Segnali BUY trovati: **{n_buy}**")
+        st.write(f"🔴 Segnali SELL trovati: **{n_sell}**")
+        if (n_buy + n_sell) == 0:
+            st.warning("⚠️ Parametri troppo stretti: 0 segnali nelle ultime 100 candele.")
+        else:
+            st.success(f"🔥 Totale opportunità: {n_buy + n_sell}")
     
     st.divider()
     st.subheader("👁️ SCANNER VALUTE FOREX")
