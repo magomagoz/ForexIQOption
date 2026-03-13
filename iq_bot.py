@@ -229,33 +229,6 @@ with st.sidebar:
             st.warning("Sistema Disconnesso")
             time_module.sleep(1)
             st.rerun()
-
-
-        with st.sidebar:
-            st.title("⚙️ YAHOO TRADING")
-            
-            # --- LOGICA DI ACCESSO ---
-            if not st.session_state.connected:
-                st.subheader("🔑 Accesso Rapido")
-                st.info("Connettiti per attivare gli strumenti.")
-                if st.button("🔌 CONNETTI SISTEMA", use_container_width=True, type="primary"):
-                    st.session_state.connected = True
-                    st.rerun()  # Ricarica per mostrare il resto
-            else:
-                # --- TUTTO IL RESTO APPARE SOLO SE CONNESSO ---
-                if st.button("🔴 DISCONNETTI", use_container_width=True):
-                    st.session_state.connected = False
-                    st.session_state.scanner_on = False
-                    st.rerun()
-        
-                st.divider()
-                
-                # TABBA (INDENTA) TUTTI GLI ALTRI ELEMENTI QUI SOTTO
-                st.subheader("👁️ SCANNER VALUTE")
-                # ... qui metti i toggle, lo stake, il timeframe, ecc.
-                # Tutti indentati sotto questo 'else'
-        
-        
             
             st.divider()
             st.subheader("👁️ SCANNER VALUTE FOREX")
