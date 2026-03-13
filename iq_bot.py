@@ -246,7 +246,7 @@ with st.sidebar:
         col_t1, col_t2, col_t3 = st.columns(3)
         use_bb = col_t1.toggle("BB", value=True)
         use_rsi = col_t2.toggle("RSI", value=True)
-        use_macd = col_t3.toggle("MACD", value=True)
+        use_macd = col_t3.toggle("MACD", value=False)
         
         # 2. Parametri Bollinger (compaiono solo se use_bb è True)
         if use_bb:
@@ -268,9 +268,9 @@ with st.sidebar:
         # 4. Parametri MACD (compaiono solo se use_macd è True)
         if use_macd:
             col_m1, col_m2 = st.columns(2)
-            custom_macd_fast = col_m1.number_input("MACD Fast", value=12)
-            custom_macd_slow = col_m2.number_input("MACD Slow", value=26)
-            custom_macd_sig = st.number_input("MACD Signal", value=9)
+            custom_macd_fast = col_m1.number_input("MACD Fast", value=10)
+            custom_macd_slow = col_m2.number_input("MACD Slow", value=20)
+            custom_macd_sig = st.number_input("MACD Signal", value=7)
         else:
             custom_macd_fast, custom_macd_slow, custom_macd_sig = 12, 26, 9
                         
