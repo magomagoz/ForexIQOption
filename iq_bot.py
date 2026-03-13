@@ -225,24 +225,34 @@ with st.sidebar:
 
     st.subheader("🎛️ Setup Indicatori (Live)")
     
-    use_bb = st.toggle("Bollinger Bands", value=True)
-    if use_bb:
-        bb_period = st.number_input("BB Periodo", value=20, min_value=5)
-        bb_std = st.number_input("BB Deviazione", value=1.8, step=0.1)
-    else:
-        bb_period, bb_std = 20, 1.8
+    # 1. I tre toggle sulla stessa riga
+    col_t1, col_t2, col_t3 = st.columns(3)
+    use_bb = col_t1.toggle("BB", value=True)
+    use_rsi = col_t2.toggle("RSI", value=True)
+    use_macd = col_t3.toggle("MACD", value=True)
 
-    use_rsi = st.toggle("RSI", value=True)
+    # 2. Parametri Bollinger (compaiono solo se use_bb è True)
+    if use_bb:
+        col_bb1, col_bb2 = st.columns(2)
+        bb_period = col_bb1.number_input("BB Periodo", value=20, min_value=5)
+        bb_std = col_bb2.number_input("BB Deviazione", value=1.80, step=0.10)
+    else:
+        # Se spento, assegniamo i valori "dietro le quinte" per non far crashare lo scanner
+        bb_period, bb_std = 20, 1.80
+
+    # 3. Parametri RSI (compaiono solo se use_rsi è True)
     if use_rsi:
-        custom_rsi_buy = st.number_input("RSI Buy", value=30)
-        custom_rsi_sell = st.number_input("RSI Sell", value=70)
+        col_rsi1, col_rsi2 = st.columns(2)
+        custom_rsi_buy = col_rsi1.number_input("RSI Buy", value=30)
+        custom_rsi_sell = col_rsi2.number_input("RSI Sell", value=70)
     else:
         custom_rsi_buy, custom_rsi_sell = 30, 70
 
-    use_macd = st.toggle("MACD", value=True)
+    # 4. Parametri MACD (compaiono solo se use_macd è True)
     if use_macd:
-        custom_macd_fast = st.number_input("MACD Fast", value=8)
-        custom_macd_slow = st.number_input("MACD Slow", value=17)
+        col_m1, col_m2 = st.columns(2)
+        custom_macd_fast = col_m1.number_input("MACD Fast", value=8)
+        custom_macd_slow = col_m2.number_input("MACD Slow", value=17)
         custom_macd_sig = st.number_input("MACD Signal", value=5)
     else:
         custom_macd_fast, custom_macd_slow, custom_macd_sig = 8, 17, 5
