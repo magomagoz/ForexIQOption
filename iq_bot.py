@@ -423,28 +423,6 @@ if st.session_state.connected:
             fig.add_trace(go.Scatter(x=asse_x, y=df_final['BBL'], line=dict(color='rgba(0,71,171,0.4)', width=1), 
                                      fill='tonexty', fillcolor='rgba(100, 100, 255, 0.05)', name="BBL"), row=1, col=1)
 
-
-            
-
-            # Freccia BUY (posizionata leggermente sotto il minimo della candela)
-            fig.add_trace(go.Scatter(
-                x=asse_x, y=df_final['buy_sig'] * 0.9998, # Offset per non coprire la candela
-                mode='markers', 
-                marker=dict(symbol='triangle-up', size=15, color='#00ff88', line=dict(width=1, color='white')), 
-                name="Entry BUY"
-            ), row=1, col=1)
-            
-            # Freccia SELL (posizionata leggermente sopra il massimo della candela)
-            fig.add_trace(go.Scatter(
-                x=asse_x, y=df_final['sell_sig'] * 1.0002, # Offset per non coprire la candela
-                mode='markers', 
-                marker=dict(symbol='triangle-down', size=15, color='#ff3333', line=dict(width=1, color='white')), 
-                name="Entry SELL"
-            ), row=1, col=1)
-
-            
-            
-            
             # Subplot 2: RSI con soglie dinamiche
             fig.add_trace(go.Scatter(x=asse_x, y=df_final['RSI'], line=dict(color='#AB63FA'), name="RSI"), row=2, col=1)
             line_buy = 45 if stress_test else custom_rsi_buy
@@ -496,6 +474,27 @@ if st.session_state.connected:
 
     except Exception as e:
             st.error(f"Errore grafico TA: {e}")
+
+
+    
+            # Freccia BUY (posizionata leggermente sotto il minimo della candela)
+            fig.add_trace(go.Scatter(
+                x=asse_x, y=df_final['buy_sig'] * 0.9998, # Offset per non coprire la candela
+                mode='markers', 
+                marker=dict(symbol='triangle-up', size=15, color='#00ff88', line=dict(width=1, color='white')), 
+                name="Entry BUY"
+            ), row=1, col=1)
+            
+            # Freccia SELL (posizionata leggermente sopra il massimo della candela)
+            fig.add_trace(go.Scatter(
+                x=asse_x, y=df_final['sell_sig'] * 1.0002, # Offset per non coprire la candela
+                mode='markers', 
+                marker=dict(symbol='triangle-down', size=15, color='#ff3333', line=dict(width=1, color='white')), 
+                name="Entry SELL"
+            ), row=1, col=1)
+
+
+    
 
     # --- 6. VERIFICA ESITI TRADE ---
     now = time_module.time()
