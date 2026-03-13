@@ -252,10 +252,10 @@ with st.sidebar:
         if use_bb:
             col_bb1, col_bb2 = st.columns(2)
             bb_period = col_bb1.number_input("BB Periodo", value=20, min_value=5)
-            bb_std = col_bb2.number_input("BB Deviazione", value=1.80, step=0.10)
+            bb_std = col_bb2.number_input("BB Deviazione", value=2.00, step=0.10)
         else:
             # Se spento, assegniamo i valori "dietro le quinte" per non far crashare lo scanner
-            bb_period, bb_std = 20, 1.80
+            bb_period, bb_std = 20, 2.00
         
         # 3. Parametri RSI (compaiono solo se use_rsi è True)
         if use_rsi:
@@ -268,11 +268,11 @@ with st.sidebar:
         # 4. Parametri MACD (compaiono solo se use_macd è True)
         if use_macd:
             col_m1, col_m2 = st.columns(2)
-            custom_macd_fast = col_m1.number_input("MACD Fast", value=8)
-            custom_macd_slow = col_m2.number_input("MACD Slow", value=17)
-            custom_macd_sig = st.number_input("MACD Signal", value=5)
+            custom_macd_fast = col_m1.number_input("MACD Fast", value=12)
+            custom_macd_slow = col_m2.number_input("MACD Slow", value=26)
+            custom_macd_sig = st.number_input("MACD Signal", value=9)
         else:
-            custom_macd_fast, custom_macd_slow, custom_macd_sig = 8, 17, 5
+            custom_macd_fast, custom_macd_slow, custom_macd_sig = 12, 26, 9
                         
         st.divider()
         st.metric(f"💰 Saldo {st.session_state.account_type}", f"{st.session_state.local_balance:.2f} €")    
