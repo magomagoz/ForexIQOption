@@ -252,7 +252,7 @@ with st.sidebar:
         if use_bb:
             col_bb1, col_bb2 = st.columns(2)
             bb_period = col_bb1.number_input("BB Periodo", value=20, min_value=5)
-            bb_std = col_bb2.number_input("BB Deviazione", value=2.00, step=0.10)
+            bb_std = col_bb2.number_input("BB Deviazione", value=2.50, step=0.10)
         else:
             # Se spento, assegniamo i valori "dietro le quinte" per non far crashare lo scanner
             bb_period, bb_std = 20, 2.00
@@ -260,10 +260,10 @@ with st.sidebar:
         # 3. Parametri RSI (compaiono solo se use_rsi è True)
         if use_rsi:
             col_rsi1, col_rsi2 = st.columns(2)
-            custom_rsi_buy = col_rsi1.number_input("RSI Buy", value=28)
-            custom_rsi_sell = col_rsi2.number_input("RSI Sell", value=72)
+            custom_rsi_buy = col_rsi1.number_input("RSI Buy", value=20)
+            custom_rsi_sell = col_rsi2.number_input("RSI Sell", value=80)
         else:
-            custom_rsi_buy, custom_rsi_sell = 28, 72
+            custom_rsi_buy, custom_rsi_sell = 20, 80
         
         # 4. Parametri MACD (compaiono solo se use_macd è True)
         if use_macd:
