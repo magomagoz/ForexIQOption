@@ -287,7 +287,7 @@ with st.sidebar:
             # Controllo SELL: se il prezzo della candela successiva è inferiore
             if pd.notnull(df_final['sell_sig'].iloc[i]):
                 if df_final['close'].iloc[i+1] < df_final['close'].iloc[i]:
-                wins_sell += 1
+                    wins_sell += 1
 
         # Calcoli finali
         tot_vinti = wins_buy + wins_sell
