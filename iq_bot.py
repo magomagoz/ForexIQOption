@@ -222,6 +222,14 @@ with st.sidebar:
             st.rerun()
 
     st.divider()
+    st.subheader("👁️ SCANNER VALUTE FOREX")
+    
+    label = "🛑 STOP SCANNER" if st.session_state.scanner_on else "🚀 AVVIA SCANNER"
+    if st.button(label, use_container_width=True, type="primary" if not st.session_state.scanner_on else "secondary"):
+        st.session_state.scanner_on = not st.session_state.scanner_on
+        st.rerun()
+
+    st.divider()
 
     st.subheader("🎛️ Setup Indicatori (Live)")
     
@@ -257,27 +265,60 @@ with st.sidebar:
     else:
         custom_macd_fast, custom_macd_slow, custom_macd_sig = 8, 17, 5
 
-    # --- STATISTICHE BACKTEST RAPIDO ---
-    st.divider()
-    st.subheader("📊 Statistiche Segnali (Backtest)")
-    if 'df_final' in locals():
-        n_buy = df_final['buy_sig'].count()
-        n_sell = df_final['sell_sig'].count()
-        st.write(f"🟢 Segnali BUY trovati: **{n_buy}**")
-        st.write(f"🔴 Segnali SELL trovati: **{n_sell}**")
-        if (n_buy + n_sell) == 0:
-            st.warning("⚠️ Parametri troppo stretti: 0 segnali nelle ultime 100 candele.")
-        else:
-            st.success(f"🔥 Totale opportunità: {n_buy + n_sell}")
     
-    st.divider()
-    st.subheader("👁️ SCANNER VALUTE FOREX")
-    
-    label = "🛑 STOP SCANNER" if st.session_state.scanner_on else "🚀 AVVIA SCANNER"
-    if st.button(label, use_container_width=True, type="primary" if not st.session_state.scanner_on else "secondary"):
-        st.session_state.scanner_on = not st.session_state.scanner_on
-        st.rerun()
+    st.write("---")
+    st.subheader("📊 Analisi Performance (Backtest 60s)")
             
+        # Calcoliamo i segnali attuali basati sui parametri scelti
+        n_buy = df_final['buy_sig'].notnull().sum()
+        n_sell = df_final['sell_sig'].notnull().sum()
+        totale_segnali = n_buy + n_sell
+
+        if st.button("🔍 VERIFICA ESITO (SCADENZA 60s)", use_container_width=True, type="primary"):
+            wins_buy, wins_sell = 0, 0
+                
+            # Analizziamo le candele (escludiamo l'ultima perché non ha ancora l'esito a 60s)
+            for i in range(len(df_final) - 1):
+                # Controllo BUY: se il prezzo della candela successiva è superiore
+                if pd.notnull(df_final['buy_sig'].iloc[i]):
+                    if df_final['close'].iloc[i+1] > df_final['close'].iloc[i]:
+                        wins_buy += 1
+                    
+                # Controllo SELL: se il prezzo della candela successiva è inferiore
+                if pd.notnull(df_final['sell_sig'].iloc[i]):
+                    if df_final['close'].iloc[i+1] < df_final['close'].iloc[i]:
+                        wins_sell += 1
+
+            # Calcoli finali
+            tot_vinti = wins_buy + wins_sell
+            tot_persi = totale_segnali - tot_vinti
+            accuracy = (tot_vinti / totale_segnali * 100) if totale_segnali > 0 else 0
+                
+            # Simulazione economica (Payout medio 85%)
+            investimento_totale = totale_segnali * st.session_state.stake
+            profitto_lordo = (wins_buy + wins_sell) * (st.session_state.stake * 0.85)
+            perdita_totale = tot_persi * st.session_state.stake
+            bilancio_netto = profitto_lordo - perdita_totale
+
+            # Visualizzazione risultati
+            c1, c2, c3 = st.columns(3)
+            c1.metric("🟢 BUY VINCENTI", f"{wins_buy} / {n_buy}")
+            c2.metric("🔴 SELL VINCENTI", f"{wins_sell} / {n_sell}")
+            c3.metric("🎯 ACCURACY", f"{accuracy:.1f}%")
+
+            # Box riassuntivo con colore dinamico
+            colore_box = "green" if bilancio_netto > 0 else "red"
+            st.markdown(f"""
+            <div style="padding:20px; border-radius:10px; border: 2px solid {colore_box}; background-color: rgba(0,0,0,0.1);">
+                <h3 style="margin-top:0;">💰 Risultato Economico Stimato</h3>
+                <p>Segnali Totali: <b>{totale_segnali}</b> (Vinti: <span style="color:#00ff88;">{tot_vinti}</span> | Persi: <span style="color:#ff3333;">{tot_persi}</span>)</p>
+                <h2 style="color:{colore_box}; margin-bottom:0;">Profitto Netto: {bilancio_netto:.2f} €</h2>
+                <small>Basato su investimento di {st.session_state.stake}€ e payout 85%</small>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.info("Regola i parametri e premi il tasto per vedere se saresti in profitto con questa configurazione.")
+                
     st.divider()
     st.metric(f"💰 Saldo {st.session_state.account_type}", f"{st.session_state.local_balance:.2f} €")    
     st.session_state.stake = st.number_input("💰 INVESTIMENTO (€)", value=100.0)
