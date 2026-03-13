@@ -225,19 +225,23 @@ with st.sidebar:
 
     st.subheader("🎛️ Setup Indicatori (Live)")
     
+    # Toggle per attivare/disattivare gli indicatori
+    col_t1, col_t2, col_t3 = st.columns(3)
+    use_bb = col_t1.toggle("BB", value=True)
+    use_rsi = col_t2.toggle("RSI", value=True)
+    use_macd = col_t3.toggle("MACD", value=True)
+
     col1, col2 = st.columns(2)
     with col1:
-        # Nuovi cursori BB
-        bb_period = st.number_input("BB Periodo", value=20, min_value=5, max_value=50, step=1)
-        custom_rsi_buy = st.number_input("RSI Buy", value=30, min_value=10, max_value=50, step=1)
-        custom_macd_fast = st.number_input("MACD Fast", value=8, min_value=2, max_value=20, step=1)
+        bb_period = st.number_input("BB Periodo", value=20, min_value=5)
+        custom_rsi_buy = st.number_input("RSI Buy", value=30)
+        custom_macd_fast = st.number_input("MACD Fast", value=8)
     with col2:
-        # Nuovi cursori BB
-        bb_std = st.number_input("BB Deviazione", value=1.8, min_value=0.1, max_value=5.0, step=0.1)
-        custom_rsi_sell = st.number_input("RSI Sell", value=70, min_value=50, max_value=90, step=1)
-        custom_macd_slow = st.number_input("MACD Slow", value=17, min_value=10, max_value=40, step=1)
+        bb_std = st.number_input("BB Deviazione", value=1.8, step=0.1)
+        custom_rsi_sell = st.number_input("RSI Sell", value=70)
+        custom_macd_slow = st.number_input("MACD Slow", value=17)
         
-    custom_macd_sig = st.number_input("MACD Signal", value=5, min_value=2, max_value=20, step=1)
+    custom_macd_sig = st.number_input("MACD Signal", value=5)
 
     # --- STATISTICHE BACKTEST RAPIDO ---
     st.divider()
@@ -363,9 +367,28 @@ if st.session_state.connected:
                         curr_bb_up = bb.filter(like='BBU').iloc[-1]
  
                         curr_macd, curr_sig = macd.iloc[-1, 0], macd.iloc[-1, 2] 
+
+
+
+
                         
-                        is_buy = (curr_rsi < rsi_buy) and (price <= curr_bb_low) and (curr_macd > curr_sig)
-                        is_sell = (curr_rsi > rsi_sell) and (price >= curr_bb_up) and (curr_macd < curr_sig)
+                        # Se il toggle è spento, la condizione diventa True (non blocca il segnale)
+                        cond_rsi_buy = (curr_rsi < custom_rsi_buy) if use_rsi else True
+                        cond_bb_buy = (price <= curr_bb_low) if use_bb else True
+                        cond_macd_buy = (curr_macd > curr_sig) if use_macd else True
+                        
+                        is_buy = cond_rsi_buy and cond_bb_buy and cond_macd_buy
+                        
+                        # Stessa cosa per il SELL
+                        cond_rsi_sell = (curr_rsi > custom_rsi_sell) if use_rsi else True
+                        cond_bb_sell = (price >= curr_bb_up) if use_bb else True
+                        cond_macd_sell = (curr_macd < curr_sig) if use_macd else True
+                        
+                        is_sell = cond_rsi_sell and cond_bb_sell and cond_macd_sell
+
+                    
+                        #is_buy = (curr_rsi < rsi_buy) and (price <= curr_bb_low) and (curr_macd > curr_sig)
+                        #is_sell = (curr_rsi > rsi_sell) and (price >= curr_bb_up) and (curr_macd < curr_sig)
                         curr_bb_status = "OUT" if (price <= curr_bb_low or price >= curr_bb_up) else "IN"
 
                     if (is_buy or is_sell) and pair not in st.session_state.active_trades:
