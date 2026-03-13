@@ -225,23 +225,27 @@ with st.sidebar:
 
     st.subheader("🎛️ Setup Indicatori (Live)")
     
-    # Toggle per attivare/disattivare gli indicatori
-    col_t1, col_t2, col_t3 = st.columns(3)
-    use_bb = col_t1.toggle("BB", value=True)
-    use_rsi = col_t2.toggle("RSI", value=True)
-    use_macd = col_t3.toggle("MACD", value=True)
-
-    col1, col2 = st.columns(2)
-    with col1:
+    use_bb = st.toggle("Bollinger Bands", value=True)
+    if use_bb:
         bb_period = st.number_input("BB Periodo", value=20, min_value=5)
-        custom_rsi_buy = st.number_input("RSI Buy", value=30)
-        custom_macd_fast = st.number_input("MACD Fast", value=8)
-    with col2:
         bb_std = st.number_input("BB Deviazione", value=1.8, step=0.1)
+    else:
+        bb_period, bb_std = 20, 1.8
+
+    use_rsi = st.toggle("RSI", value=True)
+    if use_rsi:
+        custom_rsi_buy = st.number_input("RSI Buy", value=30)
         custom_rsi_sell = st.number_input("RSI Sell", value=70)
+    else:
+        custom_rsi_buy, custom_rsi_sell = 30, 70
+
+    use_macd = st.toggle("MACD", value=True)
+    if use_macd:
+        custom_macd_fast = st.number_input("MACD Fast", value=8)
         custom_macd_slow = st.number_input("MACD Slow", value=17)
-        
-    custom_macd_sig = st.number_input("MACD Signal", value=5)
+        custom_macd_sig = st.number_input("MACD Signal", value=5)
+    else:
+        custom_macd_fast, custom_macd_slow, custom_macd_sig = 8, 17, 5
 
     # --- STATISTICHE BACKTEST RAPIDO ---
     st.divider()
@@ -430,6 +434,22 @@ if st.session_state.connected:
             macd_ta.columns = ['MACD', 'HIST', 'SIGNAL']
             
             df_final = pd.concat([df_raw, bb_ta[['BBL', 'BBM', 'BBU']], macd_ta], axis=1).tail(100)
+
+            df_final['buy_sig'] = df_final.apply(lambda x: x['close'] if (
+                ((x['RSI'] < custom_rsi_buy) if use_rsi else True) and 
+                ((x['close'] <= x['BBL']) if use_bb else True) and 
+                ((x['MACD'] > x['SIGNAL']) if use_macd else True)
+            ) else None, axis=1)
+            
+            df_final['sell_sig'] = df_final.apply(lambda x: x['close'] if (
+                ((x['RSI'] > custom_rsi_sell) if use_rsi else True) and 
+                ((x['close'] >= x['BBU']) if use_bb else True) and 
+                ((x['MACD'] < x['SIGNAL']) if use_macd else True)
+            ) else None, axis=1)
+
+            
+            
+            
             asse_x = df_final['time']
             
             fig = make_subplots(rows=3, cols=1, shared_xaxes=True, 
@@ -492,14 +512,7 @@ if st.session_state.connected:
                 spikethickness=1, 
                 spikedash="solid"
             )
-
-            st.plotly_chart(fig, use_container_width=True)
-
-    except Exception as e:
-            st.error(f"Errore grafico TA: {e}")
-
-
-    
+          
             # Freccia BUY (posizionata leggermente sotto il minimo della candela)
             fig.add_trace(go.Scatter(
                 x=asse_x, y=df_final['buy_sig'] * 0.9998, # Offset per non coprire la candela
@@ -516,8 +529,11 @@ if st.session_state.connected:
                 name="Entry SELL"
             ), row=1, col=1)
 
+            st.plotly_chart(fig, use_container_width=True)
 
     
+    except Exception as e:
+            st.error(f"Errore grafico TA: {e}")
 
     # --- 6. VERIFICA ESITI TRADE ---
     now = time_module.time()
