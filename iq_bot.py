@@ -203,109 +203,148 @@ with st.sidebar:
     st.subheader("🔑 Accesso Rapido")
     st.info("In modalità Yahoo Finance non è necessario il Token API.")
     
-    # --- LOGICA TASTO DINAMICO CONVERSIONE/DISCONNESSIONE ---
+    # --- LOGICA DI ACCESSO REAL-TIME CON VERIFICA YAHOO ---
     if not st.session_state.connected:
-        # Se NON è connesso, mostra il tasto per connettersi
+        st.subheader("🔑 Accesso Rapido")
+        st.info("Connettiti per sincronizzare i dati real-time.")
         if st.button("🔌 CONNETTI SISTEMA", use_container_width=True, type="primary"):
-            st.session_state.connected = True
-            st.session_state.oanda_token = "YAHOO_MODE"
-            st.success("✅ Sistema Connesso!")
-            time_module.sleep(1)
-            st.rerun()
+            # Usiamo uno spinner per dare feedback visivo all'utente
+            with st.spinner("Sincronizzazione con Yahoo Finance in corso..."):
+                # Prova a scaricare UNA candela di prova di EURUSD per verificare la connessione
+                test_data = get_oanda_candles("EURUSD", 60, 1, "YAHOO")
+                
+                if test_data:
+                    # Se i dati ci sono, la connessione è reale!
+                    st.session_state.connected = True
+                    # È importante salvare questa etichetta per il resto dello script
+                    st.session_state.oanda_token = "YAHOO_MODE" 
+                    st.success("✅ Sincronizzato con Yahoo Finance!")
+                    time_module.sleep(1)
+                    st.rerun() # Ricarica per mostrare il resto dell'interfaccia
+                else:
+                    # Se i dati non arrivano, c'è un problema di rete
+                    st.error("❌ Errore di connessione. Yahoo Finance non risponde. Riprova tra poco.")
     else:
         # Se è GIÀ connesso, mostra il tasto per disconnettersi
         if st.button("🔴 DISCONNETTI", use_container_width=True):
             st.session_state.connected = False
-            st.session_state.scanner_on = False # Spegne anche lo scanner per sicurezza
+            st.session_state.scanner_on = False
             st.warning("Sistema Disconnesso")
             time_module.sleep(1)
             st.rerun()
 
-    st.divider()
-    st.subheader("👁️ SCANNER VALUTE FOREX")
-    
-    label = "🛑 STOP SCANNER" if st.session_state.scanner_on else "🚀 AVVIA SCANNER"
-    if st.button(label, use_container_width=True, type="primary" if not st.session_state.scanner_on else "secondary"):
-        st.session_state.scanner_on = not st.session_state.scanner_on
-        st.rerun()
 
-    st.divider()
-
-    st.subheader("🎛️ Setup Indicatori (Live)")
-    
-    # 1. I tre toggle sulla stessa riga
-    col_t1, col_t2, col_t3 = st.columns(3)
-    use_bb = col_t1.toggle("BB", value=True)
-    use_rsi = col_t2.toggle("RSI", value=True)
-    use_macd = col_t3.toggle("MACD", value=True)
-
-    # 2. Parametri Bollinger (compaiono solo se use_bb è True)
-    if use_bb:
-        col_bb1, col_bb2 = st.columns(2)
-        bb_period = col_bb1.number_input("BB Periodo", value=20, min_value=5)
-        bb_std = col_bb2.number_input("BB Deviazione", value=1.80, step=0.10)
-    else:
-        # Se spento, assegniamo i valori "dietro le quinte" per non far crashare lo scanner
-        bb_period, bb_std = 20, 1.80
-
-    # 3. Parametri RSI (compaiono solo se use_rsi è True)
-    if use_rsi:
-        col_rsi1, col_rsi2 = st.columns(2)
-        custom_rsi_buy = col_rsi1.number_input("RSI Buy", value=30)
-        custom_rsi_sell = col_rsi2.number_input("RSI Sell", value=70)
-    else:
-        custom_rsi_buy, custom_rsi_sell = 30, 70
-
-    # 4. Parametri MACD (compaiono solo se use_macd è True)
-    if use_macd:
-        col_m1, col_m2 = st.columns(2)
-        custom_macd_fast = col_m1.number_input("MACD Fast", value=8)
-        custom_macd_slow = col_m2.number_input("MACD Slow", value=17)
-        custom_macd_sig = st.number_input("MACD Signal", value=5)
-    else:
-        custom_macd_fast, custom_macd_slow, custom_macd_sig = 8, 17, 5
-                
-    st.divider()
-    st.metric(f"💰 Saldo {st.session_state.account_type}", f"{st.session_state.local_balance:.2f} €")    
-    st.session_state.stake = st.number_input("💰 INVESTIMENTO (€)", value=100.0)
-    timeframe = st.selectbox("⏱️ TIMEFRAME OPERATIVO (s)", [60, 300], index=0)
-    
-    if st.button("🔴 DISCONNETTI"):
-        st.session_state.connected = False
-        st.session_state.scanner_on = False
-        st.rerun()
-
-    st.divider()
-    now_roma = datetime.now(pytz.timezone('Europe/Rome'))
-    now_cet = now_roma.time()
+        with st.sidebar:
+            st.title("⚙️ YAHOO TRADING")
+            
+            # --- LOGICA DI ACCESSO ---
+            if not st.session_state.connected:
+                st.subheader("🔑 Accesso Rapido")
+                st.info("Connettiti per attivare gli strumenti.")
+                if st.button("🔌 CONNETTI SISTEMA", use_container_width=True, type="primary"):
+                    st.session_state.connected = True
+                    st.rerun()  # Ricarica per mostrare il resto
+            else:
+                # --- TUTTO IL RESTO APPARE SOLO SE CONNESSO ---
+                if st.button("🔴 DISCONNETTI", use_container_width=True):
+                    st.session_state.connected = False
+                    st.session_state.scanner_on = False
+                    st.rerun()
         
-    st.header("🌍 SESSIONI DI MERCATO")
-    for city, (start, end) in {"🇬🇧 LONDRA:": (time(9,0), time(18,0)), "🇺🇸 NEW YORK:": (time(14,0), time(23,0)), "🇦🇺 SYDNEY:": (time(0,0), time(8,0)), "🇯🇵 TOKYO:": (time(0,0), time(9,0))}.items():
-        status = "Open 🟢" if start <= now_cet <= end else "Closed 🔴"
-        st.write(f"{city} {status}")
-
-    st.info(get_market_status())
-
-    st.divider()
-    st.header("🔧 STRUMENTI TEST")
-    stress_test = st.toggle("🚀 **STRESS MODE**", value=False)
-    if stress_test:
-        st.warning("⚠️ **Modalità TEST:**  \nno BB - RSI (45/55) - no MACD")
-    else:
-        st.success("🟢 **Modalità REALE:**  \nvedi gli indicatori scelti sopra")
-    
-    st.divider()
-    if st.button("🔔 **TEST AUDIO & TELEGRAM**", use_container_width=True):
-        play_trade_sound("buy")
-        invia_telegram("✅ **SENTINEL AI: SYSTEM CHECK**\nBot online e sincronizzato con Yahoo Finance. 🚀")
-        st.toast("Test completato!", icon="📲")
-
-    st.divider()
-    if st.button("🗑️ **PULISCI SEGNALI**", use_container_width=True):
-        st.session_state.signal_history = []
-        save_journal([]) 
-        st.rerun()
-    st.divider()
+                st.divider()
+                
+                # TABBA (INDENTA) TUTTI GLI ALTRI ELEMENTI QUI SOTTO
+                st.subheader("👁️ SCANNER VALUTE")
+                # ... qui metti i toggle, lo stake, il timeframe, ecc.
+                # Tutti indentati sotto questo 'else'
+        
+        
+            
+            st.divider()
+            st.subheader("👁️ SCANNER VALUTE FOREX")
+            
+            label = "🛑 STOP SCANNER" if st.session_state.scanner_on else "🚀 AVVIA SCANNER"
+            if st.button(label, use_container_width=True, type="primary" if not st.session_state.scanner_on else "secondary"):
+                st.session_state.scanner_on = not st.session_state.scanner_on
+                st.rerun()
+        
+            st.divider()
+        
+            st.subheader("🎛️ Setup Indicatori (Live)")
+            
+            # 1. I tre toggle sulla stessa riga
+            col_t1, col_t2, col_t3 = st.columns(3)
+            use_bb = col_t1.toggle("BB", value=True)
+            use_rsi = col_t2.toggle("RSI", value=True)
+            use_macd = col_t3.toggle("MACD", value=True)
+        
+            # 2. Parametri Bollinger (compaiono solo se use_bb è True)
+            if use_bb:
+                col_bb1, col_bb2 = st.columns(2)
+                bb_period = col_bb1.number_input("BB Periodo", value=20, min_value=5)
+                bb_std = col_bb2.number_input("BB Deviazione", value=1.80, step=0.10)
+            else:
+                # Se spento, assegniamo i valori "dietro le quinte" per non far crashare lo scanner
+                bb_period, bb_std = 20, 1.80
+        
+            # 3. Parametri RSI (compaiono solo se use_rsi è True)
+            if use_rsi:
+                col_rsi1, col_rsi2 = st.columns(2)
+                custom_rsi_buy = col_rsi1.number_input("RSI Buy", value=30)
+                custom_rsi_sell = col_rsi2.number_input("RSI Sell", value=70)
+            else:
+                custom_rsi_buy, custom_rsi_sell = 30, 70
+        
+            # 4. Parametri MACD (compaiono solo se use_macd è True)
+            if use_macd:
+                col_m1, col_m2 = st.columns(2)
+                custom_macd_fast = col_m1.number_input("MACD Fast", value=8)
+                custom_macd_slow = col_m2.number_input("MACD Slow", value=17)
+                custom_macd_sig = st.number_input("MACD Signal", value=5)
+            else:
+                custom_macd_fast, custom_macd_slow, custom_macd_sig = 8, 17, 5
+                        
+            st.divider()
+            st.metric(f"💰 Saldo {st.session_state.account_type}", f"{st.session_state.local_balance:.2f} €")    
+            st.session_state.stake = st.number_input("💰 INVESTIMENTO (€)", value=100.0)
+            timeframe = st.selectbox("⏱️ TIMEFRAME OPERATIVO (s)", [60, 300], index=0)
+            
+            if st.button("🔴 DISCONNETTI"):
+                st.session_state.connected = False
+                st.session_state.scanner_on = False
+                st.rerun()
+        
+            st.divider()
+            now_roma = datetime.now(pytz.timezone('Europe/Rome'))
+            now_cet = now_roma.time()
+                
+            st.header("🌍 SESSIONI DI MERCATO")
+            for city, (start, end) in {"🇬🇧 LONDRA:": (time(9,0), time(18,0)), "🇺🇸 NEW YORK:": (time(14,0), time(23,0)), "🇦🇺 SYDNEY:": (time(0,0), time(8,0)), "🇯🇵 TOKYO:": (time(0,0), time(9,0))}.items():
+                status = "Open 🟢" if start <= now_cet <= end else "Closed 🔴"
+                st.write(f"{city} {status}")
+        
+            st.info(get_market_status())
+        
+            st.divider()
+            st.header("🔧 STRUMENTI TEST")
+            stress_test = st.toggle("🚀 **STRESS MODE**", value=False)
+            if stress_test:
+                st.warning("⚠️ **Modalità TEST:**  \nno BB - RSI (45/55) - no MACD")
+            else:
+                st.success("🟢 **Modalità REALE:**  \nvedi gli indicatori scelti sopra")
+            
+            st.divider()
+            if st.button("🔔 **TEST AUDIO & TELEGRAM**", use_container_width=True):
+                play_trade_sound("buy")
+                invia_telegram("✅ **SENTINEL AI: SYSTEM CHECK**\nBot online e sincronizzato con Yahoo Finance. 🚀")
+                st.toast("Test completato!", icon="📲")
+        
+            st.divider()
+            if st.button("🗑️ **PULISCI SEGNALI**", use_container_width=True):
+                st.session_state.signal_history = []
+                save_journal([]) 
+                st.rerun()
+            st.divider()
 
 # --- 4. MAIN DASHBOARD ---
 if st.session_state.connected:
