@@ -200,9 +200,6 @@ if 'scanner_on' not in st.session_state: st.session_state.scanner_on = False
 with st.sidebar:
     st.title("⚙️ YAHOO TRADING")
     
-    st.subheader("🔑 Accesso Rapido")
-    st.info("In modalità Yahoo Finance non è necessario il Token API.")
-    
     # --- LOGICA DI ACCESSO REAL-TIME CON VERIFICA YAHOO ---
     if not st.session_state.connected:
         st.subheader("🔑 Accesso Rapido")
