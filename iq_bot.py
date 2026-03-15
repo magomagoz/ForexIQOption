@@ -198,7 +198,7 @@ if 'scanner_on' not in st.session_state: st.session_state.scanner_on = False
 
 # --- 3. SIDEBAR ---
 with st.sidebar:
-    st.title("⚙️ YAHOO TRADING")
+    st.title("⚙️ YAHOO FINANCE TRADING")
     
     # --- LOGICA DI ACCESSO REAL-TIME CON VERIFICA YAHOO ---
     if not st.session_state.connected:
@@ -287,15 +287,12 @@ with st.sidebar:
             else: custom_macd_fast, custom_macd_slow, custom_macd_sig = 12, 26, 9
                         
         st.divider()
+        st.subheader("🛠️ PARAMETRI TRADING")
+        
         st.metric(f"💰 Saldo {st.session_state.account_type}", f"{st.session_state.local_balance:.2f} €")    
         st.session_state.stake = st.number_input("💰 INVESTIMENTO (€)", value=100.0)
         timeframe = st.selectbox("⏱️ TIMEFRAME OPERATIVO (s)", [60, 300], index=0)
             
-        if st.button("🔴 DISCONNETTI"):
-            st.session_state.connected = False
-            st.session_state.scanner_on = False
-            st.rerun()
-        
         st.divider()
         now_roma = datetime.now(pytz.timezone('Europe/Rome'))
         now_cet = now_roma.time()
