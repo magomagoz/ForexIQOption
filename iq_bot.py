@@ -243,7 +243,7 @@ with st.sidebar:
             st.rerun()
 
         st.divider()
-        st.subheader("♟️ STRATEGIA DEL 6° GIORNO (OTC)")
+        st.subheader("♟️ IL 6° GIORNO (OTC)")
         
         # --- MODALITÀ WEEKEND ---
         if 'weekend_mode' not in st.session_state: 
@@ -252,7 +252,7 @@ with st.sidebar:
         st.session_state.weekend_mode = st.toggle("🧠🍹 ATTIVA SABATO MAGICO", value=st.session_state.weekend_mode)
     
         if st.session_state.weekend_mode:
-            st.success("🎯 **Sniper Sabato OTC:** RSI (20/80) e BB (20, 2.5)")
+            st.success("🎯 **Sniper Sabato OTC:**  \n**RSI (20/80)** - **BB (20, 2.5)**")
             # DEFINIAMO TUTTO QUI PER EVITARE ERRORI NEL GRAFICO
             use_bb, use_rsi, use_macd = True, True, False
             bb_period, bb_std = 20, 2.50
