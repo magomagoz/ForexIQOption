@@ -305,7 +305,7 @@ with st.sidebar:
                 st.write(f"{city} Closed 🔴")
             else:
                 for city, (start, end) in {"🇬🇧 LONDRA:": (time(9,0), time(18,0)), "🇺🇸 NEW YORK:": (time(14,0), time(23,0)), "🇦🇺 SYDNEY:": (time(23,0), time(8,0)), "🇯🇵 TOKYO:": (time(0,0), time(9,0))}.items():
-                    status = "Open 🟢" if start <= now_cet <= end else "Closed 🔴"
+                    status = "Open 🟢" if start <= now_roma <= end else "Closed 🔴"
                 st.write(f"{city} {status}")
             
                 st.info(get_market_status())
