@@ -206,7 +206,7 @@ with st.sidebar:
     # --- LOGICA DI ACCESSO REAL-TIME CON VERIFICA YAHOO ---
     if not st.session_state.connected:
         st.subheader("🔑 Accesso Rapido")
-        st.info("Connettiti per sincronizzare i dati real-time.")
+        st.info("Connettiti per i dati real-time.")
         if st.button("🔌 CONNETTI SISTEMA", use_container_width=True, type="primary"):
             # Usiamo uno spinner per dare feedback visivo all'utente
             with st.spinner("Sincronizzazione con Yahoo Finance in corso..."):
