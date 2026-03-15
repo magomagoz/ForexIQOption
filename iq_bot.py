@@ -712,13 +712,7 @@ if st.session_state.connected:
             st.progress(acc_std / 100)
     else:
         st.info("⏳ In attesa di dati per calcolare le performance...")
-    
-    st.divider()
         
-    # Visualizzazione Tabella Journal
-    st.subheader("📋 Trading Journal")
-    st.dataframe(df_journal.iloc[::-1], use_container_width=True, hide_index=True)
-    
     # --- LOGICA DI REFRESH AUTOMATICO ---
     
     # 1. Messaggio discreto di stato dello scanner
