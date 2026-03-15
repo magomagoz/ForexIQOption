@@ -233,17 +233,20 @@ with st.sidebar:
             time_module.sleep(1)
             st.rerun()
             
-    # Mostra lo scanner solo se NON è weekend e se la modalità Sniper è SPENTA
-    if not is_weekend_reale and not st.session_state.weekend_mode:
+    # --- PROTEZIONE SCANNER ---
+    if is_weekend_reale or st.session_state.weekend_mode:
+        st.divider()
+        st.warning("⚠️ **MERCATO OTC RILEVATO**")
+        st.info("Lo scanner automatico multi-valuta è disattivato. Durante il weekend opera solo in modalità **Sniper 2.5** sull'asset selezionato nel grafico.")
+        st.session_state.scanner_on = False # Forza lo spegnimento se era rimasto acceso
+    else:
+        # Se è settimana, mostra lo scanner normalmente
         st.divider()
         st.subheader("👁️ SCANNER VALUTE FOREX")
         label = "🛑 STOP SCANNER" if st.session_state.scanner_on else "🚀 AVVIA SCANNER"
-        if st.button(label, use_container_width=True):
+        if st.button(label, use_container_width=True, type="primary"):
             st.session_state.scanner_on = not st.session_state.scanner_on
             st.rerun()
-    elif st.session_state.weekend_mode:
-        # Messaggio opzionale per spiegare perché non c'è lo scanner
-        st.caption("ℹ️ Scanner automatico disabilitato in modalità Sniper.")
 
         st.divider()
         st.subheader("♟️ IL 6° GIORNO (OTC)")
