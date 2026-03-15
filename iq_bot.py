@@ -247,7 +247,9 @@ with st.sidebar:
             st.session_state.weekend_mode = False
             
         st.session_state.weekend_mode = st.toggle("🧠🍹 ATTIVA SABATO MAGICO", value=st.session_state.weekend_mode)
-    
+
+        st.divider()
+        
         if st.session_state.weekend_mode:
             # 1. COSA SUCCEDE SE È ACCESA:
             st.success("🎯 **Sniper Attivo:** Indicatori manuali nascosti.  \nImpostati su **RSI (20/80)** e **BB (20, 2.5)**. **no MACD**")
