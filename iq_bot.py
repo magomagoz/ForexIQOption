@@ -196,109 +196,76 @@ if 'signal_history' not in st.session_state: st.session_state.signal_history = l
 if 'local_balance' not in st.session_state: st.session_state.local_balance = 10000.0
 if 'scanner_on' not in st.session_state: st.session_state.scanner_on = False
 if 'weekend_mode' not in st.session_state: st.session_state.weekend_mode = False 
+if 'custom_macd_fast' not in st.session_state: st.session_state.custom_macd_fast = 12
+if 'custom_macd_slow' not in st.session_state: st.session_state.custom_macd_slow = 26
+if 'custom_macd_sig' not in st.session_state: st.session_state.custom_macd_sig = 9
 
 giorno_settimana = datetime.now(pytz.timezone('Europe/Rome')).weekday()
 is_weekend_reale = giorno_settimana >= 5  # True se Sabato (5) o Domenica (6)
 
-# --- 3. SIDEBAR ---
+# --- 3. SIDEBAR (VERSIONE CHIRURGICA) ---
 with st.sidebar:
     st.title("⚙️ YAHOO TRADING")
     
-    # --- LOGICA DI ACCESSO REAL-TIME CON VERIFICA YAHOO ---
     if not st.session_state.connected:
         st.subheader("🔑 Accesso Rapido")
         st.info("Connettiti per i dati real-time.")
         if st.button("🔌 CONNETTI SISTEMA", use_container_width=True, type="primary"):
-            # Usiamo uno spinner per dare feedback visivo all'utente
-            with st.spinner("Sincronizzazione con Yahoo Finance in corso..."):
-                # Prova a scaricare UNA candela di prova di EURUSD per verificare la connessione
+            with st.spinner("Sincronizzazione..."):
                 test_data = get_oanda_candles("EURUSD", 60, 1, "YAHOO")
-                
                 if test_data:
-                    # Se i dati ci sono, la connessione è reale!
                     st.session_state.connected = True
-                    # È importante salvare questa etichetta per il resto dello script
                     st.session_state.oanda_token = "YAHOO_MODE" 
-                    st.success("✅ Sincronizzato con Yahoo Finance!")
-                    time_module.sleep(1)
-                    st.rerun() # Ricarica per mostrare il resto dell'interfaccia
-                else:
-                    # Se i dati non arrivano, c'è un problema di rete
-                    st.error("❌ Errore di connessione. Yahoo Finance non risponde. Riprova tra poco.")
+                    st.rerun()
     else:
-        # Se è GIÀ connesso, mostra il tasto per disconnettersi
         if st.button("🔴 DISCONNETTI", use_container_width=True):
             st.session_state.connected = False
             st.session_state.scanner_on = False
-            st.warning("Sistema Disconnesso")
-            time_module.sleep(1)
             st.rerun()
-            
-    # --- PROTEZIONE SCANNER ---
-    if is_weekend_reale or st.session_state.weekend_mode:
+
         st.divider()
-        st.warning("⚠️ **MERCATO OTC RILEVATO**")
-        st.info("Lo scanner automatico multi-valuta è disattivato. Durante il weekend opera solo in modalità **Sniper 2.5** sull'asset selezionato nel grafico.")
-        st.session_state.scanner_on = False # Forza lo spegnimento se era rimasto acceso
-    else:
-        # Se è settimana, mostra lo scanner normalmente
-        st.divider()
-        st.subheader("👁️ SCANNER VALUTE FOREX")
+        # --- MODALITÀ OPERATIVA UNICA ---
+        st.subheader("🕹️ Modalità Operativa")
+        st.session_state.weekend_mode = st.toggle("🎯 ATTIVA STRATEGIA SNIPER", value=st.session_state.weekend_mode)
+        
+        # SCANNER SEMPRE DISPONIBILE
         label = "🛑 STOP SCANNER" if st.session_state.scanner_on else "🚀 AVVIA SCANNER"
         if st.button(label, use_container_width=True, type="primary"):
             st.session_state.scanner_on = not st.session_state.scanner_on
             st.rerun()
 
-    #if st.session_state.weekend_mode:
-        #st.info("💡 Lo scanner sta usando i parametri **Sniper OTC** su tutte le coppie.")
-        
-
-        st.divider()
-        st.subheader("♟️ IL 6° GIORNO (OTC)")
-        
-        # --- MODALITÀ WEEKEND ---
-        if 'weekend_mode' not in st.session_state: 
-            st.session_state.weekend_mode = False
-            
-        st.session_state.weekend_mode = st.toggle("🧠🍹 ATTIVA SABATO MAGICO", value=st.session_state.weekend_mode)
-    
+        # --- SETUP INDICATORI DINAMICO ---
         if st.session_state.weekend_mode:
-            st.success("🎯 **Sniper Sabato OTC:**  \n**RSI (20/80)** - **BB (20, 2.5)**")
-            # DEFINIAMO TUTTO QUI PER EVITARE ERRORI NEL GRAFICO
+            st.success("🎯 **Sniper Mode Attiva**\nParametri: RSI 20/80 | BB 2.5")
             use_bb, use_rsi, use_macd = True, True, False
             bb_period, bb_std = 20, 2.50
             custom_rsi_buy, custom_rsi_sell = 20, 80
-            # Questi servono al grafico per non andare in errore anche se use_macd è False
             custom_macd_fast, custom_macd_slow, custom_macd_sig = 12, 26, 9
         else:
-            # 2. COSA SUCCEDE SE È SPENTA: (Appare il tuo setup classico)
-            st.divider()
-            st.subheader("🎛️ Setup Indicatori (Live)")
-            
+            st.info("📊 **Standard Mode Attiva**")
             col_t1, col_t2, col_t3 = st.columns(3)
             use_bb = col_t1.toggle("BB", value=True)
             use_rsi = col_t2.toggle("RSI", value=True)
             use_macd = col_t3.toggle("MACD", value=False)
-    
-            if use_bb:
-                c_bb1, c_bb2 = st.columns(2)
-                bb_period = c_bb1.number_input("Periodo", 20)
-                bb_std = c_bb2.number_input("Dev", 1.80)
-            else: bb_period, bb_std = 20, 1.80
-    
-            if use_rsi:
-                c_rsi1, c_rsi2 = st.columns(2)
-                custom_rsi_buy = c_rsi1.number_input("RSI Buy", 30)
-                custom_rsi_sell = c_rsi2.number_input("RSI Sell", 70)
-            else: custom_rsi_buy, custom_rsi_sell = 30, 70
-    
-            if use_macd:
-                c_m1, c_m2 = st.columns(2)
-                custom_macd_fast = c_m1.number_input("Fast", 12)
-                custom_macd_slow = c_m2.number_input("Slow", 26)
-                custom_macd_sig = st.number_input("Signal", 9)
-            else: custom_macd_fast, custom_macd_slow, custom_macd_sig = 12, 26, 9
-                    
+            
+            c_bb1, c_bb2 = st.columns(2)
+            bb_period = c_bb1.number_input("Periodo BB", 20)
+            bb_std = c_bb2.number_input("Dev BB", 1.80)
+            
+            c_rsi1, c_rsi2 = st.columns(2)
+            custom_rsi_buy = c_rsi1.number_input("RSI Buy", 30)
+            custom_rsi_sell = c_rsi2.number_input("RSI Sell", 70)
+            
+            custom_macd_fast, custom_macd_slow, custom_macd_sig = 12, 26, 9
+        
+        st.divider()
+        st.subheader("🛠️ PARAMETRI")
+        st.metric(f"💰 SALDO", f"{st.session_state.local_balance:.2f} €")    
+        st.session_state.stake = st.number_input("💰 STAKE (€)", value=100.0)
+        timeframe = st.selectbox("⏱️ TIMEFRAME (s)", [60, 300], index=0)
+        
+        stress_test = st.toggle("🚀 STRESS MODE", value=False)
+
         now_roma = datetime.now(pytz.timezone('Europe/Rome'))
         now_cet = now_roma.time()
 
