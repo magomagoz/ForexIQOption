@@ -51,6 +51,10 @@ def invia_telegram(messaggio):
     except Exception as e:
         print(f"Errore Telegram: {e}")
 
+def reset_manual_prices():
+    st.session_state.manual_prices = {"EURGBP": 0.0, "USDCHF": 0.0, "AUDUSD": 0.0, "EURUSD": 0.0}
+    st.rerun()
+
 def send_telegram_signal(signal_type, pair, price, rsi, trade_id):
     timestamp = datetime.now().strftime("%H:%M:%S")
     message = (
@@ -273,9 +277,13 @@ with st.sidebar:
         if st.session_state.weekend_mode:
             st.divider()
             st.subheader("🎯 PREZZO MANUALE (OVERRIDE)")
-            st.info("Yahoo è fermo. Inserisci il prezzo dal Broker:")
             
-            # Inizializza il dizionario se non esiste
+            # Tasto di Reset Chirugico
+            if st.button("🧹 RESET PREZZI", use_container_width=True):
+                reset_manual_prices()
+                
+            st.info("Inserisci il prezzo dal Broker:")
+            
             if 'manual_prices' not in st.session_state:
                 st.session_state.manual_prices = {"EURGBP": 0.0, "USDCHF": 0.0, "AUDUSD": 0.0, "EURUSD": 0.0}
             
@@ -284,7 +292,8 @@ with st.sidebar:
                 st.session_state.manual_prices[pair] = st.number_input(
                     f"Prezzo {pair}", 
                     value=st.session_state.manual_prices.get(pair, 0.0), 
-                    format="%.5f"
+                    format="%.5f",
+                    key=f"input_{pair}" # Aggiungiamo una key univoca per sicurezza
                 )
         
         st.divider()
