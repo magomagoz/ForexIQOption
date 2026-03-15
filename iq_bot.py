@@ -206,10 +206,11 @@ now_roma = datetime.now(pytz.timezone('Europe/Rome'))
 giorno_settimana = now_roma.weekday() # 0 = Lunedì ... 5 = Sabato, 6 = Domenica
 is_weekend_reale = giorno_settimana >= 5  # True se Sabato (5) o Domenica (6)
 now_cet = now_roma.time()
+ora_attuale = now_roma.hour
 
 # Il mercato reale chiude Venerdì alle 23:00 e riapre Domenica alle 23:00.
 # Quindi è OTC se è Sabato (5) o se è Domenica (6) prima delle 23:00.
-if giorno_settimana == 5 or (giorno_settimana == 6 and now_roma < 23):
+if giorno_settimana == 5 or (giorno_settimana == 6 and ora_attuale < 23):
     st.session_state.weekend_mode = True  # OTC AUTO-ATTIVATO
 else:
     st.session_state.weekend_mode = False # MERCATO LIVE AUTO-ATTIVATO
