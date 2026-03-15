@@ -246,7 +246,7 @@ with st.sidebar:
             # Setta automaticamente i parametri fissi per l'OTC
             use_bb, use_rsi, use_macd = True, True, False
             bb_period, bb_std = 20, 2.50
-            custom_rsi_buy, custom_rsi_sell = 20, 80
+            custom_rsi_buy, custom_rsi_sell = 15, 85
             custom_macd_fast, custom_macd_slow, custom_macd_sig = 12, 26, 9
         else:
             st.success("🟢 **MERCATO LIVE RILEVATO**")
