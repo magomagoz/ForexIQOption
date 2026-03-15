@@ -296,7 +296,7 @@ with st.sidebar:
                     status = "Open 🟢" if start <= now_cet <= end else "Closed 🔴"
                 st.write(f"{city} {status}")
             
-            st.info(get_market_status())
+        st.info(get_market_status())
                                     
         st.divider()
         st.subheader("🛠️ PARAMETRI TRADING")
@@ -305,7 +305,6 @@ with st.sidebar:
         st.session_state.stake = st.number_input("💰 INVESTIMENTO (€)", value=100.0)
         timeframe = st.selectbox("⏱️ TIMEFRAME OPERATIVO (s)", [60, 300], index=0)
             
-        st.divider()
         now_roma = datetime.now(pytz.timezone('Europe/Rome'))
         now_cet = now_roma.time()
                 
