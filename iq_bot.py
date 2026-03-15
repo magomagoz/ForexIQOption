@@ -252,13 +252,13 @@ with st.sidebar:
             # 1. COSA SUCCEDE SE È ACCESA:
             st.success("🎯 **Sniper Attivo:** \n\n**RSI (20/80)** - **BB (20, 2.5)** - **no MACD**")
             
+            st.divider()
+            
             # Assegniamo i valori dietro le quinte per far funzionare lo scanner senza errori
             use_bb, use_rsi, use_macd = True, True, False
             bb_period, bb_std = 20, 2.50
             custom_rsi_buy, custom_rsi_sell = 20, 80
             custom_macd_fast, custom_macd_slow, custom_macd_sig = 12, 26, 9 # Ininfluenti perché use_macd è False
-
-            st.divider()
         
         else:
             # 2. COSA SUCCEDE SE È SPENTA: (Appare il tuo setup classico)
