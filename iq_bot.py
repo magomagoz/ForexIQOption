@@ -276,7 +276,7 @@ with st.sidebar:
         # --- LOGICA SIDEBAR OTC ---
         if st.session_state.weekend_mode:
             st.divider()
-            st.subheader("🎯 PREZZO MANUALE (OVERRIDE)")
+            st.subheader("🎯 PREZZO MANUALE OTC")
                             
             st.info("Inserisci il prezzo dal Broker:")
             
