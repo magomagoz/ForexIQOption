@@ -350,12 +350,6 @@ if st.session_state.connected:
         st.session_state.report_sent = True
     
     st.subheader("🌍 Live Market Flow 24h")
-    st.plotly_chart(draw_market_map_inverted(h_float, trading_autorizzato), use_container_width=True, config={'displayModeBar': False})
-    
-
-    
-        # --- CAMBIO IMMAGINE BANNER ---
-    st.subheader("🌍 Live Market Flow 24h")
     
     if st.session_state.weekend_mode or is_weekend_reale:
         try:
@@ -366,14 +360,9 @@ if st.session_state.connected:
             st.warning("Immagine banner2.png non trovata. Carica il file nella cartella del progetto.")
     else:
         # Mostra il grafico Plotly originale "draw_market_map_inverted"
-        st.plotly_chart(draw_market_map_inverted(h_float, trading_autorizzato), use_container_width=True)
-
-    
-    
-    
-    
-    
-    
+        #st.plotly_chart(draw_market_map_inverted(h_float, trading_autorizzato), use_container_width=True)
+        st.plotly_chart(draw_market_map_inverted(h_float, trading_autorizzato), use_container_width=True, config={'displayModeBar': False})
+        
     if st.session_state.scanner_on:
         if not trading_autorizzato:
             st.warning("🛡️ PROTEZIONE ATTIVA: Mercato fuori orario. Scanner in pausa.")
