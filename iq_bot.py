@@ -256,7 +256,7 @@ with st.sidebar:
             use_bb, use_rsi, use_macd = True, True, False
             bb_period, bb_std = 20, 2.50
             custom_rsi_buy, custom_rsi_sell = 20, 80
-                else:
+        else:
             # 2. COSA SUCCEDE SE È SPENTA: (Appare il tuo setup classico)
             st.subheader("🎛️ Setup Indicatori (Live)")
             
