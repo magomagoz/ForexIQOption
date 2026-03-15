@@ -252,10 +252,13 @@ with st.sidebar:
         st.session_state.weekend_mode = st.toggle("🧠🍹 ATTIVA SABATO MAGICO", value=st.session_state.weekend_mode)
     
         if st.session_state.weekend_mode:
-            st.success("🎯 **Sniper Attivo:** \n\n**RSI (20/80)** - **BB (20, 2.5)** - **no MACD**")
+            st.success("🎯 **Sniper Sabato OTC:** RSI (20/80) e BB (20, 2.5)")
+            # DEFINIAMO TUTTO QUI PER EVITARE ERRORI NEL GRAFICO
             use_bb, use_rsi, use_macd = True, True, False
             bb_period, bb_std = 20, 2.50
             custom_rsi_buy, custom_rsi_sell = 20, 80
+            # Questi servono al grafico per non andare in errore anche se use_macd è False
+            custom_macd_fast, custom_macd_slow, custom_macd_sig = 12, 26, 9
         else:
             # 2. COSA SUCCEDE SE È SPENTA: (Appare il tuo setup classico)
             st.divider()
@@ -284,7 +287,7 @@ with st.sidebar:
                 custom_macd_slow = c_m2.number_input("Slow", 26)
                 custom_macd_sig = st.number_input("Signal", 9)
             else: custom_macd_fast, custom_macd_slow, custom_macd_sig = 12, 26, 9
-    
+        
         st.divider()
         st.header("🌍 SESSIONI DI MERCATO")
         
@@ -481,10 +484,7 @@ if st.session_state.connected:
                 ((x['close'] >= x['BBU']) if use_bb else True) and 
                 ((x['MACD'] < x['SIGNAL']) if use_macd else True)
             ) else None, axis=1)
-
-            
-            
-            
+         
             asse_x = df_final['time']
             
             fig = make_subplots(rows=3, cols=1, shared_xaxes=True, 
@@ -566,6 +566,39 @@ if st.session_state.connected:
 
             st.plotly_chart(fig, use_container_width=True)
 
+            # --- DASHBOARD DISTANZA TARGET (SNIPER MODE) ---
+            if st.session_state.weekend_mode:
+                st.write("🎯 **Monitoraggio Sniper 2.5 SD**")
+                
+                ultimo_prezzo = df_final['close'].iloc[-1]
+                bbu_25 = df_final['BBU'].iloc[-1]
+                bbl_25 = df_final['BBL'].iloc[-1]
+                
+                # Calcolo distanze
+                distanza_su = bbu_25 - ultimo_prezzo
+                distanza_giu = ultimo_prezzo - bbl_25
+                
+                # Percentuale di avvicinamento (100% = segnale imminente)
+                # Calcoliamo quanto manca rispetto alla larghezza totale del canale
+                canale_totale = bbu_25 - bbl_25
+                perc_su = max(0, (1 - (distanza_su / (canale_totale/2))) * 100)
+                perc_giu = max(0, (1 - (distanza_giu / (canale_totale/2))) * 100)
+
+                m1, m2 = st.columns(2)
+                
+                with m1:
+                    color_su = "red" if distanza_su < 0 else "white"
+                    st.metric("Dist. Banda Sup (SELL)", f"{distanza_su:.5f}", 
+                              delta=f"{perc_su:.1f}% al Target", delta_color="inverse")
+                    if distanza_su <= 0: st.error("🔥 ZONA SELL RAGGIUNTA!")
+                
+                with m2:
+                    st.metric("Dist. Banda Inf (BUY)", f"{distanza_giu:.5f}", 
+                              delta=f"{perc_giu:.1f}% al Target", delta_color="normal")
+                    if distanza_giu <= 0: st.success("🔥 ZONA BUY RAGGIUNTA!")
+
+                st.progress(min(max(perc_su, perc_giu) / 100, 1.0))
+            
             st.write("---")
             st.subheader("📊 Analisi Performance (Backtest 60s)")
             
