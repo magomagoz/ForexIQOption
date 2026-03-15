@@ -376,16 +376,32 @@ if st.session_state.connected:
         # Mostra il grafico Plotly originale "draw_market_map_inverted"
         #st.plotly_chart(draw_market_map_inverted(h_float, trading_autorizzato), use_container_width=True)
         st.plotly_chart(draw_market_map_inverted(h_float, trading_autorizzato), use_container_width=True)
-        
+
+    if st.session_state.scanner_on:
+        if not trading_autorizzato:
+            
+            # Visualizza le icone delle valute osservate solo durante la settimana
+            if not is_weekend_reale and not st.session_state.weekend_mode:
+                if st.session_state.scanner_on:
+                    
+    
     if st.session_state.scanner_on:
         # Messaggio dinamico in base alla modalità
         if st.session_state.weekend_mode:
             st.success("🕵️ SCANNER OTC ATTIVO su 🇪🇺🇬🇧-🇺🇸🇨🇭-🇦🇺🇺🇸-🇪🇺🇺🇸 ", icon="🎯")
         else:
             if not trading_autorizzato:
-                st.warning("🛡️ PROTEZIONE Orario: Scanner in pausa.")
+                st.warning("🛡️ PROTEZIONE ATTIVA: Mercato fuori orario. Scanner in pausa.")
             else:
-                st.success("SISTEMA IN SCANSIONE LIVE 🔥", icon="📡")
+                st.success("SISTEMA IN SCANSIONE ATTIVA 🔥🔥🔥", icon="📡")
+
+        st.divider()
+        st.subheader("🕵️ Coppie di valute osservate")
+        cols = st.columns(5)
+        for i, pair in enumerate(ALL_PAIRS):
+            with cols[i % 5]: 
+                st.code(f"{icons.get(pair, '🔍')} {pair}")
+
         
         # Sostituisci la chiamata a get_oanda_candles con questa logica:
         for pair in ALL_PAIRS:
