@@ -258,7 +258,7 @@ with st.sidebar:
             custom_rsi_buy, custom_rsi_sell = 20, 80
             custom_macd_fast, custom_macd_slow, custom_macd_sig = 12, 26, 9 # Ininfluenti perché use_macd è False
 
-        st.divider()
+            st.divider()
         
         else:
             # 2. COSA SUCCEDE SE È SPENTA: (Appare il tuo setup classico)
