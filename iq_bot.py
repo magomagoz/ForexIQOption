@@ -710,14 +710,14 @@ if st.session_state.connected:
             st.markdown(f"**📊 Strategia STANDARD**")
             st.metric("Win Rate", f"{acc_std:.1f}%", f"{w_std}W / {t_std}T")
             st.progress(acc_std / 100)
-
-        st.divider()
-        
-        # Visualizzazione Tabella Journal
-        st.subheader("📋 Registro Operazioni")
-        st.dataframe(df_journal.iloc[::-1], use_container_width=True, hide_index=True)
     else:
         st.info("⏳ In attesa di dati per calcolare le performance...")
+    
+    st.divider()
+        
+    # Visualizzazione Tabella Journal
+    st.subheader("📋 Trading Journal")
+    st.dataframe(df_journal.iloc[::-1], use_container_width=True, hide_index=True)
     
     # --- LOGICA DI REFRESH AUTOMATICO ---
     
