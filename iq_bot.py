@@ -268,6 +268,24 @@ with st.sidebar:
         if st.button(label, use_container_width=True, type="primary"):
             st.session_state.scanner_on = not st.session_state.scanner_on
             st.rerun()
+
+        # --- LOGICA SIDEBAR OTC ---
+        if st.session_state.weekend_mode:
+            st.divider()
+            st.subheader("🎯 PREZZO MANUALE (OVERRIDE)")
+            st.info("Yahoo è fermo. Inserisci il prezzo dal Broker:")
+            
+            # Inizializza il dizionario se non esiste
+            if 'manual_prices' not in st.session_state:
+                st.session_state.manual_prices = {"EURGBP": 0.0, "USDCHF": 0.0, "AUDUSD": 0.0, "EURUSD": 0.0}
+            
+            # Crea i 4 campi input
+            for pair in ["EURGBP", "USDCHF", "AUDUSD", "EURUSD"]:
+                st.session_state.manual_prices[pair] = st.number_input(
+                    f"Prezzo {pair}", 
+                    value=st.session_state.manual_prices.get(pair, 0.0), 
+                    format="%.5f"
+                )
         
         st.divider()
         st.header("🌍 SESSIONI DI MERCATO")
@@ -363,15 +381,24 @@ if st.session_state.connected:
             else:
                 st.success("SISTEMA IN SCANSIONE LIVE 🔥", icon="📡")
 
-        # --- LOOP DI SCANSIONE UNIVERSALE ---
+
+        
+        # Sostituisci la chiamata a get_oanda_candles con questa logica:
         for pair in ALL_PAIRS:
             try:
-                token = st.session_state.get("oanda_token", "")
-                # Usiamo il timeframe scelto o 60s per lo stress test
-                current_tf = 60 if stress_test else timeframe
-                candles = get_oanda_candles(pair, current_tf, 100, token)
-                
-                if not candles or len(candles) < 30: continue
+                # Se siamo in weekend e hai inserito un prezzo manuale per questa coppia
+                if st.session_state.weekend_mode and pair in st.session_state.get('manual_prices', {}) and st.session_state.manual_prices[pair] > 0:
+                    price = st.session_state.manual_prices[pair]
+                    # Carichiamo lo storico per mantenere calcoli validi (BB/RSI)
+                    candles = get_oanda_candles(pair, 60, 100, "")
+                    if candles:
+                        # Sovrascriviamo l'ultimo prezzo con quello reale del tuo broker
+                        candles[-1]['close'] = price
+                else:
+                    # Funzionamento standard
+                    candles = get_oanda_candles(pair, 60, 100, st.session_state.get("oanda_token", ""))
+                    if not candles: continue
+                    price = candles[-1]['close']
                     
                 df = pd.DataFrame(candles)
                 df['RSI'] = ta.rsi(df['close'], length=7)
@@ -436,7 +463,14 @@ if st.session_state.connected:
     
     try:
         token = st.session_state.get("oanda_token", "")
-        candles_ta = get_oanda_candles(pair_display, timeframe, 160, token)
+        # LOGICA COERENTE CON L'OVERRIDE
+        if st.session_state.weekend_mode and pair_display in st.session_state.get('manual_prices', {}) and st.session_state.manual_prices[pair_display] > 0:
+            candles_ta = get_oanda_candles(pair_display, timeframe, 160, token)
+            if candles_ta:
+                candles_ta[-1]['close'] = st.session_state.manual_prices[pair_display]
+        else:
+            candles_ta = get_oanda_candles(pair_display, timeframe, 160, token)
+            
         if candles_ta:
             df_raw = pd.DataFrame(candles_ta)
             
