@@ -248,8 +248,8 @@ with st.sidebar:
             st.session_state.scanner_on = not st.session_state.scanner_on
             st.rerun()
 
-    if st.session_state.weekend_mode:
-        st.info("💡 Lo scanner sta usando i parametri **Sniper OTC** su tutte le coppie.")
+    #if st.session_state.weekend_mode:
+        #st.info("💡 Lo scanner sta usando i parametri **Sniper OTC** su tutte le coppie.")
         
 
         st.divider()
