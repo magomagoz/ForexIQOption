@@ -196,6 +196,10 @@ if 'signal_history' not in st.session_state: st.session_state.signal_history = l
 if 'local_balance' not in st.session_state: st.session_state.local_balance = 10000.0
 if 'scanner_on' not in st.session_state: st.session_state.scanner_on = False
 
+# Aggiungi questo all'inizio del blocco della Sidebar o del Main
+giorno_settimana = datetime.now(pytz.timezone('Europe/Rome')).weekday()
+is_weekend_reale = giorno_settimana >= 5  # 5 = Sabato, 6 = Domenica
+
 # --- 3. SIDEBAR ---
 with st.sidebar:
     st.title("⚙️ YAHOO FINANCE TRADING")
@@ -242,23 +246,17 @@ with st.sidebar:
         st.subheader("♟️ STRATEGIA DEL 6° GIORNO (OTC)")
         
         # --- MODALITÀ WEEKEND ---
-        # Usiamo il session_state per ricordare se l'interruttore è acceso o spento
         if 'weekend_mode' not in st.session_state: 
             st.session_state.weekend_mode = False
             
         st.session_state.weekend_mode = st.toggle("🧠🍹 ATTIVA SABATO MAGICO", value=st.session_state.weekend_mode)
-
+    
         if st.session_state.weekend_mode:
-            # 1. COSA SUCCEDE SE È ACCESA:
             st.success("🎯 **Sniper Attivo:** \n\n**RSI (20/80)** - **BB (20, 2.5)** - **no MACD**")
-        
-            # Assegniamo i valori dietro le quinte per far funzionare lo scanner senza errori
             use_bb, use_rsi, use_macd = True, True, False
             bb_period, bb_std = 20, 2.50
             custom_rsi_buy, custom_rsi_sell = 20, 80
-            custom_macd_fast, custom_macd_slow, custom_macd_sig = 12, 26, 9 # Ininfluenti perché use_macd è False
-        
-        else:
+                else:
             # 2. COSA SUCCEDE SE È SPENTA: (Appare il tuo setup classico)
             st.subheader("🎛️ Setup Indicatori (Live)")
             
@@ -285,7 +283,21 @@ with st.sidebar:
                 custom_macd_slow = c_m2.number_input("Slow", 26)
                 custom_macd_sig = st.number_input("Signal", 9)
             else: custom_macd_fast, custom_macd_slow, custom_macd_sig = 12, 26, 9
-                        
+    
+        st.divider()
+        st.header("🌍 SESSIONI DI MERCATO")
+        
+        # Se è weekend o se la modalità weekend è attiva, forziamo tutto su Rosso 🔴
+        for city in ["🇬🇧 LONDRA:", "🇺🇸 NEW YORK:", "🇦🇺 SYDNEY:", "🇯🇵 TOKYO:"]:
+            if is_weekend_reale or st.session_state.weekend_mode:
+                st.write(f"{city} Closed 🔴")
+            else:
+                for city, (start, end) in {"🇬🇧 LONDRA:": (time(9,0), time(18,0)), "🇺🇸 NEW YORK:": (time(14,0), time(23,0)), "🇦🇺 SYDNEY:": (time(0,0), time(8,0)), "🇯🇵 TOKYO:": (time(0,0), time(9,0))}.items():
+                status = "Open 🟢" if start <= now_cet <= end else "Closed 🔴"
+                st.write(f"{city} {status}")
+            
+            st.info(get_market_status())
+                                    
         st.divider()
         st.subheader("🛠️ PARAMETRI TRADING")
         
@@ -297,13 +309,6 @@ with st.sidebar:
         now_roma = datetime.now(pytz.timezone('Europe/Rome'))
         now_cet = now_roma.time()
                 
-        st.header("🌍 SESSIONI DI MERCATO")
-        for city, (start, end) in {"🇬🇧 LONDRA:": (time(9,0), time(18,0)), "🇺🇸 NEW YORK:": (time(14,0), time(23,0)), "🇦🇺 SYDNEY:": (time(0,0), time(8,0)), "🇯🇵 TOKYO:": (time(0,0), time(9,0))}.items():
-            status = "Open 🟢" if start <= now_cet <= end else "Closed 🔴"
-            st.write(f"{city} {status}")
-        
-        st.info(get_market_status())
-        
         st.divider()
         st.header("🔧 STRUMENTI TEST")
         stress_test = st.toggle("🚀 **STRESS MODE**", value=False)
