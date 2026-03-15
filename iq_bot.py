@@ -225,8 +225,8 @@ with st.sidebar:
 
         st.divider()
         # --- MODALITÀ OPERATIVA UNICA ---
-        st.subheader("🕹️ Modalità Operativa")
-        st.session_state.weekend_mode = st.toggle("🎯 ATTIVA STRATEGIA SNIPER", value=st.session_state.weekend_mode)
+        st.subheader("♟️ IL 6° GIORNO (OTC)")
+        st.session_state.weekend_mode = st.toggle("🧠🍹 ATTIVA SABATO MAGICO", value=st.session_state.weekend_mode)
         
         # SCANNER SEMPRE DISPONIBILE
         label = "🛑 STOP SCANNER" if st.session_state.scanner_on else "🚀 AVVIA SCANNER"
@@ -236,7 +236,7 @@ with st.sidebar:
 
         # --- SETUP INDICATORI DINAMICO ---
         if st.session_state.weekend_mode:
-            st.success("🎯 **Sniper Mode Attiva**\nParametri: RSI 20/80 | BB 2.5")
+            st.success("🎯 **Sniper Mode Attiva**\n\nParametri: RSI (20/80) | BB (20, 2.5)")
             use_bb, use_rsi, use_macd = True, True, False
             bb_period, bb_std = 20, 2.50
             custom_rsi_buy, custom_rsi_sell = 20, 80
@@ -258,14 +258,6 @@ with st.sidebar:
             
             custom_macd_fast, custom_macd_slow, custom_macd_sig = 12, 26, 9
         
-        st.divider()
-        st.subheader("🛠️ PARAMETRI")
-        st.metric(f"💰 SALDO", f"{st.session_state.local_balance:.2f} €")    
-        st.session_state.stake = st.number_input("💰 STAKE (€)", value=100.0)
-        timeframe = st.selectbox("⏱️ TIMEFRAME (s)", [60, 300], index=0)
-        
-        stress_test = st.toggle("🚀 STRESS MODE", value=False)
-
         now_roma = datetime.now(pytz.timezone('Europe/Rome'))
         now_cet = now_roma.time()
 
