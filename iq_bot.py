@@ -309,7 +309,7 @@ if st.session_state.connected:
     if st.session_state.weekend_mode:
         # Le 4 coppie più stabili e prevedibili per RSI 20/80 e BB 2.5
         ALL_PAIRS = ["EURGBP", "USDCHF", "AUDUSD", "EURUSD"]
-        st.info("🎯 **Focus Sniper:** Monitoraggio limitato alle 4 coppie chirurgiche.")
+        #st.info("🎯 **Focus Sniper:** Monitoraggio limitato alle 4 coppie chirurgiche.")
     else:
         # Lista completa per il mercato live standard
         ALL_PAIRS = ["EURGBP", "USDCHF", "USDJPY", "EURUSD", "GBPUSD", "AUDUSD", "USDCAD", "NZDUSD", "EURJPY", "GBPJPY"]
@@ -348,7 +348,7 @@ if st.session_state.connected:
     if st.session_state.scanner_on:
         # Messaggio dinamico in base alla modalità
         if st.session_state.weekend_mode:
-            st.success("🕵️ SCANNER SNIPER OTC ATTIVO su tutte le coppie", icon="🎯")
+            st.success("🕵️ SCANNER OTC ATTIVO su 🇪🇺🇬🇧-🇺🇸🇨🇭-🇦🇺🇺🇸-🇪🇺🇺🇸 ", icon="🎯")
         else:
             if not trading_autorizzato:
                 st.warning("🛡️ PROTEZIONE Orario: Scanner in pausa.")
