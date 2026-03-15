@@ -258,6 +258,7 @@ with st.sidebar:
             custom_rsi_buy, custom_rsi_sell = 20, 80
         else:
             # 2. COSA SUCCEDE SE È SPENTA: (Appare il tuo setup classico)
+            st.divider()
             st.subheader("🎛️ Setup Indicatori (Live)")
             
             col_t1, col_t2, col_t3 = st.columns(3)
@@ -301,7 +302,7 @@ with st.sidebar:
         st.divider()
         st.subheader("🛠️ PARAMETRI TRADING")
         
-        st.metric(f"💰 Saldo {st.session_state.account_type}", f"{st.session_state.local_balance:.2f} €")    
+        st.metric(f"💰 SALDO {st.session_state.account_type}", f"{st.session_state.local_balance:.2f} €")    
         st.session_state.stake = st.number_input("💰 INVESTIMENTO (€)", value=100.0)
         timeframe = st.selectbox("⏱️ TIMEFRAME OPERATIVO (s)", [60, 300], index=0)
             
