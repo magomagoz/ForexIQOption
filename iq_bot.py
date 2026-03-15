@@ -304,7 +304,7 @@ with st.sidebar:
             if is_weekend_reale or st.session_state.weekend_mode:
                 st.write(f"{city} Closed 🔴")
             else:
-                for city, (start, end) in {"🇬🇧 LONDRA:": (time(9,0), time(18,0)), "🇺🇸 NEW YORK:": (time(14,0), time(23,0)), "🇦🇺 SYDNEY:": (time(23,0), time(8,0)), "🇯🇵 TOKYO:": (time(0,0), time(9,0))}.items():
+                for city, (start, end) in {"🇬🇧 LONDRA:": (time(9,0), time(18,0)), "🇺🇸 NEW YORK:": (time(14,0), time(23,0)), "🇦🇺 SYDNEY:": (time(0,0), time(8,0)), "🇯🇵 TOKYO:": (time(0,0), time(9,0))}.items():
                     status = "Open 🟢" if start <= now_roma <= end else "Closed 🔴"
                 st.write(f"{city} {status}")
             
@@ -378,7 +378,7 @@ if st.session_state.connected:
     else:
         # Mostra il grafico Plotly originale "draw_market_map_inverted"
         #st.plotly_chart(draw_market_map_inverted(h_float, trading_autorizzato), use_container_width=True)
-        st.plotly_chart(draw_market_map_inverted(h_float, trading_autorizzato), use_container_width=True, config={'displayModeBar': False})
+        st.plotly_chart(draw_market_map_inverted(h_float, trading_autorizzato), use_container_width=True)
         
     if st.session_state.scanner_on:
         # Messaggio dinamico in base alla modalità
