@@ -297,7 +297,7 @@ with st.sidebar:
                 reset_manual_prices()
         
         st.divider()
-        st.header("🌍 SESSIONI DI MERCATO")
+        st.subheader("🌍 SESSIONI DI MERCATO")
         
         # Sostituisci la logica dentro il ciclo for delle città con questa:
         for city, (start, end) in {"🇬🇧 LONDRA:": (time(9,0), time(18,0)), "🇺🇸 NEW YORK:": (time(14,0), time(23,0)), "🇦🇺 SYDNEY:": (time(0,0), time(8,0)), "🇯🇵 TOKYO:": (time(0,0), time(9,0))}.items():
