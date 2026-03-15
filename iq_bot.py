@@ -251,9 +251,8 @@ with st.sidebar:
         if st.session_state.weekend_mode:
             # 1. COSA SUCCEDE SE È ACCESA:
             st.success("🎯 **Sniper Attivo:** \n\n**RSI (20/80)** - **BB (20, 2.5)** - **no MACD**")
-            
-            st.divider()
-            
+        
+        st.divider()    
             # Assegniamo i valori dietro le quinte per far funzionare lo scanner senza errori
             use_bb, use_rsi, use_macd = True, True, False
             bb_period, bb_std = 20, 2.50
