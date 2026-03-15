@@ -196,9 +196,6 @@ if 'signal_history' not in st.session_state: st.session_state.signal_history = l
 if 'local_balance' not in st.session_state: st.session_state.local_balance = 10000.0
 if 'scanner_on' not in st.session_state: st.session_state.scanner_on = False
 if 'weekend_mode' not in st.session_state: st.session_state.weekend_mode = False 
-if 'custom_macd_fast' not in st.session_state: st.session_state.custom_macd_fast = 12
-if 'custom_macd_slow' not in st.session_state: st.session_state.custom_macd_slow = 26
-if 'custom_macd_sig' not in st.session_state: st.session_state.custom_macd_sig = 9
 
 # --- LOGICA RILEVAMENTO AUTOMATICO OTC ---
 fuso_roma = pytz.timezone('Europe/Rome')
@@ -244,19 +241,17 @@ with st.sidebar:
             st.error("🚨 **MERCATO OTC RILEVATO**")
             st.info("🎯 **Sniper Mode Attivo**\n\nMonitoraggio: 4 Valute\n\nRSI 15/85 | BB 20/2.65")
             # Setta automaticamente i parametri fissi per l'OTC
-            use_bb, use_rsi, use_macd = True, True, False
+            use_bb, use_rsi = True, True
             bb_period, bb_std = 20, 2.65
             custom_rsi_buy, custom_rsi_sell = 15, 85
-            custom_macd_fast, custom_macd_slow, custom_macd_sig = 12, 26, 9
         else:
             st.success("🟢 **MERCATO LIVE RILEVATO**")
             st.info("📊 **Standard Mode Attiva**\nMonitoraggio: 10 Valute")
             
             # Lascia a te la scelta dei parametri dal Lun al Ven
-            col_t1, col_t2, col_t3 = st.columns(3)
+            col_t1, col_t2 = st.columns(2)
             use_bb = col_t1.toggle("BB", value=True)
             use_rsi = col_t2.toggle("RSI", value=True)
-            use_macd = col_t3.toggle("MACD", value=False)
             
             c_bb1, c_bb2 = st.columns(2)
             bb_period = c_bb1.number_input("Periodo BB", 20)
@@ -265,9 +260,7 @@ with st.sidebar:
             c_rsi1, c_rsi2 = st.columns(2)
             custom_rsi_buy = c_rsi1.number_input("RSI Buy", 30)
             custom_rsi_sell = c_rsi2.number_input("RSI Sell", 70)
-            
-            custom_macd_fast, custom_macd_slow, custom_macd_sig = 12, 26, 9
-
+  
         st.divider()
         # SCANNER SEMPRE DISPONIBILE (Ora si adatta in automatico!)
         st.subheader("👁️ CONTROLLO SCANNER")
@@ -301,7 +294,7 @@ with st.sidebar:
         st.header("🔧 STRUMENTI TEST")
         stress_test = st.toggle("🚀 **STRESS MODE**", value=False)
         if stress_test:
-            st.warning("⚠️ **Modalità TEST:**  \nno BB - RSI (45/55) - no MACD")
+            st.warning("⚠️ **Modalità TEST:**  \nno BB - RSI (45/55)")
         else:
             st.success("🟢 **Modalità REALE:**  \nvedi gli indicatori scelti sopra")
             
@@ -390,14 +383,11 @@ if st.session_state.connected:
                     r_buy, r_sell = 20, 80
                     b_per, b_std = 20, 2.5
                     m_fast, m_slow, m_sig = 12, 26, 9
-                    u_macd = False # Sniper non usa MACD per evitare ritardi
                 else:
                     # Parametri LIVE scelti da te nella sidebar
                     r_buy, r_sell = (45, 55) if stress_test else (custom_rsi_buy, custom_rsi_sell)
                     b_per, b_std = (20, 1.8) if stress_test else (bb_period, bb_std)
-                    m_fast, m_slow, m_sig = custom_macd_fast, custom_macd_slow, custom_macd_sig
-                    u_macd = use_macd if not stress_test else False
-
+   
                 # Calcolo indicatori comuni
                 bb = ta.bbands(df['close'], length=b_per, std=b_std)
                 curr_bb_low = bb.filter(like='BBL').iloc[-1]
@@ -410,15 +400,8 @@ if st.session_state.connected:
                 cond_rsi_sell = curr_rsi > r_sell
                 cond_bb_sell = price >= curr_bb_up
 
-                # Aggiunta MACD solo se richiesto (non in Sniper)
-                if u_macd:
-                    macd = ta.macd(df['close'], fast=m_fast, slow=m_slow, signal=m_sig)
-                    c_macd, c_sig = macd.iloc[-1, 0], macd.iloc[-1, 2]
-                    is_buy = cond_rsi_buy and cond_bb_buy and (c_macd > c_sig)
-                    is_sell = cond_rsi_sell and cond_bb_sell and (c_macd < c_sig)
-                else:
-                    is_buy = cond_rsi_buy and cond_bb_buy
-                    is_sell = cond_rsi_sell and cond_bb_sell
+                is_buy = cond_rsi_buy and cond_bb_buy
+                is_sell = cond_rsi_sell and cond_bb_sell
 
                 # --- ESECUZIONE SEGNALE ---
                 if (is_buy or is_sell) and pair not in st.session_state.active_trades:
@@ -460,26 +443,17 @@ if st.session_state.connected:
             df_raw['RSI'] = ta.rsi(df_raw['close'], length=7)
             bb_ta = ta.bbands(df_raw['close'], length=bb_period, std=bb_std)
             bb_ta.columns = ['BBL', 'BBM', 'BBU', 'BBB', 'BBP'] 
-            
-            # Usiamo i parametri dinamici della sidebar anche qui!
-            macd_ta = ta.macd(df_raw['close'], 
-                              fast=custom_macd_fast, 
-                              slow=custom_macd_slow, 
-                              signal=custom_macd_sig)
-            macd_ta.columns = ['MACD', 'HIST', 'SIGNAL']
-            
-            df_final = pd.concat([df_raw, bb_ta[['BBL', 'BBM', 'BBU']], macd_ta], axis=1).tail(100)
+                        
+            df_final = pd.concat([df_raw, bb_ta[['BBL', 'BBM', 'BBU']]], axis=1).tail(100)
 
             df_final['buy_sig'] = df_final.apply(lambda x: x['close'] if (
                 ((x['RSI'] < custom_rsi_buy) if use_rsi else True) and 
-                ((x['close'] <= x['BBL']) if use_bb else True) and 
-                ((x['MACD'] > x['SIGNAL']) if use_macd else True)
+                ((x['close'] <= x['BBL']) if use_bb else True) 
             ) else None, axis=1)
             
             df_final['sell_sig'] = df_final.apply(lambda x: x['close'] if (
                 ((x['RSI'] > custom_rsi_sell) if use_rsi else True) and 
-                ((x['close'] >= x['BBU']) if use_bb else True) and 
-                ((x['MACD'] < x['SIGNAL']) if use_macd else True)
+                ((x['close'] >= x['BBU']) if use_bb else True)
             ) else None, axis=1)
          
             asse_x = df_final['time']
@@ -487,7 +461,7 @@ if st.session_state.connected:
             fig = make_subplots(rows=3, cols=1, shared_xaxes=True, 
                                 row_heights=[0.5, 0.25, 0.25], 
                                 vertical_spacing=0.07, 
-                                subplot_titles=("📊 Prezzo & Volatilità", "📉 Oscillatore RSI", "🚀 Momentum MACD"))
+                                subplot_titles=("📊 Prezzo & Volatilità", "📉 Oscillatore RSI"))
             
             # --- PANNELLO 1: Candele + Bollinger ---
             fig.add_trace(go.Candlestick(x=asse_x, open=df_final['open'], high=df_final['max'], 
@@ -504,22 +478,6 @@ if st.session_state.connected:
             line_sell = 55 if stress_test else custom_rsi_sell
             fig.add_hline(y=line_buy, line_color="green", row=2, col=1, line_dash="dash")
             fig.add_hline(y=line_sell, line_color="red", row=2, col=1, line_dash="dash")
-
-            # Subplot 3: MACD con logica colori corretta
-            macd_colors = []
-            hist_diff = df_final['HIST'].diff()
-            for i in range(len(df_final)):
-                val = df_final['HIST'].iloc[i]
-                diff = hist_diff.iloc[i]
-                if pd.isna(diff): macd_colors.append('rgba(170,170,170,0.5)')
-                elif val > 0:
-                    macd_colors.append('#26A69A' if diff > 0 else '#B2DFDB') # Verde acceso / opaco
-                else:
-                    macd_colors.append('#EF5350' if diff < 0 else '#FFCDD2') # Rosso acceso / opaco
-
-            fig.add_trace(go.Bar(x=asse_x, y=df_final['HIST'], marker_color=macd_colors, name="Istogramma"), row=3, col=1)
-            fig.add_trace(go.Scatter(x=asse_x, y=df_final['MACD'], line=dict(color='#00E5FF', width=2), name="MACD"), row=3, col=1)
-            fig.add_trace(go.Scatter(x=asse_x, y=df_final['SIGNAL'], line=dict(color='#FF9100', width=2), name="Signal"), row=3, col=1)
 
             fig.update_layout(
                 xaxis_rangeslider_visible=False,
