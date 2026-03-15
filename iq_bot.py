@@ -277,11 +277,7 @@ with st.sidebar:
         if st.session_state.weekend_mode:
             st.divider()
             st.subheader("🎯 PREZZO MANUALE (OVERRIDE)")
-            
-            # Tasto di Reset Chirugico
-            if st.button("🧹 RESET PREZZI", use_container_width=True):
-                reset_manual_prices()
-                
+                            
             st.info("Inserisci il prezzo dal Broker:")
             
             if 'manual_prices' not in st.session_state:
@@ -295,6 +291,10 @@ with st.sidebar:
                     format="%.5f",
                     key=f"input_{pair}" # Aggiungiamo una key univoca per sicurezza
                 )
+
+            # Tasto di Reset Chirugico
+            if st.button("🧹 RESET PREZZI", use_container_width=True):
+                reset_manual_prices()
         
         st.divider()
         st.header("🌍 SESSIONI DI MERCATO")
