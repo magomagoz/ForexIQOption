@@ -209,7 +209,7 @@ now_cet = now_roma.time()
 
 # Il mercato reale chiude Venerdì alle 23:00 e riapre Domenica alle 23:00.
 # Quindi è OTC se è Sabato (5) o se è Domenica (6) prima delle 23:00.
-if giorno_settimana == 5 or (giorno_settimana == 6 and ora_attuale < 23):
+if giorno_settimana == 5 or (giorno_settimana == 6 and now_roma < 23):
     st.session_state.weekend_mode = True  # OTC AUTO-ATTIVATO
 else:
     st.session_state.weekend_mode = False # MERCATO LIVE AUTO-ATTIVATO
