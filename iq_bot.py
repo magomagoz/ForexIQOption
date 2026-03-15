@@ -314,7 +314,7 @@ with st.sidebar:
         st.subheader("🛠️ PARAMETRI TRADING")
         
         st.metric(f"💰 SALDO {st.session_state.account_type}", f"{st.session_state.local_balance:.2f} €")    
-        st.session_state.stake = st.number_input("💰 INVESTIMENTO (€)", value=100.0)
+        st.session_state.stake = st.number_input("💶 INVESTIMENTO (€)", value=100.0)
         timeframe = st.selectbox("⏱️ TIMEFRAME OPERATIVO (s)", [60, 300], index=0)
                 
         st.divider()
