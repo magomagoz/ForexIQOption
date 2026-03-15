@@ -237,42 +237,54 @@ with st.sidebar:
         if st.button(label, use_container_width=True, type="primary" if not st.session_state.scanner_on else "secondary"):
             st.session_state.scanner_on = not st.session_state.scanner_on
             st.rerun()
-        
+
         st.divider()
+        st.subheader("👁️ STRATEGIA DEL 6° GIORNO")
         
-        st.subheader("🎛️ Setup Indicatori (Live)")
+        # --- MODALITÀ WEEKEND ---
+        # Usiamo il session_state per ricordare se l'interruttore è acceso o spento
+        if 'weekend_mode' not in st.session_state: 
+            st.session_state.weekend_mode = False
             
-        # 1. I tre toggle sulla stessa riga
-        col_t1, col_t2, col_t3 = st.columns(3)
-        use_bb = col_t1.toggle("BB", value=True)
-        use_rsi = col_t2.toggle("RSI", value=True)
-        use_macd = col_t3.toggle("MACD", value=False)
-        
-        # 2. Parametri Bollinger (compaiono solo se use_bb è True)
-        if use_bb:
-            col_bb1, col_bb2 = st.columns(2)
-            bb_period = col_bb1.number_input("BB Periodo", value=20, min_value=5)
-            bb_std = col_bb2.number_input("BB Deviazione", value=2.50, step=0.10)
-        else:
-            # Se spento, assegniamo i valori "dietro le quinte" per non far crashare lo scanner
-            bb_period, bb_std = 20, 2.00
-        
-        # 3. Parametri RSI (compaiono solo se use_rsi è True)
-        if use_rsi:
-            col_rsi1, col_rsi2 = st.columns(2)
-            custom_rsi_buy = col_rsi1.number_input("RSI Buy", value=20)
-            custom_rsi_sell = col_rsi2.number_input("RSI Sell", value=80)
-        else:
+        st.session_state.weekend_mode = st.toggle("🎯 ATTIVA "SABATO MAGICO", value=st.session_state.weekend_mode)
+    
+        if st.session_state.weekend_mode:
+            # 1. COSA SUCCEDE SE È ACCESA:
+            st.success("🎯 **Sniper Attivo:** Indicatori manuali nascosti.  \nImpostati su **RSI (20/80)** e **BB (20, 2.5)**. MACD disattivato per ridurre i falsi allarmi nei mercati lenti.")
+            
+            # Assegniamo i valori dietro le quinte per far funzionare lo scanner senza errori
+            use_bb, use_rsi, use_macd = True, True, False
+            bb_period, bb_std = 20, 2.50
             custom_rsi_buy, custom_rsi_sell = 20, 80
-        
-        # 4. Parametri MACD (compaiono solo se use_macd è True)
-        if use_macd:
-            col_m1, col_m2 = st.columns(2)
-            custom_macd_fast = col_m1.number_input("MACD Fast", value=10)
-            custom_macd_slow = col_m2.number_input("MACD Slow", value=20)
-            custom_macd_sig = st.number_input("MACD Signal", value=7)
+            custom_macd_fast, custom_macd_slow, custom_macd_sig = 12, 26, 9 # Ininfluenti perché use_macd è False
+            
         else:
-            custom_macd_fast, custom_macd_slow, custom_macd_sig = 10, 20, 7
+            # 2. COSA SUCCEDE SE È SPENTA: (Appare il tuo setup classico)
+            st.subheader("🎛️ Setup Indicatori (Live)")
+            
+            col_t1, col_t2, col_t3 = st.columns(3)
+            use_bb = col_t1.toggle("BB", value=True)
+            use_rsi = col_t2.toggle("RSI", value=True)
+            use_macd = col_t3.toggle("MACD", value=True)
+    
+            if use_bb:
+                c_bb1, c_bb2 = st.columns(2)
+                bb_period = c_bb1.number_input("Periodo", 20)
+                bb_std = c_bb2.number_input("Dev", 1.80)
+            else: bb_period, bb_std = 20, 1.80
+    
+            if use_rsi:
+                c_rsi1, c_rsi2 = st.columns(2)
+                custom_rsi_buy = c_rsi1.number_input("RSI Buy", 30)
+                custom_rsi_sell = c_rsi2.number_input("RSI Sell", 70)
+            else: custom_rsi_buy, custom_rsi_sell = 30, 70
+    
+            if use_macd:
+                c_m1, c_m2 = st.columns(2)
+                custom_macd_fast = c_m1.number_input("Fast", 12)
+                custom_macd_slow = c_m2.number_input("Slow", 26)
+                custom_macd_sig = st.number_input("Signal", 9)
+            else: custom_macd_fast, custom_macd_slow, custom_macd_sig = 12, 26, 9
                         
         st.divider()
         st.metric(f"💰 Saldo {st.session_state.account_type}", f"{st.session_state.local_balance:.2f} €")    
