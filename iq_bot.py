@@ -293,7 +293,10 @@ with st.sidebar:
                 custom_macd_slow = c_m2.number_input("Slow", 26)
                 custom_macd_sig = st.number_input("Signal", 9)
             else: custom_macd_fast, custom_macd_slow, custom_macd_sig = 12, 26, 9
-        
+                    
+        now_roma = datetime.now(pytz.timezone('Europe/Rome'))
+        now_cet = now_roma.time()
+
         st.divider()
         st.header("🌍 SESSIONI DI MERCATO")
         
@@ -314,9 +317,6 @@ with st.sidebar:
         st.metric(f"💰 SALDO {st.session_state.account_type}", f"{st.session_state.local_balance:.2f} €")    
         st.session_state.stake = st.number_input("💰 INVESTIMENTO (€)", value=100.0)
         timeframe = st.selectbox("⏱️ TIMEFRAME OPERATIVO (s)", [60, 300], index=0)
-            
-        now_roma = datetime.now(pytz.timezone('Europe/Rome'))
-        now_cet = now_roma.time()
                 
         st.divider()
         st.header("🔧 STRUMENTI TEST")
