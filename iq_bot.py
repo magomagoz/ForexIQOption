@@ -195,6 +195,7 @@ if 'active_trades' not in st.session_state: st.session_state.active_trades = {}
 if 'signal_history' not in st.session_state: st.session_state.signal_history = load_journal()
 if 'local_balance' not in st.session_state: st.session_state.local_balance = 10000.0
 if 'scanner_on' not in st.session_state: st.session_state.scanner_on = False
+if 'weekend_mode' not in st.session_state: st.session_state.weekend_mode = False 
 
 giorno_settimana = datetime.now(pytz.timezone('Europe/Rome')).weekday()
 is_weekend_reale = giorno_settimana >= 5  # True se Sabato (5) o Domenica (6)
