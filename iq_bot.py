@@ -591,7 +591,7 @@ if st.session_state.connected:
                     color_su = "red" if distanza_su < 0 else "white"
                     st.metric("DISTANZA BANDA SUPERIORE (SELL)", f"{distanza_su:.5f}", 
                               delta=f"{perc_su:.1f}% al Target", delta_color="inverse")
-                    if distanza_su <= 0: st.error("🔥 ZONA SELL RAGGIUNTA!")
+                if distanza_su <= 0: st.error("🔥 ZONA SELL RAGGIUNTA!")
                 
                 with m2:
                     st.metric("DISTANZA BANDA INFERIORE (BUY)", f"{distanza_giu:.5f}", 
