@@ -601,14 +601,14 @@ if st.session_state.connected:
                 st.progress(min(max(perc_su, perc_giu) / 100, 1.0))
             
             st.write("---")
-            st.subheader("📊 Analisi Performance (Backtest 60s)")
+            st.subheader("📊 Analisi Performance (1m)")
             
             # Calcoliamo i segnali attuali basati sui parametri scelti
             n_buy = df_final['buy_sig'].notnull().sum()
             n_sell = df_final['sell_sig'].notnull().sum()
             totale_segnali = n_buy + n_sell
 
-            if st.button("🔍 VERIFICA ESITO (SCADENZA 60s)", use_container_width=True, type="primary"):
+            if st.button("🔍 VERIFICA ESITO (60s)", use_container_width=True, type="primary"):
                 wins_buy, wins_sell = 0, 0
                 
                 # Analizziamo le candele (escludiamo l'ultima perché non ha ancora l'esito a 60s)
