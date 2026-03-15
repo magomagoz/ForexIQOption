@@ -196,13 +196,12 @@ if 'signal_history' not in st.session_state: st.session_state.signal_history = l
 if 'local_balance' not in st.session_state: st.session_state.local_balance = 10000.0
 if 'scanner_on' not in st.session_state: st.session_state.scanner_on = False
 
-# Aggiungi questo all'inizio del blocco della Sidebar o del Main
 giorno_settimana = datetime.now(pytz.timezone('Europe/Rome')).weekday()
-is_weekend_reale = giorno_settimana >= 5  # 5 = Sabato, 6 = Domenica
+is_weekend_reale = giorno_settimana >= 5  # True se Sabato (5) o Domenica (6)
 
 # --- 3. SIDEBAR ---
 with st.sidebar:
-    st.title("⚙️ YAHOO FINANCE TRADING")
+    st.title("⚙️ YAHOO TRADING")
     
     # --- LOGICA DI ACCESSO REAL-TIME CON VERIFICA YAHOO ---
     if not st.session_state.connected:
@@ -234,13 +233,17 @@ with st.sidebar:
             time_module.sleep(1)
             st.rerun()
             
+    # Mostra lo scanner solo se NON è weekend e se la modalità Sniper è SPENTA
+    if not is_weekend_reale and not st.session_state.weekend_mode:
         st.divider()
         st.subheader("👁️ SCANNER VALUTE FOREX")
-        
         label = "🛑 STOP SCANNER" if st.session_state.scanner_on else "🚀 AVVIA SCANNER"
-        if st.button(label, use_container_width=True, type="primary" if not st.session_state.scanner_on else "secondary"):
+        if st.button(label, use_container_width=True):
             st.session_state.scanner_on = not st.session_state.scanner_on
             st.rerun()
+    elif st.session_state.weekend_mode:
+        # Messaggio opzionale per spiegare perché non c'è lo scanner
+        st.caption("ℹ️ Scanner automatico disabilitato in modalità Sniper.")
 
         st.divider()
         st.subheader("♟️ IL 6° GIORNO (OTC)")
@@ -372,11 +375,15 @@ if st.session_state.connected:
         else:
             st.success("SISTEMA IN SCANSIONE ATTIVA 🔥🔥🔥", icon="📡")
 
-            st.divider()
-            st.subheader("🕵️ Coppie di valute osservate")
-            cols = st.columns(5)
-            for i, pair in enumerate(ALL_PAIRS):
-                with cols[i % 5]: st.code(f"{icons.get(pair, '🔍')} {pair}")
+            # Visualizza le icone delle valute osservate solo durante la settimana
+            if not is_weekend_reale and not st.session_state.weekend_mode:
+                if st.session_state.scanner_on:
+                    st.divider()
+                    st.subheader("🕵️ Coppie di valute osservate")
+                    cols = st.columns(5)
+                    for i, pair in enumerate(ALL_PAIRS):
+                        with cols[i % 5]: 
+                            st.code(f"{icons.get(pair, '🔍')} {pair}")
 
             current_tf = 60 if stress_test else timeframe
             rsi_buy = 55 if stress_test else custom_rsi_buy
@@ -682,12 +689,16 @@ if st.session_state.connected:
 
     # --- 7. TABELLA JOURNAL ---
     st.divider()
-    st.subheader("📋 Trading Journal")
-    if st.session_state.signal_history:
-        df_journal = pd.DataFrame(st.session_state.signal_history).iloc[::-1]
-        st.dataframe(df_journal, use_container_width=True, hide_index=True)
+
+    if st.session_state.weekend_mode:
+        st.subheader("📋 Sniper Journal (Sabato OTC)")
     else:
-        st.info("⏳ In attesa di segnali... Scanner attivo!")
+        st.subheader("📋 Trading Journal (Live Market)")
+        if st.session_state.signal_history:
+            df_journal = pd.DataFrame(st.session_state.signal_history).iloc[::-1]
+            st.dataframe(df_journal, use_container_width=True, hide_index=True)
+        else:
+            st.info("⏳ In attesa di segnali... Scanner attivo!")
 
     # --- LOGICA DI REFRESH AUTOMATICO ---
     
