@@ -246,7 +246,7 @@ with st.sidebar:
         if 'weekend_mode' not in st.session_state: 
             st.session_state.weekend_mode = False
             
-        st.session_state.weekend_mode = st.toggle("🎯 ATTIVA "SABATO MAGICO"", value=st.session_state.weekend_mode)
+        st.session_state.weekend_mode = st.toggle("🎯 ATTIVA SABATO MAGICO", value=st.session_state.weekend_mode)
     
         if st.session_state.weekend_mode:
             # 1. COSA SUCCEDE SE È ACCESA:
