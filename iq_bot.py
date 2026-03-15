@@ -458,8 +458,8 @@ if st.session_state.connected:
          
             asse_x = df_final['time']
             
-            fig = make_subplots(rows=3, cols=1, shared_xaxes=True, 
-                                row_heights=[0.5, 0.25, 0.25], 
+            fig = make_subplots(rows=2, cols=1, shared_xaxes=True, 
+                                row_heights=[0.5, 0.25], 
                                 vertical_spacing=0.07, 
                                 subplot_titles=("📊 Prezzo & Volatilità", "📉 Oscillatore RSI"))
             
