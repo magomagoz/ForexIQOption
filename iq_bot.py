@@ -379,12 +379,20 @@ if st.session_state.connected:
 
     if st.session_state.scanner_on:
         if not trading_autorizzato:
-            
+            st.warning("🛡️ PROTEZIONE ATTIVA: Mercato fuori orario. Scanner in pausa.")
+        else:
+            st.success("SISTEMA IN SCANSIONE ATTIVA 🔥🔥🔥", icon="📡")
+
             # Visualizza le icone delle valute osservate solo durante la settimana
             if not is_weekend_reale and not st.session_state.weekend_mode:
                 if st.session_state.scanner_on:
-                    
-    
+                    st.divider()
+                    st.subheader("🕵️ Coppie di valute osservate")
+                    cols = st.columns(5)
+                    for i, pair in enumerate(ALL_PAIRS):
+                        with cols[i % 5]: 
+                            st.code(f"{icons.get(pair, '🔍')} {pair}")
+
         if st.session_state.scanner_on:
             # Messaggio dinamico in base alla modalità
             if st.session_state.weekend_mode:
@@ -394,14 +402,6 @@ if st.session_state.connected:
                     st.warning("🛡️ PROTEZIONE ATTIVA: Mercato fuori orario. Scanner in pausa.")
                 else:
                     st.success("SISTEMA IN SCANSIONE ATTIVA 🔥🔥🔥", icon="📡")
-
-        st.divider()
-        st.subheader("🕵️ Coppie di valute osservate")
-        cols = st.columns(5)
-        for i, pair in enumerate(ALL_PAIRS):
-            with cols[i % 5]: 
-                st.code(f"{icons.get(pair, '🔍')} {pair}")
-
         
         # Sostituisci la chiamata a get_oanda_candles con questa logica:
         for pair in ALL_PAIRS:
