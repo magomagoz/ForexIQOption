@@ -305,7 +305,16 @@ with st.sidebar:
 
 # --- 4. MAIN DASHBOARD ---
 if st.session_state.connected:
-    ALL_PAIRS = ["EURGBP", "USDCHF", "USDJPY", "EURUSD", "GBPUSD", "AUDUSD", "USDCAD", "NZDUSD", "EURJPY", "GBPJPY"]
+    # FILTRO CHIRURGICO: Cambia asset in base alla modalità
+    if st.session_state.weekend_mode:
+        # Le 4 coppie più stabili e prevedibili per RSI 20/80 e BB 2.5
+        ALL_PAIRS = ["EURGBP", "USDCHF", "AUDUSD", "EURUSD"]
+        st.info("🎯 **Focus Sniper:** Monitoraggio limitato alle 4 coppie chirurgiche.")
+    else:
+        # Lista completa per il mercato live standard
+        ALL_PAIRS = ["EURGBP", "USDCHF", "USDJPY", "EURUSD", "GBPUSD", "AUDUSD", "USDCAD", "NZDUSD", "EURJPY", "GBPJPY"]
+
+    # Icone per la visualizzazione (rimangono invariate)
     icons = {"EURGBP": "🇪🇺🇬🇧", "USDCHF": "🇺🇸🇨🇭", "USDJPY": "🇺🇸🇯🇵","EURUSD": "🇪🇺🇺🇸", "GBPUSD": "🇬🇧🇺🇸", "AUDUSD": "🇦🇺🇺🇸", "USDCAD": "🇺🇸🇨🇦", "NZDUSD": "🇳🇿🇺🇸", "EURJPY": "🇪🇺🇯🇵", "GBPJPY": "🇬🇧🇯🇵"}
 
     fuso_roma = pytz.timezone('Europe/Rome')
