@@ -200,8 +200,20 @@ if 'custom_macd_fast' not in st.session_state: st.session_state.custom_macd_fast
 if 'custom_macd_slow' not in st.session_state: st.session_state.custom_macd_slow = 26
 if 'custom_macd_sig' not in st.session_state: st.session_state.custom_macd_sig = 9
 
-giorno_settimana = datetime.now(pytz.timezone('Europe/Rome')).weekday()
+# --- LOGICA RILEVAMENTO AUTOMATICO OTC ---
+fuso_roma = pytz.timezone('Europe/Rome')
+now_roma = datetime.now(pytz.timezone('Europe/Rome'))
+giorno_settimana = now_roma.weekday() # 0 = Lunedì ... 5 = Sabato, 6 = Domenica
 is_weekend_reale = giorno_settimana >= 5  # True se Sabato (5) o Domenica (6)
+now_cet = now_roma.time()
+
+# Il mercato reale chiude Venerdì alle 23:00 e riapre Domenica alle 23:00.
+# Quindi è OTC se è Sabato (5) o se è Domenica (6) prima delle 23:00.
+if giorno_settimana == 5 or (giorno_settimana == 6 and ora_attuale < 23):
+    st.session_state.weekend_mode = True  # OTC AUTO-ATTIVATO
+else:
+    st.session_state.weekend_mode = False # MERCATO LIVE AUTO-ATTIVATO
+
 
 # --- 3. SIDEBAR (VERSIONE CHIRURGICA) ---
 with st.sidebar:
@@ -224,25 +236,22 @@ with st.sidebar:
             st.rerun()
 
         st.divider()
-        # --- MODALITÀ OPERATIVA UNICA ---
-        st.subheader("♟️ IL 6° GIORNO (OTC)")
-        st.session_state.weekend_mode = st.toggle("🧠🍹 ATTIVA SABATO MAGICO", value=st.session_state.weekend_mode)
+        st.subheader("🤖 **Rilevamento Mercato Live/OTC**")
         
-        # SCANNER SEMPRE DISPONIBILE
-        label = "🛑 STOP SCANNER" if st.session_state.scanner_on else "🚀 AVVIA SCANNER"
-        if st.button(label, use_container_width=True, type="primary"):
-            st.session_state.scanner_on = not st.session_state.scanner_on
-            st.rerun()
-
-        # --- SETUP INDICATORI DINAMICO ---
+        # Il bot comunica cosa ha rilevato
         if st.session_state.weekend_mode:
-            st.success("🎯 **Sniper Mode Attiva**\n\nParametri: RSI (20/80) | BB (20, 2.5)")
+            st.error("🚨 **MERCATO OTC RILEVATO**")
+            st.info("🎯 **Sniper Mode Auto-Attivata**\nMonitoraggio: 4 Valute\nSetup Forzato: RSI 20/80 | BB 2.5")
+            # Setta automaticamente i parametri fissi per l'OTC
             use_bb, use_rsi, use_macd = True, True, False
             bb_period, bb_std = 20, 2.50
             custom_rsi_buy, custom_rsi_sell = 20, 80
             custom_macd_fast, custom_macd_slow, custom_macd_sig = 12, 26, 9
         else:
-            st.info("📊 **Standard Mode Attiva**")
+            st.success("🟢 **MERCATO LIVE RILEVATO**")
+            st.info("📊 **Standard Mode Attiva**\nMonitoraggio: 10 Valute")
+            
+            # Lascia a te la scelta dei parametri dal Lun al Ven
             col_t1, col_t2, col_t3 = st.columns(3)
             use_bb = col_t1.toggle("BB", value=True)
             use_rsi = col_t2.toggle("RSI", value=True)
@@ -257,10 +266,15 @@ with st.sidebar:
             custom_rsi_sell = c_rsi2.number_input("RSI Sell", 70)
             
             custom_macd_fast, custom_macd_slow, custom_macd_sig = 12, 26, 9
-        
-        now_roma = datetime.now(pytz.timezone('Europe/Rome'))
-        now_cet = now_roma.time()
 
+        st.divider()
+        # SCANNER SEMPRE DISPONIBILE (Ora si adatta in automatico!)
+        st.subheader("👁️ CONTROLLO SCANNER")
+        label = "🛑 STOP SCANNER" if st.session_state.scanner_on else "🚀 AVVIA SCANNER"
+        if st.button(label, use_container_width=True, type="primary"):
+            st.session_state.scanner_on = not st.session_state.scanner_on
+            st.rerun()
+        
         st.divider()
         st.header("🌍 SESSIONI DI MERCATO")
         
