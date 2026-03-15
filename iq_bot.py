@@ -242,10 +242,10 @@ with st.sidebar:
         # Il bot comunica cosa ha rilevato
         if st.session_state.weekend_mode:
             st.error("🚨 **MERCATO OTC RILEVATO**")
-            st.info("🎯 **Sniper Mode Attivo**\n\nMonitoraggio: 4 Valute\n\nRSI 15/85 | BB 20/2.5")
+            st.info("🎯 **Sniper Mode Attivo**\n\nMonitoraggio: 4 Valute\n\nRSI 15/85 | BB 20/2.65")
             # Setta automaticamente i parametri fissi per l'OTC
             use_bb, use_rsi, use_macd = True, True, False
-            bb_period, bb_std = 20, 2.50
+            bb_period, bb_std = 20, 2.65
             custom_rsi_buy, custom_rsi_sell = 15, 85
             custom_macd_fast, custom_macd_slow, custom_macd_sig = 12, 26, 9
         else:
