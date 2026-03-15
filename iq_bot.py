@@ -239,18 +239,18 @@ with st.sidebar:
             st.rerun()
 
         st.divider()
-        st.subheader("👁️ STRATEGIA DEL 6° GIORNO")
+        st.subheader("♟️ STRATEGIA DEL 6° GIORNO (OTC)")
         
         # --- MODALITÀ WEEKEND ---
         # Usiamo il session_state per ricordare se l'interruttore è acceso o spento
         if 'weekend_mode' not in st.session_state: 
             st.session_state.weekend_mode = False
             
-        st.session_state.weekend_mode = st.toggle("🎯 ATTIVA SABATO MAGICO", value=st.session_state.weekend_mode)
+        st.session_state.weekend_mode = st.toggle("🧠🍹 ATTIVA SABATO MAGICO", value=st.session_state.weekend_mode)
     
         if st.session_state.weekend_mode:
             # 1. COSA SUCCEDE SE È ACCESA:
-            st.success("🎯 **Sniper Attivo:** Indicatori manuali nascosti.  \nImpostati su **RSI (20/80)** e **BB (20, 2.5)**. MACD disattivato per ridurre i falsi allarmi nei mercati lenti.")
+            st.success("🎯 **Sniper Attivo:** Indicatori manuali nascosti.  \nImpostati su **RSI (20/80)** e **BB (20, 2.5)**. **no MACD**")
             
             # Assegniamo i valori dietro le quinte per far funzionare lo scanner senza errori
             use_bb, use_rsi, use_macd = True, True, False
@@ -265,7 +265,7 @@ with st.sidebar:
             col_t1, col_t2, col_t3 = st.columns(3)
             use_bb = col_t1.toggle("BB", value=True)
             use_rsi = col_t2.toggle("RSI", value=True)
-            use_macd = col_t3.toggle("MACD", value=True)
+            use_macd = col_t3.toggle("MACD", value=False)
     
             if use_bb:
                 c_bb1, c_bb2 = st.columns(2)
