@@ -296,7 +296,7 @@ with st.sidebar:
                     status = "Open 🟢" if start <= now_cet <= end else "Closed 🔴"
                 st.write(f"{city} {status}")
             
-        st.info(get_market_status())
+            st.info(get_market_status())
                                     
         st.divider()
         st.subheader("🛠️ PARAMETRI TRADING")
