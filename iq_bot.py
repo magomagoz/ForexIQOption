@@ -385,15 +385,15 @@ if st.session_state.connected:
                 if st.session_state.scanner_on:
                     
     
-    if st.session_state.scanner_on:
-        # Messaggio dinamico in base alla modalità
-        if st.session_state.weekend_mode:
-            st.success("🕵️ SCANNER OTC ATTIVO su 🇪🇺🇬🇧-🇺🇸🇨🇭-🇦🇺🇺🇸-🇪🇺🇺🇸 ", icon="🎯")
-        else:
-            if not trading_autorizzato:
-                st.warning("🛡️ PROTEZIONE ATTIVA: Mercato fuori orario. Scanner in pausa.")
+        if st.session_state.scanner_on:
+            # Messaggio dinamico in base alla modalità
+            if st.session_state.weekend_mode:
+                st.success("🕵️ SCANNER OTC ATTIVO su 🇪🇺🇬🇧-🇺🇸🇨🇭-🇦🇺🇺🇸-🇪🇺🇺🇸 ", icon="🎯")
             else:
-                st.success("SISTEMA IN SCANSIONE ATTIVA 🔥🔥🔥", icon="📡")
+                if not trading_autorizzato:
+                    st.warning("🛡️ PROTEZIONE ATTIVA: Mercato fuori orario. Scanner in pausa.")
+                else:
+                    st.success("SISTEMA IN SCANSIONE ATTIVA 🔥🔥🔥", icon="📡")
 
         st.divider()
         st.subheader("🕵️ Coppie di valute osservate")
