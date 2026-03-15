@@ -568,6 +568,7 @@ if st.session_state.connected:
 
             # --- DASHBOARD DISTANZA TARGET (SNIPER MODE) ---
             if st.session_state.weekend_mode:
+                st.divider()
                 st.subheader("🎯 **Monitoraggio Sniper OTC**")
                 
                 ultimo_prezzo = df_final['close'].iloc[-1]
