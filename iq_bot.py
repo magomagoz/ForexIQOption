@@ -568,7 +568,7 @@ if st.session_state.connected:
 
             # --- DASHBOARD DISTANZA TARGET (SNIPER MODE) ---
             if st.session_state.weekend_mode:
-                st.write("🎯 **Monitoraggio Sniper 2.5 SD**")
+                st.subheader("🎯 **Monitoraggio Sniper OTC**")
                 
                 ultimo_prezzo = df_final['close'].iloc[-1]
                 bbu_25 = df_final['BBU'].iloc[-1]
@@ -588,14 +588,14 @@ if st.session_state.connected:
                 
                 with m1:
                     color_su = "red" if distanza_su < 0 else "white"
-                    st.metric("Dist. Banda Sup (SELL)", f"{distanza_su:.5f}", 
+                    st.metric("DISTANZA BANDA SUPERIORE (SELL)", f"{distanza_su:.5f}", 
                               delta=f"{perc_su:.1f}% al Target", delta_color="inverse")
                     if distanza_su <= 0: st.error("🔥 ZONA SELL RAGGIUNTA!")
                 
                 with m2:
-                    st.metric("Dist. Banda Inf (BUY)", f"{distanza_giu:.5f}", 
+                    st.metric("DISTANZA BANDA INFERIORE (BUY)", f"{distanza_giu:.5f}", 
                               delta=f"{perc_giu:.1f}% al Target", delta_color="normal")
-                    if distanza_giu <= 0: st.success("🔥 ZONA BUY RAGGIUNTA!")
+                if distanza_giu <= 0: st.success("🔥 ZONA BUY RAGGIUNTA!")
 
                 st.progress(min(max(perc_su, perc_giu) / 100, 1.0))
             
