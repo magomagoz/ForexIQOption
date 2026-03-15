@@ -248,6 +248,10 @@ with st.sidebar:
             st.session_state.scanner_on = not st.session_state.scanner_on
             st.rerun()
 
+    if st.session_state.weekend_mode:
+        st.info("💡 Lo scanner sta usando i parametri **Sniper OTC** su tutte le coppie.")
+        
+
         st.divider()
         st.subheader("♟️ IL 6° GIORNO (OTC)")
         
@@ -373,91 +377,90 @@ if st.session_state.connected:
         st.plotly_chart(draw_market_map_inverted(h_float, trading_autorizzato), use_container_width=True, config={'displayModeBar': False})
         
     if st.session_state.scanner_on:
-        if not trading_autorizzato:
-            st.warning("🛡️ PROTEZIONE ATTIVA: Mercato fuori orario. Scanner in pausa.")
+        # Messaggio dinamico in base alla modalità
+        if st.session_state.weekend_mode:
+            st.success("🕵️ SCANNER SNIPER OTC ATTIVO su tutte le coppie", icon="🎯")
         else:
-            st.success("SISTEMA IN SCANSIONE ATTIVA 🔥🔥🔥", icon="📡")
+            if not trading_autorizzato:
+                st.warning("🛡️ PROTEZIONE Orario: Scanner in pausa.")
+            else:
+                st.success("SISTEMA IN SCANSIONE LIVE 🔥", icon="📡")
 
-            # Visualizza le icone delle valute osservate solo durante la settimana
-            if not is_weekend_reale and not st.session_state.weekend_mode:
-                if st.session_state.scanner_on:
-                    st.divider()
-                    st.subheader("🕵️ Coppie di valute osservate")
-                    cols = st.columns(5)
-                    for i, pair in enumerate(ALL_PAIRS):
-                        with cols[i % 5]: 
-                            st.code(f"{icons.get(pair, '🔍')} {pair}")
-
-            current_tf = 60 if stress_test else timeframe
-            rsi_buy = 55 if stress_test else custom_rsi_buy
-            rsi_sell = 45 if stress_test else custom_rsi_sell
+        # --- LOOP DI SCANSIONE UNIVERSALE ---
+        for pair in ALL_PAIRS:
+            try:
+                token = st.session_state.get("oanda_token", "")
+                # Usiamo il timeframe scelto o 60s per lo stress test
+                current_tf = 60 if stress_test else timeframe
+                candles = get_oanda_candles(pair, current_tf, 100, token)
+                
+                if not candles or len(candles) < 30: continue
                     
-            for pair in ALL_PAIRS:
-                try:
-                    token = st.session_state.get("oanda_token", "")
-                    candles = get_oanda_candles(pair, current_tf, 100, token)
+                df = pd.DataFrame(candles)
+                df['RSI'] = ta.rsi(df['close'], length=7)
+                price, curr_rsi = df['close'].iloc[-1], df['RSI'].iloc[-1]
+
+                # --- ASSEGNAZIONE PARAMETRI (Sniper vs Manuale) ---
+                if st.session_state.weekend_mode:
+                    # Parametri SNIPER fissi per il weekend
+                    r_buy, r_sell = 20, 80
+                    b_per, b_std = 20, 2.5
+                    m_fast, m_slow, m_sig = 12, 26, 9
+                    u_macd = False # Sniper non usa MACD per evitare ritardi
+                else:
+                    # Parametri LIVE scelti da te nella sidebar
+                    r_buy, r_sell = (45, 55) if stress_test else (custom_rsi_buy, custom_rsi_sell)
+                    b_per, b_std = (20, 1.8) if stress_test else (bb_period, bb_std)
+                    m_fast, m_slow, m_sig = custom_macd_fast, custom_macd_slow, custom_macd_sig
+                    u_macd = use_macd if not stress_test else False
+
+                # Calcolo indicatori comuni
+                bb = ta.bbands(df['close'], length=b_per, std=b_std)
+                curr_bb_low = bb.filter(like='BBL').iloc[-1]
+                curr_bb_up = bb.filter(like='BBU').iloc[-1]
+                
+                # Logica Segnali
+                cond_rsi_buy = curr_rsi < r_buy
+                cond_bb_buy = price <= curr_bb_low
+                
+                cond_rsi_sell = curr_rsi > r_sell
+                cond_bb_sell = price >= curr_bb_up
+
+                # Aggiunta MACD solo se richiesto (non in Sniper)
+                if u_macd:
+                    macd = ta.macd(df['close'], fast=m_fast, slow=m_slow, signal=m_sig)
+                    c_macd, c_sig = macd.iloc[-1, 0], macd.iloc[-1, 2]
+                    is_buy = cond_rsi_buy and cond_bb_buy and (c_macd > c_sig)
+                    is_sell = cond_rsi_sell and cond_bb_sell and (c_macd < c_sig)
+                else:
+                    is_buy = cond_rsi_buy and cond_bb_buy
+                    is_sell = cond_rsi_sell and cond_bb_sell
+
+                # --- ESECUZIONE SEGNALE ---
+                if (is_buy or is_sell) and pair not in st.session_state.active_trades:
+                    direction = "BUY" if is_buy else "SELL"
+                    t_id = genera_trade_id()
+                    st.session_state.active_trades[pair] = {
+                        'id': t_id, 'entry_price': price, 
+                        'entry_time': time_module.time(), 'direction': direction
+                    }
                     
-                    if not candles or len(candles) < 30: continue
-                        
-                    df = pd.DataFrame(candles)
-                    df['RSI'] = ta.rsi(df['close'], length=7)
-                    price, curr_rsi = df['close'].iloc[-1], df['RSI'].iloc[-1]
-
-                    if stress_test:
-                        is_buy, is_sell = curr_rsi < rsi_buy, curr_rsi > rsi_sell
-                        curr_macd, curr_bb_status = 0.0, "TEST"
-                    else:
-                        bb = ta.bbands(df['close'], length=bb_period, std=bb_std)
-                        macd = ta.macd(df['close'], fast=custom_macd_fast, slow=custom_macd_slow, signal=custom_macd_sig)
-                        
-                        # Usiamo i nomi delle colonne generati da pandas_ta per evitare errori di indice
-                        curr_bb_low = bb.filter(like='BBL').iloc[-1]
-                        curr_bb_up = bb.filter(like='BBU').iloc[-1]
- 
-                        curr_macd, curr_sig = macd.iloc[-1, 0], macd.iloc[-1, 2] 
-
-                        # --- LOGICA TREND FORTE (Sotto la definizione di curr_macd e curr_sig) ---
-                        # Calcoliamo la distanza tra MACD e Signal: se è troppo ampia, il trend è forte
-                        diff_macd = abs(curr_macd - curr_sig)
-                        is_trend_forte = diff_macd > (abs(curr_macd) * 0.5) # Soglia di volatilità
-                        
-                        if is_trend_forte:
-                            st.sidebar.warning("⚠️ TREND FORTE: Attenzione ai rimbalzi!")
-                        
-                        # Se il toggle è spento, la condizione diventa True (non blocca il segnale)
-                        cond_rsi_buy = (curr_rsi < custom_rsi_buy) if use_rsi else True
-                        cond_bb_buy = (price <= curr_bb_low) if use_bb else True
-                        cond_macd_buy = (curr_macd > curr_sig) if use_macd else True
-                        
-                        is_buy = cond_rsi_buy and cond_bb_buy and cond_macd_buy
-                        
-                        # Stessa cosa per il SELL
-                        cond_rsi_sell = (curr_rsi > custom_rsi_sell) if use_rsi else True
-                        cond_bb_sell = (price >= curr_bb_up) if use_bb else True
-                        cond_macd_sell = (curr_macd < curr_sig) if use_macd else True
-                        
-                        is_sell = cond_rsi_sell and cond_bb_sell and cond_macd_sell
-
+                    st.session_state.signal_history.append({
+                        'time': datetime.now().strftime("%H:%M:%S"),
+                        'pair': pair, 
+                        'dir': direction, 
+                        'price': f"{price:.5f}",
+                        'rsi': round(curr_rsi, 1), 
+                        'tipo': "🎯 SNIPER" if st.session_state.weekend_mode else "📊 STD", # Nuova colonna
+                        'result': "⏳ In corso..."
+                    })
                     
-                        #is_buy = (curr_rsi < rsi_buy) and (price <= curr_bb_low) and (curr_macd > curr_sig)
-                        #is_sell = (curr_rsi > rsi_sell) and (price >= curr_bb_up) and (curr_macd < curr_sig)
-                        curr_bb_status = "OUT" if (price <= curr_bb_low or price >= curr_bb_up) else "IN"
+                    save_journal(st.session_state.signal_history)
+                    send_telegram_signal(direction, pair, price, curr_rsi, t_id)
+                    play_trade_sound("buy")
 
-                    if (is_buy or is_sell) and pair not in st.session_state.active_trades:
-                        direction = "BUY" if is_buy else "SELL"
-                        t_id = genera_trade_id()
-                        st.session_state.active_trades[pair] = {'id': t_id, 'entry_price': price, 'entry_time': time_module.time(), 'direction': direction}
-                        
-                        st.session_state.signal_history.append({
-                            'time': datetime.now().strftime("%H:%M:%S"),
-                            'pair': pair, 'dir': direction, 'price': f"{price:.5f}",
-                            'rsi': round(curr_rsi, 1), 'macd': round(curr_macd, 6),
-                            'bb': curr_bb_status, 'result': "⏳ In corso..."
-                        })
-                        save_journal(st.session_state.signal_history)
-                        send_telegram_signal(direction, pair, price, curr_rsi, t_id)
-                        play_trade_sound("buy")
-                except: continue
+            except Exception as e:
+                continue
     
     # --- 5. ANALISI TECNICA GRAFICA (CORRETTA) ---
     st.divider()
@@ -689,20 +692,49 @@ if st.session_state.connected:
                 save_journal(st.session_state.signal_history)
                 del st.session_state.active_trades[pair]
             except: continue
-
-    # --- 7. TABELLA JOURNAL ---
+    
+    # --- 7. TABELLA JOURNAL & PERFORMANCE HUB ---
     st.divider()
+    
+    if st.session_state.signal_history:
+        df_journal = pd.DataFrame(st.session_state.signal_history)
+        
+        # Calcolo statistiche separate
+        def calc_stats(df_sub):
+            total = len(df_sub)
+            wins = len(df_sub[df_sub['result'].str.contains("WIN", na=False)])
+            accuracy = (wins / total * 100) if total > 0 else 0
+            return total, wins, accuracy
 
-    if st.session_state.weekend_mode:
-        st.subheader("📋 Sniper Journal (Sabato OTC)")
+        # Filtriamo i dati per tipo
+        df_sniper = df_journal[df_journal['tipo'] == "🎯 SNIPER"]
+        df_std = df_journal[df_journal['tipo'] == "📊 STD"]
+
+        t_sniper, w_sniper, acc_sniper = calc_stats(df_sniper)
+        t_std, w_std, acc_std = calc_stats(df_std)
+
+        # Visualizzazione Statistiche
+        st.subheader("📊 Performance Hub")
+        c1, c2 = st.columns(2)
+        
+        with c1:
+            st.markdown(f"**🎯 Strategia SNIPER**")
+            st.metric("Win Rate", f"{acc_sniper:.1f}%", f"{w_sniper}W / {t_sniper}T")
+            st.progress(acc_sniper / 100)
+
+        with c2:
+            st.markdown(f"**📊 Strategia STANDARD**")
+            st.metric("Win Rate", f"{acc_std:.1f}%", f"{w_std}W / {t_std}T")
+            st.progress(acc_std / 100)
+
+        st.divider()
+        
+        # Visualizzazione Tabella Journal
+        st.subheader("📋 Registro Operazioni")
+        st.dataframe(df_journal.iloc[::-1], use_container_width=True, hide_index=True)
     else:
-        st.subheader("📋 Trading Journal (Live Market)")
-        if st.session_state.signal_history:
-            df_journal = pd.DataFrame(st.session_state.signal_history).iloc[::-1]
-            st.dataframe(df_journal, use_container_width=True, hide_index=True)
-        else:
-            st.info("⏳ In attesa di segnali... Scanner attivo!")
-
+        st.info("⏳ In attesa di dati per calcolare le performance...")
+    
     # --- LOGICA DI REFRESH AUTOMATICO ---
     
     # 1. Messaggio discreto di stato dello scanner
