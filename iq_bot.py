@@ -242,7 +242,7 @@ with st.sidebar:
         
         # Il bot comunica cosa ha rilevato
         if st.session_state.weekend_mode:
-            st.error("🚨 **MERCATO OTC (Weekend)**")
+            st.error("🚨 **MERCATO OTC (Sab-Dom)**")
             st.info("🎯 **Sniper Mode Attivo**\n\nMonitoraggio: 4 Valute\n\nRSI 15/85 | BB 20/2.65")
             # Setta automaticamente i parametri fissi per l'OTC
             use_bb, use_rsi = True, True
