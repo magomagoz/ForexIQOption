@@ -377,95 +377,102 @@ if st.session_state.connected:
         #st.plotly_chart(draw_market_map_inverted(h_float, trading_autorizzato), use_container_width=True)
         st.plotly_chart(draw_market_map_inverted(h_float, trading_autorizzato), use_container_width=True)
 
+        # --- GESTIONE STATO SCANNER E PROTEZIONE ORARIA ---
+        esegui_scansione = False # Di default è spento
+        
         if st.session_state.scanner_on:
             # Messaggio dinamico in base alla modalità
             if st.session_state.weekend_mode:
                 st.success("SCANNER OTC ATTIVO su 🇪🇺🇬🇧-🇺🇸🇨🇭-🇦🇺🇺🇸-🇪🇺🇺🇸 ", icon="🎯")
+                esegui_scansione = True
             else:
                 if not trading_autorizzato:
                     st.warning("🛡️ PROTEZIONE ATTIVA: Mercato fuori orario. Scanner in pausa.")
+                    esegui_scansione = False # IL VERO BLOCCO
                 else:
                     st.success("SISTEMA IN SCANSIONE ATTIVA 🔥🔥🔥", icon="📡")
-
                     st.divider()
                     st.subheader("🕵️ Coppie di valute osservate")
                     cols = st.columns(5)
                     for i, pair in enumerate(ALL_PAIRS):
                         with cols[i % 5]: 
                             st.code(f"{icons.get(pair, '🔍')} {pair}")
+                    esegui_scansione = True
         
-        # Sostituisci la chiamata a get_oanda_candles con questa logica:
-        for pair in ALL_PAIRS:
-            try:
-                # Se siamo in weekend e hai inserito un prezzo manuale per questa coppia
-                if st.session_state.weekend_mode and pair in st.session_state.get('manual_prices', {}) and st.session_state.manual_prices[pair] > 0:
-                    price = st.session_state.manual_prices[pair]
-                    # Carichiamo lo storico per mantenere calcoli validi (BB/RSI)
-                    candles = get_oanda_candles(pair, 60, 100, "")
-                    if candles:
-                        # Sovrascriviamo l'ultimo prezzo con quello reale del tuo broker
-                        candles[-1]['close'] = price
-                else:
-                    # Funzionamento standard
-                    candles = get_oanda_candles(pair, 60, 100, st.session_state.get("oanda_token", ""))
-                    if not candles: continue
-                    price = candles[-1]['close']
+        # --- CICLO DI SCANSIONE VERO E PROPRIO ---
+        # Si attiva SOLO se esegui_scansione è True
+        if esegui_scansione:
+            for pair in ALL_PAIRS:
+                try:
+                    # Se siamo in weekend e hai inserito un prezzo manuale per questa coppia
+                    if st.session_state.weekend_mode and pair in st.session_state.get('manual_prices', {}) and st.session_state.manual_prices[pair] > 0:
+                        price = st.session_state.manual_prices[pair]
+                        # Carichiamo lo storico per mantenere calcoli validi (BB/RSI)
+                        candles = get_oanda_candles(pair, 60, 100, "")
+                        if candles:
+                            # Sovrascriviamo l'ultimo prezzo con quello reale del tuo broker
+                            candles[-1]['close'] = price
+                    else:
+                        # Funzionamento standard
+                        candles = get_oanda_candles(pair, 60, 100, st.session_state.get("oanda_token", ""))
+                        if not candles: continue
+                        price = candles[-1]['close']
+                        
+                    df = pd.DataFrame(candles)
+                    df['RSI'] = ta.rsi(df['close'], length=7)
+                    price, curr_rsi = df['close'].iloc[-1], df['RSI'].iloc[-1]
+
+                    # --- ASSEGNAZIONE PARAMETRI (Sniper vs Manuale) ---
+                    if st.session_state.weekend_mode:
+                        # Parametri SNIPER fissi per il weekend
+                        r_buy, r_sell = 20, 80
+                        b_per, b_std = 20, 2.5
+                    else:
+                        # Parametri LIVE scelti da te nella sidebar
+                        r_buy, r_sell = (45, 55) if stress_test else (custom_rsi_buy, custom_rsi_sell)
+                        b_per, b_std = (20, 1.8) if stress_test else (bb_period, bb_std)
+       
+                    # Calcolo indicatori comuni
+                    bb = ta.bbands(df['close'], length=b_per, std=b_std)
+                    curr_bb_low = bb.filter(like='BBL').iloc[-1]
+                    curr_bb_up = bb.filter(like='BBU').iloc[-1]
                     
-                df = pd.DataFrame(candles)
-                df['RSI'] = ta.rsi(df['close'], length=7)
-                price, curr_rsi = df['close'].iloc[-1], df['RSI'].iloc[-1]
-
-                # --- ASSEGNAZIONE PARAMETRI (Sniper vs Manuale) ---
-                if st.session_state.weekend_mode:
-                    # Parametri SNIPER fissi per il weekend
-                    r_buy, r_sell = 20, 80
-                    b_per, b_std = 20, 2.5
-                    m_fast, m_slow, m_sig = 12, 26, 9
-                else:
-                    # Parametri LIVE scelti da te nella sidebar
-                    r_buy, r_sell = (45, 55) if stress_test else (custom_rsi_buy, custom_rsi_sell)
-                    b_per, b_std = (20, 1.8) if stress_test else (bb_period, bb_std)
-   
-                # Calcolo indicatori comuni
-                bb = ta.bbands(df['close'], length=b_per, std=b_std)
-                curr_bb_low = bb.filter(like='BBL').iloc[-1]
-                curr_bb_up = bb.filter(like='BBU').iloc[-1]
-                
-                # Logica Segnali
-                cond_rsi_buy = curr_rsi < r_buy
-                cond_bb_buy = price <= curr_bb_low
-                
-                cond_rsi_sell = curr_rsi > r_sell
-                cond_bb_sell = price >= curr_bb_up
-
-                is_buy = cond_rsi_buy and cond_bb_buy
-                is_sell = cond_rsi_sell and cond_bb_sell
-
-                # --- ESECUZIONE SEGNALE ---
-                if (is_buy or is_sell) and pair not in st.session_state.active_trades:
-                    direction = "BUY" if is_buy else "SELL"
-                    t_id = genera_trade_id()
-                    st.session_state.active_trades[pair] = {
-                        'id': t_id, 'entry_price': price, 
-                        'entry_time': time_module.time(), 'direction': direction
-                    }
+                    # --- LOGICA SEGNALI CORRETTA (Rispetta gli interruttori UI) ---
+                    cond_rsi_buy = (curr_rsi < r_buy) if use_rsi else True
+                    cond_bb_buy = (price <= curr_bb_low) if use_bb else True
                     
-                    st.session_state.signal_history.append({
-                        'time': datetime.now().strftime("%H:%M:%S"),
-                        'pair': pair, 
-                        'dir': direction, 
-                        'price': f"{price:.5f}",
-                        'rsi': round(curr_rsi, 1), 
-                        'tipo': "🎯 SNIPER" if st.session_state.weekend_mode else "📊 STD", # Nuova colonna
-                        'result': "⏳ In corso..."
-                    })
-                    
-                    save_journal(st.session_state.signal_history)
-                    send_telegram_signal(direction, pair, price, curr_rsi, t_id)
-                    play_trade_sound("buy")
+                    cond_rsi_sell = (curr_rsi > r_sell) if use_rsi else True
+                    cond_bb_sell = (price >= curr_bb_up) if use_bb else True
 
-            except Exception as e:
-                continue
+                    # Esegue il trade solo se le condizioni sono vere E se c'è almeno un indicatore attivo
+                    is_buy = (cond_rsi_buy and cond_bb_buy) and (use_rsi or use_bb)
+                    is_sell = (cond_rsi_sell and cond_bb_sell) and (use_rsi or use_bb)
+
+                    # --- ESECUZIONE SEGNALE ---
+                    if (is_buy or is_sell) and pair not in st.session_state.active_trades:
+                        direction = "BUY" if is_buy else "SELL"
+                        t_id = genera_trade_id()
+                        st.session_state.active_trades[pair] = {
+                            'id': t_id, 'entry_price': price, 
+                            'entry_time': time_module.time(), 'direction': direction
+                        }
+                        
+                        st.session_state.signal_history.append({
+                            'time': datetime.now().strftime("%H:%M:%S"),
+                            'pair': pair, 
+                            'dir': direction, 
+                            'price': f"{price:.5f}",
+                            'rsi': round(curr_rsi, 1), 
+                            'tipo': "🎯 SNIPER" if st.session_state.weekend_mode else "📊 STD",
+                            'result': "⏳ In corso..."
+                        })
+                        
+                        save_journal(st.session_state.signal_history)
+                        send_telegram_signal(direction, pair, price, curr_rsi, t_id)
+                        play_trade_sound("buy")
+
+                except Exception as e:
+                    continue
     
     # --- 5. ANALISI TECNICA GRAFICA (CORRETTA) ---
     st.divider()
