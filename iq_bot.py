@@ -354,8 +354,11 @@ if st.session_state.connected:
     now_time = now_roma.time()
     h_float = now_roma.hour + (now_roma.minute / 60)
 
-    window_1 = (time(9, 0), time(12, 0))
-    window_2 = (time(14, 0), time(18, 0))
+    window_1 = (time(0, 0), time(12, 0))
+    window_2 = (time(12, 0), time(23, 0))
+
+    #window_1 = (time(9, 0), time(12, 0))
+    #window_2 = (time(14, 0), time(18, 0))
     is_trading_time = (window_1[0] <= now_time <= window_1[1]) or (window_2[0] <= now_time <= window_2[1])
     trading_autorizzato = is_trading_time or stress_test
 
