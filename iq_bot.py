@@ -259,7 +259,7 @@ with st.sidebar:
             
             c_bb1, c_bb2 = st.columns(2)
             bb_period = c_bb1.selectbox("Periodo BB", [20, 14], index = 0)
-            bb_std = c_bb2.selectbox("Dev BB", [1.80, 2.00, 2.20], index = 0)
+            bb_std = c_bb2.selectbox("Dev BB", [1.80, 2.00, 2.20], index = 1)
             
             c_rsi1, c_rsi2 = st.columns(2)
             custom_rsi_buy = c_rsi1.selectbox("RSI Buy", [30, 28, 25], index = 0)
@@ -484,9 +484,17 @@ if st.session_state.connected:
             
         if candles_ta:
             df_raw = pd.DataFrame(candles_ta)
-            
+
+            # Calcolo indicatori
             df_raw['RSI'] = ta.rsi(df_raw['close'], length=7)
             bb_ta = ta.bbands(df_raw['close'], length=bb_period, std=bb_std)
+            
+            # --- AGGIUNGI QUESTO CONTROLLO SICUREZZA ---
+            if bb_ta is None or bb_ta.empty:
+                st.error(f"⚠️ Impossibile calcolare le Bande di Bollinger per {pair_display}. Prova a cambiare periodo o asset.")
+                st.stop() # Ferma l'esecuzione di questo blocco senza crashare l'app
+            
+            # Rinominiano le colonne per sicurezza (gestisce nomi diversi della libreria)
             bb_ta.columns = ['BBL', 'BBM', 'BBU', 'BBB', 'BBP'] 
                         
             df_final = pd.concat([df_raw, bb_ta[['BBL', 'BBM', 'BBU']]], axis=1).tail(100)
