@@ -263,7 +263,7 @@ with st.sidebar:
                         
             c_bb2, c_rsi2 = st.columns(2)
             bb_std = c_bb2.selectbox("Dev BB", [1.80, 2.00, 2.20], index = 1)
-            custom_rsi_sell = c_rsi2.selectbox("RSI Sell", [70, 72, 75], index = 1)
+            custom_rsi_sell = c_rsi2.selectbox("RSI Sell", [70, 72, 75], index = 0)
 
         st.divider()
         # SCANNER SEMPRE DISPONIBILE (Ora si adatta in automatico!)
