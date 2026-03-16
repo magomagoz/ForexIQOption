@@ -737,6 +737,71 @@ if st.session_state.connected:
     else:
         st.info("⏳ In attesa di dati per calcolare le performance...")
         
+    st.divider()
+
+    # --- SEZIONE STATISTICHE E SALDO AGGIORNATO ---
+    st.subheader("📋 Trading Journal")
+    
+    if st.session_state.signal_history:
+        wins = sum(1 for s in st.session_state.signal_history if "✅" in str(s.get('result', '')))
+        losses = sum(1 for s in st.session_state.signal_history if "❌" in str(s.get('result', '')))
+        total = wins + losses
+        rate = (wins / total * 100) if total > 0 else 0
+
+        #st.metric("🏆 PERFORMANCE LIVE", f"Win Rate: {rate:.1f}%", f"W: {wins} | L: {losses}")
+
+        # Creiamo 3 colonne per le metriche finali
+        m1, m2, m3 = st.columns(3)
+        with m1:
+            st.metric("🏆 Win Rate", f"{rate:.1f}%")
+        with m2:
+            st.metric("📊 Score", f"W: {wins} | L: {losses}")
+        with m3:
+            # Questo è il saldo che si aggiorna con i tuoi calcoli Win/Loss
+            st.metric(f"💰 Saldo {st.session_state.account_type}", f"{st.session_state.local_balance:.2f} €")    
+        
+    # --- 4. TABELLA SEGNALI (ULTIMO IN ALTO) ---    
+    if st.session_state.signal_history:
+        # Creiamo il DataFrame
+        df_journal = pd.DataFrame(st.session_state.signal_history)
+        
+        # Invertiamo l'ordine: l'ultimo aggiunto finisce in prima riga [::-1]
+        df_reversed = df_journal.iloc[::-1].copy()
+        
+        # Assicuriamoci che tutte le colonne esistano (per evitare errori se il segnale è nuovo)
+        for col in ['time', 'pair', 'dir', 'price', 'rsi', 'result']:
+            if col not in df_reversed.columns:
+                df_reversed[col] = "-" 
+        
+            # Rinominiamo le nuove colonne
+            rename_map = {
+                'time': '⏰ ORA',
+                'pair': '💱 COPPIA',
+                'dir': '🚀 TIPO',
+                'price': '💰 ENTRATA',
+                'rsi': '📊 RSI',
+                'macd': '📉 MACD',
+                'bb': '↔️ BOLLINGER',
+                'result': '🔍 ESITO'
+            }
+            
+        # Funzione per colorare l'esito
+        def style_result(val):
+            color = 'white'
+            if '✅' in str(val): color = '#00ff00'
+            elif '❌' in str(val): color = '#ff4b4b'
+            elif '⏳' in str(val): color = '#ffa500'
+            return f'color: {color}'
+    
+        # Visualizzazione della tabella invertita
+        st.dataframe(
+            df_reversed.rename(columns=rename_map).style.applymap(style_result, subset=['🔍 ESITO']),
+            use_container_width=True, 
+            hide_index=True
+        )
+    else:
+        st.info("⏳ In attesa di segnali... Scanner attivo!")
+
     # --- LOGICA DI REFRESH AUTOMATICO ---
     
     # 1. Messaggio discreto di stato dello scanner
