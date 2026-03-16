@@ -262,9 +262,9 @@ with st.sidebar:
             bb_std = c_bb2.number_input("Dev BB", 1.80)
             
             c_rsi1, c_rsi2 = st.columns(2)
-            custom_rsi_buy = c_rsi1.number_input("RSI Buy", 30)
-            custom_rsi_sell = c_rsi2.number_input("RSI Sell", 70)
-  
+            custom_rsi_buy = c_rsi1.selectbox("RSI Buy", [30, 28, 25], index = 0)
+            custom_rsi_sell = c_rsi2.selectbox("RSI Sell", [70, 72, 75], index = 0)
+
         st.divider()
         # SCANNER SEMPRE DISPONIBILE (Ora si adatta in automatico!)
         st.subheader("👁️ CONTROLLO SCANNER")
