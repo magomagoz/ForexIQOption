@@ -318,9 +318,14 @@ with st.sidebar:
         st.header("🔧 STRUMENTI TEST")
         stress_test = st.toggle("🚀 **STRESS MODE**", value=False)
         if stress_test:
-            st.warning("⚠️ **Modalità TEST:**  \nno BB - RSI (45/55)")
+            st.warning("⚠️ **Modalità TEST:** \nno BB - RSI (45/55)")
+            # --- OVERRIDE DI SISTEMA ---
+            use_bb = False       # Spegne forzatamente le BB
+            use_rsi = True       # Accende forzatamente l'RSI
+            custom_rsi_buy = 45  # Forza soglia BUY
+            custom_rsi_sell = 55 # Forza soglia SELL
         else:
-            st.success("🟢 **Modalità REALE:**  \nvedi gli indicatori scelti sopra")
+            st.success("🟢 **Modalità REALE:** \nvedi gli indicatori scelti sopra")
             
         st.divider()
         if st.button("🔔 **TEST AUDIO & TELEGRAM**", use_container_width=True):
@@ -426,14 +431,14 @@ if st.session_state.connected:
                     price, curr_rsi = df['close'].iloc[-1], df['RSI'].iloc[-1]
 
                     # --- ASSEGNAZIONE PARAMETRI (Sniper vs Manuale) ---
-                    if st.session_state.weekend_mode:
-                        # Parametri SNIPER fissi per il weekend
+                    if st.session_state.weekend_mode and not stress_test:
+                        # Parametri SNIPER fissi per il weekend (ignorati se in Stress Test)
                         r_buy, r_sell = 20, 80
                         b_per, b_std = 20, 2.5
                     else:
-                        # Parametri LIVE scelti da te nella sidebar
-                        r_buy, r_sell = (45, 55) if stress_test else (custom_rsi_buy, custom_rsi_sell)
-                        b_per, b_std = (20, 1.8) if stress_test else (bb_period, bb_std)
+                        # Prende i parametri (che ora sono automaticamente 45/55 se lo Stress Test è ON)
+                        r_buy, r_sell = custom_rsi_buy, custom_rsi_sell
+                        b_per, b_std = bb_period, bb_std
        
                     # Calcolo indicatori comuni
                     bb = ta.bbands(df['close'], length=b_per, std=b_std)
@@ -537,10 +542,8 @@ if st.session_state.connected:
 
             # Subplot 2: RSI con soglie dinamiche
             fig.add_trace(go.Scatter(x=asse_x, y=df_final['RSI'], line=dict(color='#AB63FA'), name="RSI"), row=2, col=1)
-            line_buy = 45 if stress_test else custom_rsi_buy
-            line_sell = 55 if stress_test else custom_rsi_sell
-            fig.add_hline(y=line_buy, line_color="green", row=2, col=1, line_dash="dash")
-            fig.add_hline(y=line_sell, line_color="red", row=2, col=1, line_dash="dash")
+            fig.add_hline(y=custom_rsi_buy, line_color="green", row=2, col=1, line_dash="dash")
+            fig.add_hline(y=custom_rsi_sell, line_color="red", row=2, col=1, line_dash="dash")
 
             fig.update_layout(
                 xaxis_rangeslider_visible=False,
