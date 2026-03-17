@@ -822,22 +822,16 @@ if st.session_state.connected:
         accuracy_f = (wins_f / total_f * 100) if total_f > 0 else 0.0
         
         # --- METRICHE VISIVE ---
-        m1, m2, m3, m4 = st.columns(4)
+        m1, m2, m3 = st.columns(3)
         with m1:
             st.metric("💰 Saldo Corrente", f"{st.session_state.local_balance:.2f} €")
         with m2:
             st.metric(f"🎯 Win/Loss ({time_start.strftime('%H:%M')} - {time_end.strftime('%H:%M')})", f"{wins_f}W - {loss_f}L", f"Tot: {total_f}")
         with m3:
-            st.metric("📊 Win Rate (Filtrato)", f"{accuracy_f:.1f}%")
+            st.metric("🏁 Win Rate (Filtrato)", f"{accuracy_f:.1f}%")
         #with m4:
             # Mostriamo l'intervallo operativo
             #st.metric("⏱️ Primo / Ultimo Segnale", f"{primo_trade}", f"Fine: {ultimo_trade}", delta_color="off")
-        with m4:
-            # Creiamo due mini-colonne dentro la colonna m4
-            sub_c1, sub_c2 = st.columns(2)
-            sub_c1.metric("🚀 Primo", primo_trade)
-            sub_c2.metric("🏁 Ultimo", ultimo_trade)
-
             
         # Invertiamo per vedere i più recenti in alto nella tabella
         df_reversed = df_display.iloc[::-1].copy()
