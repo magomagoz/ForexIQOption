@@ -763,46 +763,10 @@ if st.session_state.connected:
                 save_journal(st.session_state.signal_history)
                 del st.session_state.active_trades[pair]
             except: continue
-    
-    # --- 7. TABELLA JOURNAL & PERFORMANCE HUB ---
-    st.divider()
-    st.subheader("📊 Performance Hub")
-        
-    if st.session_state.signal_history:
-        df_journal = pd.DataFrame(st.session_state.signal_history)
-        
-        # Calcolo statistiche separate
-        def calc_stats(df_sub):
-            total = len(df_sub)
-            wins = len(df_sub[df_sub['result'].str.contains("WIN", na=False)])
-            accuracy = (wins / total * 100) if total > 0 else 0
-            return total, wins, accuracy
-
-        # Filtriamo i dati per tipo
-        df_sniper = df_journal[df_journal['mercato'] == "🎯 OTC"]
-        df_std = df_journal[df_journal['mercato'] == "📊 LIVE"]
-
-        t_sniper, w_sniper, acc_sniper = calc_stats(df_sniper)
-        t_std, w_std, acc_std = calc_stats(df_std)
-
-        # Visualizzazione Statistiche
-        c1, c2 = st.columns(2)
-        
-        with c1:
-            st.markdown(f"**🎯 Strategia OTC**")
-            st.metric("Win Rate", f"{acc_sniper:.1f}%", f"{w_sniper}W / {t_sniper}T")
-            st.progress(acc_sniper / 100)
-
-        with c2:
-            st.markdown(f"**📊 Strategia LIVE**")
-            st.metric("Win Rate", f"{acc_std:.1f}%", f"{w_std}W / {t_std}T")
-            st.progress(acc_std / 100)
-    else:
-        st.info("⏳ In attesa di dati per calcolare le performance...")
-        
+            
     st.divider()
     # --- SEZIONE STATISTICHE E SALDO AGGIORNATO ---
-    st.subheader("📋 Trading Journal")
+    st.subheader("📋 Trading Journal & Performance Hub")
     
     if st.session_state.signal_history:
         wins = sum(1 for s in st.session_state.signal_history if "✅" in str(s.get('result', '')))
@@ -813,12 +777,14 @@ if st.session_state.connected:
         #st.metric("🏆 PERFORMANCE LIVE", f"Win Rate: {rate:.1f}%", f"W: {wins} | L: {losses}")
 
         # Creiamo 3 colonne per le metriche finali
-        m1, m2, m3 = st.columns(3)
+        m1, m2, m3, m4 = st.columns(4)
         with m1:
-            st.metric("🏆 Win Rate", f"{rate:.1f}%")
+            st.metric("🏆 WR LIVE", f"{acc_std:.1f}%", f"{w_std}W / {t_std}T")
         with m2:
-            st.metric("📊 Score", f"W: {wins} | L: {losses}")
+            st.metric("🏆 WR OTC", f"{acc_sniper:.1f}%", f"{w_sniper}W / {t_sniper}T")
         with m3:
+            st.metric("📊 Score", f"W: {wins} | L: {losses}")
+        with m4:
             # Questo è il saldo che si aggiorna con i tuoi calcoli Win/Loss
             st.metric(f"💰 Saldo {st.session_state.account_type}", f"{st.session_state.local_balance:.2f} €")    
         
