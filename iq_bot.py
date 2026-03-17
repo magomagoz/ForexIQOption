@@ -764,56 +764,88 @@ if st.session_state.connected:
                 del st.session_state.active_trades[pair]
             except: continue
             
+    # --- 7. TABELLA JOURNAL & PERFORMANCE HUB ---
     st.divider()
-    # --- SEZIONE STATISTICHE E SALDO AGGIORNATO ---
-    st.subheader("📋 Trading Journal & Performance Hub")
-    
-    if st.session_state.signal_history:
-        wins = sum(1 for s in st.session_state.signal_history if "✅" in str(s.get('result', '')))
-        losses = sum(1 for s in st.session_state.signal_history if "❌" in str(s.get('result', '')))
-        total = wins + losses
-        rate = (wins / total * 100) if total > 0 else 0
-
-        #st.metric("🏆 PERFORMANCE LIVE", f"Win Rate: {rate:.1f}%", f"W: {wins} | L: {losses}")
-
-        # Creiamo 3 colonne per le metriche finali
-        m1, m2, m3, m4 = st.columns(4)
-        with m1:
-            st.metric("🏆 WR LIVE", f"{acc_live:.1f}%", f"{w_live}W / {t_live}T")
-        with m2:
-            st.metric("🏆 WR OTC", f"{acc_sniper:.1f}%", f"{w_sniper}W / {t_sniper}T")
-        with m3:
-            st.metric("📊 Score", f"W: {wins} | L: {losses}")
-        with m4:
-            # Questo è il saldo che si aggiorna con i tuoi calcoli Win/Loss
-            st.metric(f"💰 Saldo {st.session_state.account_type}", f"{st.session_state.local_balance:.2f} €")    
+    st.subheader("📊 Performance Hub")
         
-    # --- TABELLA SEGNALI AGGIORNATA ---    
     if st.session_state.signal_history:
         df_journal = pd.DataFrame(st.session_state.signal_history)
-        df_reversed = df_journal.iloc[::-1].copy()
         
-        # Mappatura completa di tutte le colonne richieste
+        # Funzione interna per calcolare le statistiche
+        def calc_stats(df_sub):
+            if df_sub.empty: return 0, 0, 0.0
+            total = len(df_sub)
+            wins = len(df_sub[df_sub['result'].str.contains("WIN", na=False)])
+            accuracy = (wins / total * 100) if total > 0 else 0
+            return total, wins, accuracy
+
+        # FILTRI PER PERFORMANCE
+        df_otc = df_journal[df_journal['mercato'] == "🎯 OTC"]
+        df_std = df_journal[df_journal['mercato'] == "📊 STD"]
+
+        t_otc, w_otc, acc_otc = calc_stats(df_otc)
+        t_std, w_std, acc_std = calc_stats(df_std)
+
+        # Visualizzazione Statistiche
+        c1, c2 = st.columns(2)
+        with c1:
+            st.markdown(f"**🎯 Strategia OTC**")
+            st.metric("Win Rate OTC", f"{acc_otc:.1f}%", f"{w_otc}W / {t_otc}T")
+            st.progress(acc_otc / 100)
+        with c2:
+            st.markdown(f"**📊 Strategia LIVE (STD)**")
+            st.metric("Win Rate STD", f"{acc_std:.1f}%", f"{w_std}W / {t_std}T")
+            st.progress(acc_std / 100)
+        
+        st.divider()
+        
+        # --- SEZIONE TRADING JOURNAL CON FILTRO ---
+        col_title, col_filter = st.columns([2, 1])
+        with col_title:
+            st.subheader("📋 Trading Journal")
+        with col_filter:
+            # FILTRO A TENDINA
+            filtro_mercato = st.selectbox(
+                "Filtra per mercato:",
+                ["TUTTI", "🎯 OTC", "📊 STD"],
+                index=0,
+                label_visibility="collapsed"
+            )
+
+        # Applicazione del filtro al DataFrame della tabella
+        df_display = df_journal.copy()
+        if filtro_mercato != "TUTTI":
+            df_display = df_display[df_display['mercato'] == filtro_mercato]
+        
+        # Invertiamo per vedere i più recenti in alto
+        df_reversed = df_display.iloc[::-1].copy()
+        
+        # Statistiche rapide basate sul filtro selezionato
+        wins_f = sum(1 for s in df_display.to_dict('records') if "✅" in str(s.get('result', '')))
+        loss_f = sum(1 for s in df_display.to_dict('records') if "❌" in str(s.get('result', '')))
+        
+        m1, m2, m3 = st.columns(3)
+        with m1:
+            st.metric("💰 Saldo Corrente", f"{st.session_state.local_balance:.2f} €")
+        with m2:
+            st.metric("📈 Trade (Filtro)", f"{len(df_display)}")
+        with m3:
+            st.metric("🎯 Win/Loss (Filtro)", f"{wins_f}W - {loss_f}L")
+
+        # Mappatura colonne
         rename_map = {
-            'time': '⏰ ORA',
-            'pair': '💱 COPPIA',
-            'dir': '🚀 TIPO',
-            'price': '💰 ENTRATA',
-            'params_bb': '↔️ BB (P/D)',
-            'params_rsi': '📉 RSI (B/S)',
-            'mercato': '🌍 MERCATO',
-            'result': '🔍 ESITO'
+            'time': '⏰ ORA', 'pair': '💱 COPPIA', 'dir': '🚀 TIPO',
+            'price': '💰 ENTRATA', 'params_bb': '↔️ BB (P/D)',
+            'params_rsi': '📉 RSI (B/S)', 'mercato': '🌍 MERCATO', 'result': '🔍 ESITO'
         }
         
-        # Funzione di stile per l'esito
         def style_result(val):
             color = 'white'
             if '✅' in str(val): color = '#00ff00'
             elif '❌' in str(val): color = '#ff4b4b'
             elif '⏳' in str(val): color = '#ffa500'
             return f'color: {color}'
-    
-        # Visualizzazione con le nuove colonne
+
         st.dataframe(
             df_reversed.rename(columns=rename_map).style.applymap(style_result, subset=['🔍 ESITO']),
             use_container_width=True, 
@@ -821,6 +853,7 @@ if st.session_state.connected:
         )
     else:
         st.info("⏳ In attesa di segnali... Scanner attivo!")
+
 
     # --- LOGICA DI REFRESH AUTOMATICO ---
     
