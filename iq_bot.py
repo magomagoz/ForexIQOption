@@ -77,7 +77,7 @@ def registra_trade(trade_id, pair, direction, risultato, profitto):
     data.append({
         "id": trade_id, "pair": pair, "direction": direction,
         "risultato": risultato, "profitto": profitto,
-        "timestamp": datetime.now().strftime("%H:%M:%S")
+        "timestamp": datetime.now().strftime("%d-%m-%Y %H:%M:%S")
     })
     with open(file_path, "w") as f:
         json.dump(data, f)
@@ -541,7 +541,7 @@ if st.session_state.connected:
                         }
                         
                         st.session_state.signal_history.append({
-                            'time': datetime.now().strftime("%H:%M:%S"),
+                            'time': datetime.now().strftime("%d-%m-%Y %H:%M:%S"),
                             'pair': pair, 
                             'dir': direction, 
                             'price': f"{price:.5f}",
