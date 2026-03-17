@@ -788,7 +788,7 @@ if st.session_state.connected:
         t_sniper, w_sniper, acc_sniper = calc_stats(df_sniper)
         t_std, w_std, acc_std = calc_stats(df_std)
     
-        st.divider()
+        #st.divider()
         
         # --- SEZIONE TRADING JOURNAL CON FILTRO ---
         col_title, col_filter = st.columns([2, 1])
@@ -846,7 +846,7 @@ if st.session_state.connected:
             hide_index=True
         )
     else:
-        st.info("⏳ In attesa di segnali... Scanner attivo!")
+        st.info("⏳ Accendi lo Scanner e resta in attesa di segnali!")
                 
     # --- 8. REFRESH LOOP ---
     if st.session_state.scanner_on:
