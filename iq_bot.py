@@ -514,7 +514,7 @@ if st.session_state.connected:
                         t_id = genera_trade_id()
                         
                         # Determina l'etichetta del mercato
-                        tipo_mercato = "🎯 OTC" if st.session_state.weekend_mode else "📊 STD"
+                        tipo_mercato = "🎯 OTC" if st.session_state.weekend_mode else "📊 LIVE"
                         
                         # Registra i parametri attuali della sidebar
                         params_bb = f"{bb_period}/{bb_std}"
@@ -779,8 +779,8 @@ if st.session_state.connected:
             return total, wins, accuracy
 
         # Filtriamo i dati per tipo
-        df_sniper = df_journal[df_journal['tipo'] == "🎯 OTC"]
-        df_std = df_journal[df_journal['tipo'] == "📊 LIVE"]
+        df_sniper = df_journal[df_journal['mercato'] == "🎯 OTC"]
+        df_std = df_journal[df_journal['mercato'] == "📊 LIVE"]
 
         t_sniper, w_sniper, acc_sniper = calc_stats(df_sniper)
         t_std, w_std, acc_std = calc_stats(df_std)
