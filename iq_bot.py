@@ -765,25 +765,31 @@ if st.session_state.connected:
                 del st.session_state.active_trades[pair]
             except: continue
                                 
-        if st.session_state.signal_history:
-            df_journal = pd.DataFrame(st.session_state.signal_history)
-            
-            # Calcolo statistiche separate
-            def calc_stats(df_sub):
-                total = len(df_sub)
-                wins = len(df_sub[df_sub['result'].str.contains("WIN", na=False)])
-                accuracy = (wins / total * 100) if total > 0 else 0
-                return total, wins, accuracy
+    # =========================================================
+    # --- 7. TABELLA JOURNAL & PERFORMANCE HUB (FUORI DAL FOR) ---
+    # =========================================================
     
-            # Filtriamo i dati per tipo
-            df_sniper = df_journal[df_journal['mercato'] == "🎯 OTC"]
-            df_std = df_journal[df_journal['mercato'] == "📊 LIVE"]
-    
-            t_sniper, w_sniper, acc_sniper = calc_stats(df_sniper)
-            t_std, w_std, acc_std = calc_stats(df_std)
+    if st.session_state.signal_history:
+        df_journal = pd.DataFrame(st.session_state.signal_history)
         
-        #st.divider()
-            
+        # Calcolo statistiche separate
+        def calc_stats(df_sub):
+            if df_sub.empty:
+                return 0, 0, 0.0
+            total = len(df_sub)
+            wins = len(df_sub[df_sub['result'].str.contains("WIN", na=False)])
+            accuracy = (wins / total * 100) if total > 0 else 0
+            return total, wins, accuracy
+
+        # Filtriamo i dati per tipo
+        df_sniper = df_journal[df_journal['mercato'] == "🎯 OTC"]
+        df_std = df_journal[df_journal['mercato'] == "📊 LIVE"]
+
+        t_sniper, w_sniper, acc_sniper = calc_stats(df_sniper)
+        t_std, w_std, acc_std = calc_stats(df_std)
+    
+        st.divider()
+        
         # --- SEZIONE TRADING JOURNAL CON FILTRO ---
         col_title, col_filter = st.columns([2, 1])
         with col_title:
@@ -796,19 +802,19 @@ if st.session_state.connected:
                 index=0,
                 label_visibility="collapsed"
             )
-    
+
         # Applicazione del filtro al DataFrame della tabella
         df_display = df_journal.copy()
         if filtro_mercato != "TUTTI":
             df_display = df_display[df_display['mercato'] == filtro_mercato]
-                
+            
         # Invertiamo per vedere i più recenti in alto
         df_reversed = df_display.iloc[::-1].copy()
-                
+            
         # Statistiche rapide basate sul filtro selezionato
         wins_f = sum(1 for s in df_display.to_dict('records') if "✅" in str(s.get('result', '')))
         loss_f = sum(1 for s in df_display.to_dict('records') if "❌" in str(s.get('result', '')))
-            
+        
         m1, m2, m3, m4 = st.columns(4)
         with m1:
             st.metric("💰 Saldo Corrente", f"{st.session_state.local_balance:.2f} €")
@@ -818,30 +824,30 @@ if st.session_state.connected:
             st.metric("📊 WR Live", f"{acc_std:.1f}%", f"{w_std}W / {t_std}T")
         with m4:
             st.metric("📊 WR OTC", f"{acc_sniper:.1f}%", f"{w_sniper}W / {t_sniper}T")
-        
-                
+    
+            
         # Mappatura colonne
         rename_map = {
             'time': '⏰ ORA', 'pair': '💱 COPPIA', 'dir': '🚀 TIPO',
             'price': '💰 ENTRATA', 'params_bb': '↔️ BB (P/D)',
             'params_rsi': '📉 RSI (B/S)', 'mercato': '🌍 MERCATO', 'result': '🔍 ESITO'
         }
-                
+            
         def style_result(val):
             color = 'white'
             if '✅' in str(val): color = '#00ff00'
             elif '❌' in str(val): color = '#ff4b4b'
             elif '⏳' in str(val): color = '#ffa500'
             return f'color: {color}'
-        
+    
         st.dataframe(
             df_reversed.rename(columns=rename_map).style.applymap(style_result, subset=['🔍 ESITO']),
             use_container_width=True,                 
             hide_index=True
         )
-    #else:
-        #st.warning("⏳ In attesa di segnali...")
-                    
+    else:
+        st.info("⏳ In attesa di segnali... Scanner attivo!")
+                
     # --- 8. REFRESH LOOP ---
     if st.session_state.scanner_on:
         time_module.sleep(3) 
