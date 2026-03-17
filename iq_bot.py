@@ -893,7 +893,7 @@ if st.session_state.connected:
             # Rimuoviamo la colonna 'ora_reale' usata solo per i calcoli prima di stampare
             if 'ora_reale' in df_reversed.columns:
                 df_reversed = df_reversed.drop(columns=['ora_reale'])
-                            
+         
         # Applica lo stile nella chiamata st.dataframe:
         st.dataframe(
             df_reversed.rename(columns=rename_map)
