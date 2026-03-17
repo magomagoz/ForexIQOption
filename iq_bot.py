@@ -703,7 +703,7 @@ if st.session_state.connected:
     
     # --- 7. TABELLA JOURNAL & PERFORMANCE HUB ---
     st.divider()
-    st.subheader("📋 Trading Journal")
+    st.subheader("📊 Performance Hub")
         
     if st.session_state.signal_history:
         df_journal = pd.DataFrame(st.session_state.signal_history)
@@ -723,7 +723,6 @@ if st.session_state.connected:
         t_std, w_std, acc_std = calc_stats(df_std)
 
         # Visualizzazione Statistiche
-        st.subheader("📊 Performance Hub")
         c1, c2 = st.columns(2)
         
         with c1:
