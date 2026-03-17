@@ -55,17 +55,17 @@ def reset_manual_prices():
     st.session_state.manual_prices = {"EURGBP": 0.0, "USDCHF": 0.0, "AUDUSD": 0.0, "EURUSD": 0.0}
     st.rerun()
 
-def send_telegram_signal(signal_type, trade_id, pair, price, rsi):
+def send_telegram_signal(signal_type, pair, price, rsi, trade_id, stake): # <--- Aggiunto stake qui
     timestamp = datetime.now().strftime("%H:%M:%S")
-    investito = stake
     message = (
         f"🚀 *NUOVA OPERAZIONE*\n"
         f"🔔 *Segnale:* {signal_type}\n"
         f"🆔 ID: `{trade_id}`\n"
         f"📊 Asset: {pair}\n"
+        f"💵 Investimento: `{stake:.2f} €` \n" # <--- Nuova riga
         f"💰 Prezzo: `{price:.5f}`\n"
         f"📊 RSI: `{rsi:.1f}`\n"
-        f"⏰ Ora: {timestamp}`"
+        f"⏰ Ora: {timestamp}"
     )
     invia_telegram(message)
 
@@ -542,18 +542,19 @@ if st.session_state.connected:
                         }
                         
                         st.session_state.signal_history.append({
-                            'time': datetime.now().strftime("%d-%m-%Y %H:%M:%S"),
+                            'time': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                             'pair': pair, 
                             'dir': direction, 
                             'price': f"{price:.5f}",
-                            'params_bb': params_bb,    # Nuova colonna
-                            'params_rsi': params_rsi,  # Nuova colonna
-                            'mercato': tipo_mercato,   # Nuova colonna
+                            'stake': st.session_state.stake, # <--- SALVIAMO LO STAKE USATO ORA
+                            'params_bb': params_bb,
+                            'params_rsi': params_rsi,
+                            'mercato': tipo_mercato,
                             'result': "⏳ In corso..."
                         })
                         
                         save_journal(st.session_state.signal_history)
-                        send_telegram_signal(direction, pair, price, curr_rsi, t_id)
+                        send_telegram_signal(direction, pair, price, curr_rsi, t_id, st.session_state.stake)
                         play_trade_sound("buy")
 
                 except Exception as e:
