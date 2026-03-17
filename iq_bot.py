@@ -842,9 +842,9 @@ if st.session_state.connected:
         
         # --- METRICHE VISIVE ---
         m1, m2, m3 = st.columns(3)
-        with m1:
+        #with m1:
             #st.metric("💰 Saldo Corrente", f"{st.session_state.local_balance:.2f} €")
-                    with m1:
+        with m1:
             # Colore dinamico per il profitto di sessione
             colore_pnl = "normal" if profitto_sessione >= 0 else "inverse"
             st.metric(
