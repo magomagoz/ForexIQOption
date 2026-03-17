@@ -55,8 +55,9 @@ def reset_manual_prices():
     st.session_state.manual_prices = {"EURGBP": 0.0, "USDCHF": 0.0, "AUDUSD": 0.0, "EURUSD": 0.0}
     st.rerun()
 
-def send_telegram_signal(signal_type, pair, price, rsi, trade_id):
+def send_telegram_signal(signal_type, trade_id, pair, price, rsi):
     timestamp = datetime.now().strftime("%H:%M:%S")
+    investito = 100€
     message = (
         f"🚀 *NUOVA OPERAZIONE*\n"
         f"🔔 *Segnale:* {signal_type}\n"
@@ -65,7 +66,7 @@ def send_telegram_signal(signal_type, pair, price, rsi, trade_id):
         f"💰 Prezzo: `{price:.5f}`\n"
         f"📊 RSI: `{rsi:.1f}`\n"
         f"⏰ Ora: {timestamp}`\n"
-        f"💶 Investito: 100€
+        f"💶 Investito: {investito}
     )
     invia_telegram(message)
 
