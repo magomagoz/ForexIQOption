@@ -685,7 +685,7 @@ if st.session_state.connected:
                 st.progress(min(max(perc_su, perc_giu) / 100, 1.0))
             
             st.write("---")
-            st.subheader("📊 Analisi Performance (1m)")
+            st.subheader("📊 Analisi Segnali pregressi (1m)")
             
             # Calcoliamo i segnali attuali basati sui parametri scelti
             n_buy = df_final['buy_sig'].notnull().sum()
@@ -781,7 +781,7 @@ if st.session_state.connected:
 
         # FILTRI PER PERFORMANCE
         df_otc = df_journal[df_journal['mercato'] == "🎯 OTC"]
-        df_std = df_journal[df_journal['mercato'] == "📊 STD"]
+        df_std = df_journal[df_journal['mercato'] == "📊 LIVE"]
 
         t_otc, w_otc, acc_otc = calc_stats(df_otc)
         t_std, w_std, acc_std = calc_stats(df_std)
