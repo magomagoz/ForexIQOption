@@ -146,7 +146,7 @@ def get_market_status():
     is_ny = new_york[0] <= now_time <= new_york[1]
     
     if is_londra and is_ny:
-        return "🔥 SOVRAPPOSIZIONE (EU/USA)\n\nAlta Volatilità"
+        return "🔥 **EU+USA**\n\nAlta Volatilità"
     elif is_londra:
         return "🇪🇺 SESSIONE LONDRA"
     elif is_ny:
