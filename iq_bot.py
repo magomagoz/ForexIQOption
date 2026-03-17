@@ -810,16 +810,14 @@ if st.session_state.connected:
         wins_f = sum(1 for s in df_display.to_dict('records') if "✅" in str(s.get('result', '')))
         loss_f = sum(1 for s in df_display.to_dict('records') if "❌" in str(s.get('result', '')))
         
-        m1, m2, m3, m4, m5 = st.columns(5)
+        m1, m2, m3, m4 = st.columns(5)
         with m1:
             st.metric("💰 Saldo Corrente", f"{st.session_state.local_balance:.2f} €")
         with m2:
-            st.metric("📈 Trade Totali", f"{len(df_display)}")
+            st.metric("🎯 Win/Loss", f"{wins_f}W - {loss_f}L", f"{len(df_display)")
         with m3:
-            st.metric("🎯 Win/Loss", f"{wins_f}W - {loss_f}L")
-        with m4:
             st.metric("📊 WR Live", f"{acc_std:.1f}%", f"{w_std}W / {t_std}T")
-        with m5:
+        with m4:
             st.metric("📊 WR OTC", f"{acc_sniper:.1f}%", f"{w_sniper}W / {t_sniper}T")
 
         
