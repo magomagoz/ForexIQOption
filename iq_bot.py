@@ -315,7 +315,7 @@ with st.sidebar:
         timeframe = st.selectbox("⏱️ TIMEFRAME OPERATIVO (s)", [60, 300], index=0)
                 
         st.divider()
-        st.header("🔧 STRUMENTI TEST")
+        st.subheader("🔧 STRUMENTI TEST")
         stress_test = st.toggle("🚀 **STRESS MODE**", value=False)
         if stress_test:
             st.warning("⚠️ **Modalità TEST:** \nno BB - RSI (45/55)")
@@ -341,7 +341,7 @@ with st.sidebar:
         st.divider()
 
         # --- SEZIONE GESTIONE DATI CSV ---
-        st.header("💾 GESTIONE SEGNALI")
+        st.subheader("💾 GESTIONE SEGNALI")
 
         # 1. TASTO ESPORTA CSV
         if st.session_state.signal_history:
