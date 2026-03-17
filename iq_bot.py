@@ -254,8 +254,8 @@ with st.sidebar:
             
             # Lascia a te la scelta dei parametri dal Lun al Ven
             col_t1, col_t2 = st.columns(2)
-            use_bb = col_t1.toggle("BB", value=True)
-            use_rsi = col_t2.toggle("RSI", value=True)
+            use_bb = col_t1.toggle("**BB**", value=True)
+            use_rsi = col_t2.toggle("**RSI**", value=True)
             
             c_bb1, c_rsi1 = st.columns(2)
             bb_period = c_bb1.selectbox("Periodo BB", [20, 14], index = 0)
@@ -736,7 +736,7 @@ if st.session_state.connected:
                 </div>
                 """, unsafe_allow_html=True)
             else:
-                st.info("**Regola BB e RSI a lato e verifica quale sarebbe stato il profitto**")
+                st.info("Regola BB e RSI a lato e verifica quale sarebbe stato il profitto")
                 #st.divider()
     except Exception as e:
             st.error(f"Errore grafico: {e}")
