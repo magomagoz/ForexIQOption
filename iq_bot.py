@@ -442,8 +442,14 @@ if st.session_state.connected:
        
                     # Calcolo indicatori comuni
                     bb = ta.bbands(df['close'], length=b_per, std=b_std)
-                    curr_bb_low = bb.filter(like='BBL').iloc[-1]
-                    curr_bb_up = bb.filter(like='BBU').iloc[-1]
+                    
+                    # PROTEZIONE: Se pandas_ta fallisce a calcolare le BB, saltiamo la valuta
+                    if bb is None or bb.empty:
+                        continue
+
+                    # CORREZIONE: Estraiamo il numero puro (float), non la Series di Pandas!
+                    curr_bb_low = float(bb.filter(like='BBL').iloc[-1].iloc[0])
+                    curr_bb_up = float(bb.filter(like='BBU').iloc[-1].iloc[0])
                     
                     # --- LOGICA SEGNALI CORRETTA (Rispetta gli interruttori UI) ---
                     cond_rsi_buy = (curr_rsi < r_buy) if use_rsi else True
