@@ -214,6 +214,23 @@ if 'local_balance' not in st.session_state: st.session_state.local_balance = 100
 if 'scanner_on' not in st.session_state: st.session_state.scanner_on = False
 if 'weekend_mode' not in st.session_state: st.session_state.weekend_mode = False 
 
+# --- CALCOLO PROFITTO PER SIDEBAR ---
+profitto_totale_sessione = 0.0
+if st.session_state.signal_history:
+    df_temp = pd.DataFrame(st.session_state.signal_history)
+    
+    def quick_pnl(row):
+        stake_u = row.get('stake', 100.0) # usa 100 se manca lo stake nel record
+        if "✅" in str(row['result']): return round(stake_u * 0.85, 2)
+        if "❌" in str(row['result']): return round(-float(stake_u), 2)
+        return 0.0
+    
+    # Calcoliamo il profitto su TUTTI i trade dello storico (o filtrati se preferisci)
+    profitto_totale_sessione = df_temp.apply(quick_pnl, axis=1).sum()
+
+# Il saldo reale è il deposito iniziale (es. 10000) + i profitti/perdite
+saldo_dinamico = 10000.0 + profitto_totale_sessione 
+
 # --- LOGICA RILEVAMENTO AUTOMATICO OTC ---
 fuso_roma = pytz.timezone('Europe/Rome')
 now_roma = datetime.now(pytz.timezone('Europe/Rome'))
@@ -322,11 +339,20 @@ with st.sidebar:
             st.write(f"{city} {status}")
             
         st.info(get_market_status())
-                                    
+
+
+
         st.divider()
         st.subheader("🛠️ PARAMETRI TRADING")
         
-        st.metric(f"💰 SALDO {st.session_state.account_type}", f"{st.session_state.local_balance:.2f} €")    
+        # Mostriamo il saldo dinamico con il delta del profitto
+        st.metric(
+            label=f"💰 SALDO {st.session_state.account_type}", 
+            value=f"{saldo_dinamico:.2f} €", 
+            delta=f"{profitto_totale_sessione:.2f} € (Sessione)",
+            delta_color="normal" if profitto_totale_sessione >= 0 else "inverse"
+        )
+
         st.session_state.stake = st.number_input("💶 INVESTIMENTO (€)", value=100.0)
         timeframe = st.selectbox("⏱️ TIMEFRAME OPERATIVO (s)", [60, 300], index=0)
                 
