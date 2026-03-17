@@ -833,11 +833,6 @@ if st.session_state.connected:
                 return round(-float(stake_usato), 2)
             return 0.0
 
-        def style_pnl(val):
-            # Rimuoviamo il simbolo € se presente per fare il confronto numerico
-            color = '#00ff00' if val > 0 else '#ff4b4b' if val < 0 else 'white'
-            return f'color: {color}; font-weight: bold;'
-
         # Creiamo una colonna temporanea per il calcolo del profitto nel set filtrato
         df_display['💶 P&L'] = df_display.apply(calcola_pnl, axis=1)
         profitto_sessione = df_display['💶 P&L'].sum()
@@ -894,6 +889,11 @@ if st.session_state.connected:
             if 'ora_reale' in df_reversed.columns:
                 df_reversed = df_reversed.drop(columns=['ora_reale'])
          
+        def style_pnl(val):
+            # Rimuoviamo il simbolo € se presente per fare il confronto numerico
+            color = '#00ff00' if val > 0 else '#ff4b4b' if val < 0 else 'white'
+            return f'color: {color}; font-weight: bold;'
+        
         # Applica lo stile nella chiamata st.dataframe:
         st.dataframe(
             df_reversed.rename(columns=rename_map)
