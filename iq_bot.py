@@ -841,12 +841,12 @@ if st.session_state.connected:
         #st.warning("⏳ In attesa di segnali...")
     
     
-            # --- LOGICA DI REFRESH AUTOMATICO ---
+        # --- LOGICA DI REFRESH AUTOMATICO ---
             
-            # 1. Messaggio discreto di stato dello scanner
-        st.caption(f"🔄 Scanner in esecuzione... Ultimo check: {now_roma.time().strftime('%H:%M:%S')}")
+        # 1. Messaggio discreto di stato dello scanner
+    st.caption(f"🔄 Scanner in esecuzione... Ultimo check: {now_roma.time().strftime('%H:%M:%S')}")
             
             # --- 8. REFRESH LOOP ---
-        if st.session_state.scanner_on:
-            time_module.sleep(3) 
-            st.rerun()
+    if st.session_state.scanner_on:
+        time_module.sleep(3) 
+        st.rerun()
