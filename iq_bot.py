@@ -839,8 +839,8 @@ if st.session_state.connected:
             use_container_width=True, 
             hide_index=True
         )
-    else:
-        st.info("⏳ In attesa di segnali...")
+else:
+    st.info("⏳ In attesa di segnali...")
 
 
     # --- LOGICA DI REFRESH AUTOMATICO ---
