@@ -186,6 +186,18 @@ def draw_market_map_inverted(current_hour_float, trading_autorizzato):
 # --- 2. SETUP STREAMLIT E SESSIONE ---
 st.set_page_config(page_title="Sentinel AI", page_icon="🚀", layout="wide")
 
+st.markdown("""
+    <style>
+    /* Rimuove l'effetto sbiadito di Streamlit durante il refresh */
+    [data-testid="stAppViewContainer"] * {
+        transition: none !important;
+    }
+    div[data-testid="stVerticalBlock"] {
+        opacity: 1 !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 try:
     logo = Image.open("banner.png")
     st.image(logo, use_column_width=True, caption="Yahoo Finance Signals PRO")
@@ -840,11 +852,18 @@ if st.session_state.connected:
             elif '⏳' in str(val): color = '#ffa500'
             return f'color: {color}'
     
-        st.dataframe(
-            df_reversed.rename(columns=rename_map).style.applymap(style_result, subset=['🔍 ESITO']),
-            use_container_width=True,                 
-            hide_index=True
-        )
+
+        # Creiamo un "buco" vuoto nell'interfaccia
+        table_placeholder = st.empty()
+        
+        # Riempiamo il buco in modo pulito senza sovrapposizioni
+        with table_placeholder.container():
+            st.dataframe(
+                df_reversed.rename(columns=rename_map).style.applymap(style_result, subset=['🔍 ESITO']),
+                use_container_width=True,                 
+                hide_index=True
+            )
+
     else:
         st.info("⏳ Accendi lo Scanner e resta in attesa di segnali!")
                 
