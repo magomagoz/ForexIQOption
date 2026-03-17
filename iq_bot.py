@@ -341,14 +341,14 @@ with st.sidebar:
         st.divider()
 
         # --- SEZIONE GESTIONE DATI CSV ---
-        st.header("💾 GESTIONE STORICO (CSV)")
+        st.header("💾 GESTIONE SEGNALI")
 
         # 1. TASTO ESPORTA CSV
         if st.session_state.signal_history:
             df_export = pd.DataFrame(st.session_state.signal_history)
             csv_data = df_export.to_csv(index=False).encode('utf-8')
             st.download_button(
-                label="📥 ESPORTA STORICO (CSV)",
+                label="📥 ESPORTA SEGNALI",
                 data=csv_data,
                 file_name=f"sentinel_history_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
                 mime="text/csv",
@@ -356,7 +356,7 @@ with st.sidebar:
             )
         else:
             # Tasto disabilitato se non ci sono segnali da esportare
-            st.button("📥 ESPORTA STORICO (CSV)", disabled=True, use_container_width=True)
+            st.button("📥 ESPORTA SEGNALI", disabled=True, use_container_width=True)
 
         # 2. WIDGET IMPORTA CSV
         st.caption("Carica un file CSV per ripristinare o unire dati passati:")
