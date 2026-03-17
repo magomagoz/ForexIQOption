@@ -877,7 +877,7 @@ if st.session_state.connected:
             
         def style_result(val):
             color = 'white'
-            if '✅' in str(val): color = '#00ff00'
+            if '✅' in str(val): color = '#32CD32'
             elif '❌' in str(val): color = '#ff4b4b'
             elif '⏳' in str(val): color = '#ffa500'
             return f'color: {color}'
