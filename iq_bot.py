@@ -882,27 +882,26 @@ if st.session_state.connected:
             elif '⏳' in str(val): color = '#ffa500'
             return f'color: {color}'
     
-        # Usiamo il placeholder per evitare l'effetto fantasma che abbiamo discusso prima
+        # Usiamo il placeholder per evitare l'effetto fantasma
         table_placeholder = st.empty()
         with table_placeholder.container():
-            # Rimuoviamo la colonna 'ora_reale' usata solo per i calcoli prima di stampare
+            # Rimuoviamo la colonna 'ora_reale' usata solo per i calcoli
             if 'ora_reale' in df_reversed.columns:
                 df_reversed = df_reversed.drop(columns=['ora_reale'])
          
-        def style_pnl(val):
-            # Rimuoviamo il simbolo € se presente per fare il confronto numerico
-            color = '#00ff00' if val > 0 else '#ff4b4b' if val < 0 else 'white'
-            return f'color: {color}; font-weight: bold;'
-        
-        # Applica lo stile nella chiamata st.dataframe:
-        st.dataframe(
-            df_reversed.rename(columns=rename_map)
-            .style.applymap(style_result, subset=['🔍 ESITO'])
-            .applymap(style_pnl, subset=['PNL']) # <-- Colora i soldi!
-            .format({"💰 ENTRATA": "{:.5f}", "PNL": "{:.2f} €"}),
-            use_container_width=True,                 
-            hide_index=True
-        )
+            def style_pnl(val):
+                # Colora in verde se > 0, rosso se < 0
+                color = '#00ff00' if val > 0 else '#ff4b4b' if val < 0 else 'white'
+                return f'color: {color}; font-weight: bold;'
+            
+            # Disegniamo la tabella DENTRO il container (indentazione corretta)
+            st.dataframe(
+                df_reversed.rename(columns=rename_map)
+                .style.applymap(style_result, subset=['🔍 ESITO'])
+                .applymap(style_pnl, subset=['💶 P&L']) # <-- NOME CORRETTO QUI
+                .format({"💰 ENTRATA": "{:.5f}", "💶 P&L": "{:.2f} €"}), # <-- NOME CORRETTO QUI
+                use_container_width=True,                 
+                hide_index=True
+            )
     else:
         st.info("⏳ Accendi lo Scanner e resta in attesa di segnali!")
-        
