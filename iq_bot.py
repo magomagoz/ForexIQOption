@@ -780,12 +780,15 @@ if st.session_state.connected:
     # =========================================================
     # --- 7. TABELLA JOURNAL & PERFORMANCE HUB (FUORI DAL FOR) ---
     # =========================================================
+    st.divider()
+    # --- SEZIONE STATISTICHE E SALDO AGGIORNATO ---
+    st.subheader("📋 Trading Journal & Performance Hub")
     
     if st.session_state.signal_history:
         df_journal = pd.DataFrame(st.session_state.signal_history)
         
-        st.divider()
-        st.subheader("📋 Trading Journal & Performance Hub")
+        #st.divider()
+        #st.subheader("📋 Trading Journal & Performance Hub")
         
         # --- NUOVA SEZIONE FILTRI (Mercato e Orario) ---
         f1, f2, f3 = st.columns([1, 1, 1])
