@@ -850,7 +850,7 @@ if st.session_state.connected:
             st.metric(
                 label="💰 Profitto Sessione", 
                 value=f"{profitto_sessione:.2f} €", 
-                delta=f"Saldo Tot: {st.session_state.local_balance:.2f} €",
+                delta=f"Saldo Iniziale: {st.session_state.local_balance:.2f} €",
                 delta_color=colore_pnl
             )
       
@@ -894,4 +894,3 @@ if st.session_state.connected:
     else:
         st.info("⏳ Accendi lo Scanner e resta in attesa di segnali!")
         
-         
