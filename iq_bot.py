@@ -894,15 +894,15 @@ if st.session_state.connected:
             if 'ora_reale' in df_reversed.columns:
                 df_reversed = df_reversed.drop(columns=['ora_reale'])
                             
-            # Applica lo stile nella chiamata st.dataframe:
-            st.dataframe(
-                df_reversed.rename(columns=rename_map)
-                .style.applymap(style_result, subset=['🔍 ESITO'])
-                .applymap(style_pnl, subset=['PNL']) # <-- Colora i soldi!
-                .format({"💰 ENTRATA": "{:.5f}", "PNL": "{:.2f} €"}),
-                use_container_width=True,                 
-                hide_index=True
-            )
+        # Applica lo stile nella chiamata st.dataframe:
+        st.dataframe(
+            df_reversed.rename(columns=rename_map)
+            .style.applymap(style_result, subset=['🔍 ESITO'])
+            .applymap(style_pnl, subset=['PNL']) # <-- Colora i soldi!
+            .format({"💰 ENTRATA": "{:.5f}", "PNL": "{:.2f} €"}),
+            use_container_width=True,                 
+            hide_index=True
+        )
     else:
         st.info("⏳ Accendi lo Scanner e resta in attesa di segnali!")
         
