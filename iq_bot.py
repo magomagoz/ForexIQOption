@@ -64,7 +64,8 @@ def send_telegram_signal(signal_type, pair, price, rsi, trade_id):
         f"📊 Asset: {pair}\n"
         f"💰 Prezzo: `{price:.5f}`\n"
         f"📊 RSI: `{rsi:.1f}`\n"
-        f"⏰ Ora: {timestamp}"
+        f"⏰ Ora: {timestamp}`\n"
+        f"💶 Stake: {stake}
     )
     invia_telegram(message)
 
@@ -378,7 +379,7 @@ with st.sidebar:
         uploaded_file = st.file_uploader("📤 IMPORTA DATI", type=["csv"], label_visibility="collapsed")
         
         if uploaded_file is not None:
-            if st.button("🔄 UNISCI DATI CSV", use_container_width=True, type="secondary"):
+            if st.button("🔄 UNISCI DATI", use_container_width=True, type="secondary"):
                 try:
                     # Legge il file caricato
                     df_import = pd.read_csv(uploaded_file)
@@ -666,7 +667,7 @@ if st.session_state.connected:
             # --- DASHBOARD DISTANZA TARGET (SNIPER MODE) ---
             if st.session_state.weekend_mode:
                 st.divider()
-                st.subheader("🎯 **Monitoraggio Sniper OTC**")
+                st.subheader("🎯 **Monitoraggio OTC**")
                 
                 ultimo_prezzo = df_final['close'].iloc[-1]
                 bbu_25 = df_final['BBU'].iloc[-1]
@@ -767,7 +768,7 @@ if st.session_state.connected:
                 st.session_state.local_balance += profit
                 if win: play_trade_sound("win")
                 colore = "✅" if win else "❌"
-                invia_telegram(f"{colore} *ESITO*\nAsset: {pair}\nRisultato: {res_status}\nProfit: {profit:.2f}€")
+                invia_telegram(f"*ESITO* {colore} {res_status}\n📊 Asset: {pair}\n🆔 ID: {trade_id}\n💶 Profit: {profit:.2f}€")
                 registra_trade(trade['id'], pair, trade['direction'], res_status, profit)
                 for s in reversed(st.session_state.signal_history):
                     if s['pair'] == pair and s['result'] == "⏳ In corso...":
@@ -777,6 +778,47 @@ if st.session_state.connected:
                 del st.session_state.active_trades[pair]
             except: continue
                                 
+    # =========================================================
+    # --- 7. TABELLA JOURNAL & PERFORMANCE HUB (FUORI DAL FOR) ---
+    # =========================================================
+    #st.divider()
+    # --- SEZIONE STATISTICHE E SALDO AGGIORNATO ---
+    st.subheader("📋 Trading Journal & Performance Hub")
+    
+    if st.session_state.signal_history:
+        df_journal = pd.DataFrame(st.session_state.signal_history)
+        
+        #st.divider()
+        #st.subheader("📋 Trading Journal & Performance Hub")
+        
+        # --- NUOVA SEZIONE FILTRI (Mercato e Orario) ---
+        f1, f2, f3 = st.columns([1, 1, 1])
+        with f1:
+            filtro_mercato = st.selectbox("🌍 Filtro Mercato:", ["TUTTI", "🎯 OTC", "📊 LIVE"], index=0)
+        with f2:
+            time_start = st.time_input("🟢 Orario Inizio:", value=time(0, 0))
+        with f3:
+            time_end = st.time_input("🛑 Orario Fine:", value=time(23, 59))
+
+        # Creiamo una colonna temporanea per gestire i calcoli dell'ora reale
+        # Converte la stringa '16:02:50' in un vero oggetto 'time'
+        df_journal['ora_reale'] = pd.to_datetime(df_journal['time'], errors='coerce').dt.time
+        
+        # 1. Applichiamo il filtro ORARIO
+        df_display = df_journal[(df_journal['ora_reale'] >= time_start) & (df_journal['ora_reale'] <= time_end)].copy()
+        
+        # 2. Applichiamo il filtro MERCATO
+        if filtro_mercato != "TUTTI":
+            df_display = df_display[df_display['mercato'] == filtro_mercato]
+            
+        # --- ESTRAZIONE PRIMO E ULTIMO TRADE ---
+        if not df_display.empty:
+            primo_trade = df_display['time'].iloc[0]   # Il primo registrato
+            ultimo_trade = df_display['time'].iloc[-1] # L'ultimo registrato
+        else:
+            primo_trade = "--:--:--"
+            ultimo_trade = "--:--:--"
+
         # --- CALCOLO PROFITTO FILTRATO ---
         # Estraiamo il profitto dai risultati (assumendo payout 85% o usando i dati salvati)
         # Se hai salvato il profitto nel dizionario del segnale, usiamo quello, altrimenti lo simuliamo
@@ -791,16 +833,17 @@ if st.session_state.connected:
         df_display['pnl'] = df_display.apply(calcola_pnl, axis=1)
         profitto_sessione = df_display['pnl'].sum()
         
-        # Statistiche rapide
+        # Statistiche rapide basate sui dati FILTRATI
         total_f = len(df_display)
         wins_f = sum(1 for s in df_display.to_dict('records') if "✅" in str(s.get('result', '')))
         loss_f = sum(1 for s in df_display.to_dict('records') if "❌" in str(s.get('result', '')))
         accuracy_f = (wins_f / total_f * 100) if total_f > 0 else 0.0
         
-        # --- VISUALIZZAZIONE METRICHE AGGIORNATA ---
-        m1, m2, m3, m4 = st.columns(4)
-        
+        # --- METRICHE VISIVE ---
+        m1, m2, m3 = st.columns(3)
         with m1:
+            #st.metric("💰 Saldo Corrente", f"{st.session_state.local_balance:.2f} €")
+                    with m1:
             # Colore dinamico per il profitto di sessione
             colore_pnl = "normal" if profitto_sessione >= 0 else "inverse"
             st.metric(
@@ -809,24 +852,45 @@ if st.session_state.connected:
                 delta=f"Saldo Tot: {st.session_state.local_balance:.2f} €",
                 delta_color=colore_pnl
             )
-            
+      
         with m2:
-            st.metric(
-                label=f"🎯 Win/Loss Filter", 
-                value=f"{wins_f}W - {loss_f}L", 
-                delta=f"Su {total_f} Trade"
-            )
-            
+            st.metric(f"🎯 Win/Loss ({time_start.strftime('%H:%M')} - {time_end.strftime('%H:%M')})", f"{wins_f}W - {loss_f}L", f"Tot: {total_f}")
         with m3:
-            st.metric(label="📊 Win Rate", value=f"{accuracy_f:.1f}%")
+            st.metric("🏁 Win Rate (Filtrato)", f"{accuracy_f:.1f}%")
+        #with m4:
+            # Mostriamo l'intervallo operativo
+            #st.metric("⏱️ Primo / Ultimo Segnale", f"{primo_trade}", f"Fine: {ultimo_trade}", delta_color="off")
             
-        with m4:
-            # Opzione A (Markdown elegante che abbiamo visto prima)
-            st.markdown(f"""
-                <div style="background-color: rgba(255, 255, 255, 0.05); padding: 10px; border-radius: 5px; border-left: 3px solid #0f3ada; height: 85px;">
-                    <p style="margin: 0; font-size: 0.8rem; color: #888;">⏱️ INTERVALLO SEGNALI</p>
-                    <p style="margin: 0; font-size: 1.1rem; font-weight: bold;">
-                        {primo_trade} <span style="color: #444;">➔</span> {ultimo_trade}
-                    </p>
-                </div>
-            """, unsafe_allow_html=True)
+        # Invertiamo per vedere i più recenti in alto nella tabella
+        df_reversed = df_display.iloc[::-1].copy()
+            
+        # Mappatura colonne
+        rename_map = {
+            'time': '⏰ ORA', 'pair': '💱 COPPIA', 'dir': '🚀 TIPO',
+            'price': '💰 ENTRATA', 'params_bb': '↔️ BB (P/D)',
+            'params_rsi': '📉 RSI (B/S)', 'mercato': '🌍 MERCATO', 'result': '🔍 ESITO'
+        }
+            
+        def style_result(val):
+            color = 'white'
+            if '✅' in str(val): color = '#00ff00'
+            elif '❌' in str(val): color = '#ff4b4b'
+            elif '⏳' in str(val): color = '#ffa500'
+            return f'color: {color}'
+    
+        # Usiamo il placeholder per evitare l'effetto fantasma che abbiamo discusso prima
+        table_placeholder = st.empty()
+        with table_placeholder.container():
+            # Rimuoviamo la colonna 'ora_reale' usata solo per i calcoli prima di stampare
+            if 'ora_reale' in df_reversed.columns:
+                df_reversed = df_reversed.drop(columns=['ora_reale'])
+                
+            st.dataframe(
+                df_reversed.rename(columns=rename_map).style.applymap(style_result, subset=['🔍 ESITO']),
+                use_container_width=True,                 
+                hide_index=True
+            )
+    else:
+        st.info("⏳ Accendi lo Scanner e resta in attesa di segnali!")
+        
+         
