@@ -737,7 +737,7 @@ if st.session_state.connected:
                 """, unsafe_allow_html=True)
             else:
                 st.info("Regola BB e RSI a lato e verifica quale sarebbe stato il profitto")
-                #st.divider()
+                st.divider()
     except Exception as e:
             st.error(f"Errore grafico: {e}")
 
