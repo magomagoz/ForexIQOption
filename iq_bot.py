@@ -803,11 +803,10 @@ if st.session_state.connected:
         #st.divider()
         
         # --- SEZIONE TRADING JOURNAL CON FILTRO ---
-        st.subheader("📋 Trading Journal")
         
         col_title, col_filter = st.columns([2, 1])
         with col_title:
-            st.markdown("📋 Performance Hub")
+            st.subheader("📋 Trading Journal & Performance Hub")
         with col_filter:
             # FILTRO A TENDINA
             filtro_mercato = st.selectbox(
