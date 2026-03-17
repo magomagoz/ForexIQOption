@@ -807,7 +807,7 @@ if st.session_state.connected:
             # FILTRO A TENDINA
             filtro_mercato = st.selectbox(
                 "Filtra per mercato:",
-                ["TUTTI", "🎯 OTC", "📊 STD"],
+                ["TUTTI", "🎯 OTC", "📊 LIVE"],
                 index=0,
                 label_visibility="collapsed"
             )
