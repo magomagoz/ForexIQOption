@@ -823,7 +823,7 @@ if st.session_state.connected:
         with m4:
             st.metric("📊 WR Live", f"{acc_std:.1f}%", f"{w_std}W / {t_std}T")
         with m5:
-            st.metric("📊 WR OTC", f"{acc_otc:.1f}%", f"{w_otc}W / {t_otc}T")
+            st.metric("📊 WR OTC", f"{acc_sniper:.1f}%", f"{w_sniper}W / {t_sniper}T")
 
         
         # Mappatura colonne
