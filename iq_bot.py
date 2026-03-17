@@ -765,44 +765,12 @@ if st.session_state.connected:
             except: continue
             
     # --- 7. TABELLA JOURNAL & PERFORMANCE HUB ---
-    st.divider()
-    st.subheader("📊 Performance Hub")
-        
-    if st.session_state.signal_history:
-        df_journal = pd.DataFrame(st.session_state.signal_history)
-        
-        # Funzione interna per calcolare le statistiche
-        def calc_stats(df_sub):
-            if df_sub.empty: return 0, 0, 0.0
-            total = len(df_sub)
-            wins = len(df_sub[df_sub['result'].str.contains("WIN", na=False)])
-            accuracy = (wins / total * 100) if total > 0 else 0
-            return total, wins, accuracy
-
-        # FILTRI PER PERFORMANCE
-        df_otc = df_journal[df_journal['mercato'] == "🎯 OTC"]
-        df_std = df_journal[df_journal['mercato'] == "📊 LIVE"]
-
-        t_otc, w_otc, acc_otc = calc_stats(df_otc)
-        t_std, w_std, acc_std = calc_stats(df_std)
-
-        # Visualizzazione Statistiche
-        c1, c2 = st.columns(2)
-        with c1:
-            st.markdown(f"**🎯 Strategia OTC**")
-            st.metric("Win Rate OTC", f"{acc_otc:.1f}%", f"{w_otc}W / {t_otc}T")
-            st.progress(acc_otc / 100)
-        with c2:
-            st.markdown(f"**📊 Strategia LIVE (STD)**")
-            st.metric("Win Rate STD", f"{acc_std:.1f}%", f"{w_std}W / {t_std}T")
-            st.progress(acc_std / 100)
-        
         st.divider()
         
         # --- SEZIONE TRADING JOURNAL CON FILTRO ---
         col_title, col_filter = st.columns([2, 1])
         with col_title:
-            st.subheader("📋 Trading Journal")
+            st.subheader("📋 Trading Journal & Performance Hub")
         with col_filter:
             # FILTRO A TENDINA
             filtro_mercato = st.selectbox(
