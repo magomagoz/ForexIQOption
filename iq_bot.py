@@ -65,7 +65,7 @@ def send_telegram_signal(signal_type, pair, price, rsi, trade_id):
         f"💰 Prezzo: `{price:.5f}`\n"
         f"📊 RSI: `{rsi:.1f}`\n"
         f"⏰ Ora: {timestamp}`\n"
-        f"💶 Stake: {stake}
+        f"💶 Investito: 100€
     )
     invia_telegram(message)
 
