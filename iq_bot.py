@@ -814,7 +814,7 @@ if st.session_state.connected:
         with m1:
             st.metric("💰 Saldo Corrente", f"{st.session_state.local_balance:.2f} €")
         with m2:
-            st.metric("🎯 Win/Loss", f"{wins_f}W - {loss_f}L", f"{len(df_display)")
+            st.metric("🎯 Win/Loss", f"{wins_f}W - {loss_f}L", f"{len(df_display)}")
         with m3:
             st.metric("📊 WR Live", f"{acc_std:.1f}%", f"{w_std}W / {t_std}T")
         with m4:
