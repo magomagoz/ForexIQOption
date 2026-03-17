@@ -340,6 +340,52 @@ with st.sidebar:
             st.rerun()
         st.divider()
 
+        # --- SEZIONE GESTIONE DATI CSV ---
+        st.header("💾 GESTIONE STORICO (CSV)")
+
+        # 1. TASTO ESPORTA CSV
+        if st.session_state.signal_history:
+            df_export = pd.DataFrame(st.session_state.signal_history)
+            csv_data = df_export.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label="📥 ESPORTA STORICO (CSV)",
+                data=csv_data,
+                file_name=f"sentinel_history_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
+        else:
+            # Tasto disabilitato se non ci sono segnali da esportare
+            st.button("📥 ESPORTA STORICO (CSV)", disabled=True, use_container_width=True)
+
+        # 2. WIDGET IMPORTA CSV
+        st.caption("Carica un file CSV per ripristinare o unire dati passati:")
+        uploaded_file = st.file_uploader("📤 IMPORTA DATI", type=["csv"], label_visibility="collapsed")
+        
+        if uploaded_file is not None:
+            if st.button("🔄 UNISCI DATI CSV", use_container_width=True, type="secondary"):
+                try:
+                    # Legge il file caricato
+                    df_import = pd.read_csv(uploaded_file)
+                    nuovi_dati = df_import.to_dict('records')
+                    
+                    # Uniamo la cronologia attuale con quella caricata dal file
+                    st.session_state.signal_history.extend(nuovi_dati)
+                    
+                    # Protezione: rimuove i duplicati esatti (stessa ora e stessa valuta)
+                    # per evitare di falsare le statistiche se importi file sovrapposti
+                    df_pulito = pd.DataFrame(st.session_state.signal_history).drop_duplicates(subset=['time', 'pair'], keep='last')
+                    st.session_state.signal_history = df_pulito.to_dict('records')
+                    
+                    # Salva anche nel file JSON locale per persistenza
+                    save_journal(st.session_state.signal_history) 
+                    
+                    st.success("✅ Storico fuso con successo!")
+                    time_module.sleep(1.5) # Pausa breve per mostrare il messaggio
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"⚠️ Errore nel file: {e}")
+
 # --- 4. MAIN DASHBOARD ---
 if st.session_state.connected:
     # FILTRO CHIRURGICO: Cambia asset in base alla modalità
@@ -722,8 +768,8 @@ if st.session_state.connected:
             return total, wins, accuracy
 
         # Filtriamo i dati per tipo
-        df_sniper = df_journal[df_journal['tipo'] == "🎯 SNIPER"]
-        df_std = df_journal[df_journal['tipo'] == "📊 STD"]
+        df_sniper = df_journal[df_journal['tipo'] == "🎯 OTC"]
+        df_std = df_journal[df_journal['tipo'] == "📊 LIVE"]
 
         t_sniper, w_sniper, acc_sniper = calc_stats(df_sniper)
         t_std, w_std, acc_std = calc_stats(df_std)
@@ -732,12 +778,12 @@ if st.session_state.connected:
         c1, c2 = st.columns(2)
         
         with c1:
-            st.markdown(f"**🎯 Strategia SNIPER**")
+            st.markdown(f"**🎯 Strategia OTC**")
             st.metric("Win Rate", f"{acc_sniper:.1f}%", f"{w_sniper}W / {t_sniper}T")
             st.progress(acc_sniper / 100)
 
         with c2:
-            st.markdown(f"**📊 Strategia STANDARD**")
+            st.markdown(f"**📊 Strategia LIVE**")
             st.metric("Win Rate", f"{acc_std:.1f}%", f"{w_std}W / {t_std}T")
             st.progress(acc_std / 100)
     else:
@@ -785,7 +831,6 @@ if st.session_state.connected:
                 'dir': '🚀 TIPO',
                 'price': '💰 ENTRATA',
                 'rsi': '📊 RSI',
-                'macd': '📉 MACD',
                 'bb': '↔️ BOLLINGER',
                 'result': '🔍 ESITO'
             }
