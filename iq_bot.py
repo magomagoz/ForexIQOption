@@ -863,4 +863,4 @@ if st.session_state.connected:
                 hide_index=True
             )
     else:
-        st.info("⏳ In attesa di segnali... Scanner attivo!")
+        st.info("⏳ Accendi lo Scanner e resta in attesa di segnali!")
