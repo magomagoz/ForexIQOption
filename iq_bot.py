@@ -890,9 +890,15 @@ if st.session_state.connected:
                 df_reversed = df_reversed.drop(columns=['ora_reale'])
          
             def style_pnl(val):
+                # Sfondo verde scuro per profitto, rosso scuro per perdita
+                bg_color = 'rgba(0, 255, 0, 0.1)' if val > 0 else 'rgba(255, 0, 0, 0.1)' if val < 0 else 'transparent'
+                text_color = '#00ff00' if val > 0 else '#ff4b4b' if val < 0 else 'white'
+                return f'background-color: {bg_color}; color: {text_color}; font-weight: bold;'
+           
+            #def style_pnl(val):
                 # Colora in verde se > 0, rosso se < 0
-                color = '#32CD32' if val > 0 else '#ff4b4b' if val < 0 else 'white'
-                return f'color: {color}; font-weight: bold;'
+                #color = '#32CD32' if val > 0 else '#ff4b4b' if val < 0 else 'white'
+                #return f'color: {color}; font-weight: bold;'
             
             # Disegniamo la tabella DENTRO il container (indentazione corretta)
             st.dataframe(
