@@ -540,8 +540,6 @@ if st.session_state.connected:
                         send_telegram_signal(direction, pair, price, curr_rsi, t_id)
                         play_trade_sound("buy")
 
-
-
                 except Exception as e:
                     continue
     
@@ -763,8 +761,7 @@ if st.session_state.connected:
                 save_journal(st.session_state.signal_history)
                 del st.session_state.active_trades[pair]
             except: continue
-                    
-            
+                                
         if st.session_state.signal_history:
             df_journal = pd.DataFrame(st.session_state.signal_history)
             
