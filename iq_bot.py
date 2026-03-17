@@ -556,7 +556,7 @@ if st.session_state.connected:
                         t_id = genera_trade_id()
                         
                         # Determina l'etichetta del mercato
-                        tipo_mercato = "🎯 OTC" if st.session_state.weekend_mode else "📊 LIVE"
+                        tipo_mercato = "OTC" if st.session_state.weekend_mode else "LIVE"
                         
                         # Registra i parametri attuali della sidebar
                         params_bb = f"{bb_period}/{bb_std}"
