@@ -891,7 +891,7 @@ if st.session_state.connected:
          
             def style_pnl(val):
                 # Colora in verde se > 0, rosso se < 0
-                color = '#00ff00' if val > 0 else '#ff4b4b' if val < 0 else 'white'
+                color = '#32CD32' if val > 0 else '#ff4b4b' if val < 0 else 'white'
                 return f'color: {color}; font-weight: bold;'
             
             # Disegniamo la tabella DENTRO il container (indentazione corretta)
