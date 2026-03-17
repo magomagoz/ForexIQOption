@@ -824,15 +824,23 @@ if st.session_state.connected:
         # Estraiamo il profitto dai risultati (assumendo payout 85% o usando i dati salvati)
         # Se hai salvato il profitto nel dizionario del segnale, usiamo quello, altrimenti lo simuliamo
         def calcola_pnl(row):
+            # Usiamo lo stake salvato nel trade, se non c'è usiamo quello attuale
+            stake_usato = row.get('stake', st.session_state.stake)
+            
             if "✅" in str(row['result']):
-                return st.session_state.stake * 0.85
+                return round(stake_usato * 0.85, 2)
             elif "❌" in str(row['result']):
-                return -st.session_state.stake
+                return round(-float(stake_usato), 2)
             return 0.0
 
+        def style_pnl(val):
+            # Rimuoviamo il simbolo € se presente per fare il confronto numerico
+            color = '#00ff00' if val > 0 else '#ff4b4b' if val < 0 else 'white'
+            return f'color: {color}; font-weight: bold;'
+
         # Creiamo una colonna temporanea per il calcolo del profitto nel set filtrato
-        df_display['P&L'] = df_display.apply(calcola_pnl, axis=1)
-        profitto_sessione = df_display['P&L'].sum()
+        df_display['💶 P&L'] = df_display.apply(calcola_pnl, axis=1)
+        profitto_sessione = df_display['💶 P&L'].sum()
         
         # Statistiche rapide basate sui dati FILTRATI
         total_f = len(df_display)
@@ -885,9 +893,13 @@ if st.session_state.connected:
             # Rimuoviamo la colonna 'ora_reale' usata solo per i calcoli prima di stampare
             if 'ora_reale' in df_reversed.columns:
                 df_reversed = df_reversed.drop(columns=['ora_reale'])
-                
+                            
+            # Applica lo stile nella chiamata st.dataframe:
             st.dataframe(
-                df_reversed.rename(columns=rename_map).style.applymap(style_result, subset=['🔍 ESITO']),
+                df_reversed.rename(columns=rename_map)
+                .style.applymap(style_result, subset=['🔍 ESITO'])
+                .applymap(style_pnl, subset=['PNL']) # <-- Colora i soldi!
+                .format({"💰 ENTRATA": "{:.5f}", "PNL": "{:.2f} €"}),
                 use_container_width=True,                 
                 hide_index=True
             )
