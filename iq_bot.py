@@ -508,10 +508,18 @@ if st.session_state.connected:
                     is_buy = (cond_rsi_buy and cond_bb_buy) and (use_rsi or use_bb)
                     is_sell = (cond_rsi_sell and cond_bb_sell) and (use_rsi or use_bb)
 
-                    # --- ESECUZIONE SEGNALE ---
+                    # --- ESECUZIONE SEGNALE AGGIORNATA ---
                     if (is_buy or is_sell) and pair not in st.session_state.active_trades:
                         direction = "BUY" if is_buy else "SELL"
                         t_id = genera_trade_id()
+                        
+                        # Determina l'etichetta del mercato
+                        tipo_mercato = "🎯 OTC" if st.session_state.weekend_mode else "📊 STD"
+                        
+                        # Registra i parametri attuali della sidebar
+                        params_bb = f"{bb_period}/{bb_std}"
+                        params_rsi = f"{custom_rsi_buy}/{custom_rsi_sell}"
+                    
                         st.session_state.active_trades[pair] = {
                             'id': t_id, 'entry_price': price, 
                             'entry_time': time_module.time(), 'direction': direction
@@ -522,14 +530,17 @@ if st.session_state.connected:
                             'pair': pair, 
                             'dir': direction, 
                             'price': f"{price:.5f}",
-                            'rsi': round(curr_rsi, 1), 
-                            'tipo': "🎯 SNIPER" if st.session_state.weekend_mode else "📊 STD",
+                            'params_bb': params_bb,    # Nuova colonna
+                            'params_rsi': params_rsi,  # Nuova colonna
+                            'mercato': tipo_mercato,   # Nuova colonna
                             'result': "⏳ In corso..."
                         })
                         
                         save_journal(st.session_state.signal_history)
                         send_telegram_signal(direction, pair, price, curr_rsi, t_id)
                         play_trade_sound("buy")
+
+
 
                 except Exception as e:
                     continue
@@ -811,31 +822,24 @@ if st.session_state.connected:
             # Questo è il saldo che si aggiorna con i tuoi calcoli Win/Loss
             st.metric(f"💰 Saldo {st.session_state.account_type}", f"{st.session_state.local_balance:.2f} €")    
         
-    # --- 4. TABELLA SEGNALI (ULTIMO IN ALTO) ---    
+    # --- TABELLA SEGNALI AGGIORNATA ---    
     if st.session_state.signal_history:
-        # Creiamo il DataFrame
         df_journal = pd.DataFrame(st.session_state.signal_history)
-        
-        # Invertiamo l'ordine: l'ultimo aggiunto finisce in prima riga [::-1]
         df_reversed = df_journal.iloc[::-1].copy()
         
-        # Assicuriamoci che tutte le colonne esistano (per evitare errori se il segnale è nuovo)
-        for col in ['time', 'pair', 'dir', 'price', 'rsi', 'result']:
-            if col not in df_reversed.columns:
-                df_reversed[col] = "-" 
+        # Mappatura completa di tutte le colonne richieste
+        rename_map = {
+            'time': '⏰ ORA',
+            'pair': '💱 COPPIA',
+            'dir': '🚀 TIPO',
+            'price': '💰 ENTRATA',
+            'params_bb': '↔️ BB (P/D)',
+            'params_rsi': '📉 RSI (B/S)',
+            'mercato': '🌍 MERCATO',
+            'result': '🔍 ESITO'
+        }
         
-            # Rinominiamo le nuove colonne
-            rename_map = {
-                'time': '⏰ ORA',
-                'pair': '💱 COPPIA',
-                'dir': '🚀 TIPO',
-                'price': '💰 ENTRATA',
-                'rsi': '📊 RSI',
-                'bb': '↔️ BOLLINGER',
-                'result': '🔍 ESITO'
-            }
-            
-        # Funzione per colorare l'esito
+        # Funzione di stile per l'esito
         def style_result(val):
             color = 'white'
             if '✅' in str(val): color = '#00ff00'
@@ -843,7 +847,7 @@ if st.session_state.connected:
             elif '⏳' in str(val): color = '#ffa500'
             return f'color: {color}'
     
-        # Visualizzazione della tabella invertita
+        # Visualizzazione con le nuove colonne
         st.dataframe(
             df_reversed.rename(columns=rename_map).style.applymap(style_result, subset=['🔍 ESITO']),
             use_container_width=True, 
