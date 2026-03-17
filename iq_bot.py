@@ -810,7 +810,7 @@ if st.session_state.connected:
         wins_f = sum(1 for s in df_display.to_dict('records') if "✅" in str(s.get('result', '')))
         loss_f = sum(1 for s in df_display.to_dict('records') if "❌" in str(s.get('result', '')))
         
-        m1, m2, m3, m4 = st.columns(5)
+        m1, m2, m3, m4 = st.columns(4)
         with m1:
             st.metric("💰 Saldo Corrente", f"{st.session_state.local_balance:.2f} €")
         with m2:
