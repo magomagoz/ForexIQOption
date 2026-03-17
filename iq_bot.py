@@ -779,7 +779,7 @@ if st.session_state.connected:
         # Creiamo 3 colonne per le metriche finali
         m1, m2, m3, m4 = st.columns(4)
         with m1:
-            st.metric("🏆 WR LIVE", f"{acc_std:.1f}%", f"{w_std}W / {t_std}T")
+            st.metric("🏆 WR LIVE", f"{acc_live:.1f}%", f"{w_live}W / {t_live}T")
         with m2:
             st.metric("🏆 WR OTC", f"{acc_sniper:.1f}%", f"{w_sniper}W / {t_sniper}T")
         with m3:
