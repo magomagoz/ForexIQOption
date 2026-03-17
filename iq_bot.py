@@ -764,9 +764,6 @@ if st.session_state.connected:
                 del st.session_state.active_trades[pair]
             except: continue
                     
-        # --- 7. TABELLA JOURNAL & PERFORMANCE HUB ---
-        st.divider()
-        st.subheader("📊 Performance Hub")
             
         if st.session_state.signal_history:
             df_journal = pd.DataFrame(st.session_state.signal_history)
