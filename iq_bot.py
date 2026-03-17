@@ -824,14 +824,19 @@ if st.session_state.connected:
         wins_f = sum(1 for s in df_display.to_dict('records') if "✅" in str(s.get('result', '')))
         loss_f = sum(1 for s in df_display.to_dict('records') if "❌" in str(s.get('result', '')))
         
-        m1, m2, m3 = st.columns(3)
+        m1, m2, m3, m4, m5 = st.columns(5)
         with m1:
             st.metric("💰 Saldo Corrente", f"{st.session_state.local_balance:.2f} €")
         with m2:
-            st.metric("📈 Trade (Filtro)", f"{len(df_display)}")
+            st.metric("📈 Trade Totali", f"{len(df_display)}")
         with m3:
-            st.metric("🎯 Win/Loss (Filtro)", f"{wins_f}W - {loss_f}L")
+            st.metric("🎯 Win/Loss", f"{wins_f}W - {loss_f}L")
+        with m4:
+            st.metric("📊 WR Live", f"{acc_std:.1f}%", f"{w_std}W / {t_std}T")
+        with m5:
+            st.metric("📊 WR OTC", f"{acc_otc:.1f}%", f"{w_otc}W / {t_otc}T")
 
+        
         # Mappatura colonne
         rename_map = {
             'time': '⏰ ORA', 'pair': '💱 COPPIA', 'dir': '🚀 TIPO',
