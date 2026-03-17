@@ -780,7 +780,7 @@ if st.session_state.connected:
     # =========================================================
     # --- 7. TABELLA JOURNAL & PERFORMANCE HUB (FUORI DAL FOR) ---
     # =========================================================
-    st.divider()
+    #st.divider()
     # --- SEZIONE STATISTICHE E SALDO AGGIORNATO ---
     st.subheader("📋 Trading Journal & Performance Hub")
     
