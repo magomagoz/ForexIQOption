@@ -841,7 +841,7 @@ if st.session_state.connected:
             hide_index=True
         )
     else:
-        st.info("⏳ In attesa di segnali... Scanner attivo!")
+        st.info("⏳ In attesa di segnali...")
 
 
     # --- LOGICA DI REFRESH AUTOMATICO ---
