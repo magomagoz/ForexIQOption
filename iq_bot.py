@@ -787,7 +787,6 @@ if st.session_state.connected:
         # --- SEZIONE TRADING JOURNAL CON FILTRO ---
         col_title, col_filter = st.columns([2, 1])
         with col_title:
-            st.divider()
             st.subheader("📋 Trading Journal & Performance Hub")
         with col_filter:
             # FILTRO A TENDINA
