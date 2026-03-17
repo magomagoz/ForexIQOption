@@ -272,7 +272,7 @@ with st.sidebar:
         if st.button(label, use_container_width=True, type="primary"):
             st.session_state.scanner_on = not st.session_state.scanner_on
             st.rerun()
-
+        if st.session_state.scanner_on:
             # 1. Messaggio discreto di stato dello scanner
             st.caption(f"🔄 Scanner in esecuzione...  \nUltimo check: {now_roma.time().strftime('%H:%M:%S')}")
     
