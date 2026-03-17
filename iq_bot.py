@@ -735,8 +735,8 @@ if st.session_state.connected:
                 </div>
                 """, unsafe_allow_html=True)
             else:
-                st.info("**Regola i parametri e verifica il profitto**")
-        
+                st.info("**Regola BB e RSI a lato e verifica il profitto**")
+                st.divider()
     except Exception as e:
             st.error(f"Errore grafico: {e}")
 
@@ -787,7 +787,7 @@ if st.session_state.connected:
         # --- SEZIONE TRADING JOURNAL CON FILTRO ---
         col_title, col_filter = st.columns([2, 1])
         with col_title:
-            st.subheader("📋 Trading Journal & Performance Hub")
+        st.subheader("📋 Trading Journal & Performance Hub")
         with col_filter:
             # FILTRO A TENDINA
             filtro_mercato = st.selectbox(
@@ -840,7 +840,7 @@ if st.session_state.connected:
                 hide_index=True
             )
     else:
-        st.info("⏳ In attesa di segnali...")
+        st.warning("⏳ In attesa di segnali...")
     
     
             # --- LOGICA DI REFRESH AUTOMATICO ---
