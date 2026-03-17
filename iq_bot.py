@@ -797,50 +797,50 @@ if st.session_state.connected:
             label_visibility="collapsed"
         )
 
-    # Applicazione del filtro al DataFrame della tabella
-    df_display = df_journal.copy()
-    if filtro_mercato != "TUTTI":
-        df_display = df_display[df_display['mercato'] == filtro_mercato]
+        # Applicazione del filtro al DataFrame della tabella
+        df_display = df_journal.copy()
+        if filtro_mercato != "TUTTI":
+            df_display = df_display[df_display['mercato'] == filtro_mercato]
+            
+        # Invertiamo per vedere i più recenti in alto
+        df_reversed = df_display.iloc[::-1].copy()
+            
+        # Statistiche rapide basate sul filtro selezionato
+        wins_f = sum(1 for s in df_display.to_dict('records') if "✅" in str(s.get('result', '')))
+        loss_f = sum(1 for s in df_display.to_dict('records') if "❌" in str(s.get('result', '')))
         
-    # Invertiamo per vedere i più recenti in alto
-    df_reversed = df_display.iloc[::-1].copy()
-        
-    # Statistiche rapide basate sul filtro selezionato
-    wins_f = sum(1 for s in df_display.to_dict('records') if "✅" in str(s.get('result', '')))
-    loss_f = sum(1 for s in df_display.to_dict('records') if "❌" in str(s.get('result', '')))
+        m1, m2, m3, m4 = st.columns(4)
+        with m1:
+            st.metric("💰 Saldo Corrente", f"{st.session_state.local_balance:.2f} €")
+        with m2:
+            st.metric("🎯 Win/Loss", f"{wins_f}W - {loss_f}L", f"{len(df_display)}")
+        with m3:
+            st.metric("📊 WR Live", f"{acc_std:.1f}%", f"{w_std}W / {t_std}T")
+        with m4:
+            st.metric("📊 WR OTC", f"{acc_sniper:.1f}%", f"{w_sniper}W / {t_sniper}T")
     
-    m1, m2, m3, m4 = st.columns(4)
-    with m1:
-        st.metric("💰 Saldo Corrente", f"{st.session_state.local_balance:.2f} €")
-    with m2:
-        st.metric("🎯 Win/Loss", f"{wins_f}W - {loss_f}L", f"{len(df_display)}")
-    with m3:
-        st.metric("📊 WR Live", f"{acc_std:.1f}%", f"{w_std}W / {t_std}T")
-    with m4:
-        st.metric("📊 WR OTC", f"{acc_sniper:.1f}%", f"{w_sniper}W / {t_sniper}T")
-
-        
-    # Mappatura colonne
-    rename_map = {
-        'time': '⏰ ORA', 'pair': '💱 COPPIA', 'dir': '🚀 TIPO',
-        'price': '💰 ENTRATA', 'params_bb': '↔️ BB (P/D)',
-        'params_rsi': '📉 RSI (B/S)', 'mercato': '🌍 MERCATO', 'result': '🔍 ESITO'
-    }
-        
-    def style_result(val):
-        color = 'white'
-        if '✅' in str(val): color = '#00ff00'
-        elif '❌' in str(val): color = '#ff4b4b'
-        elif '⏳' in str(val): color = '#ffa500'
-        return f'color: {color}'
-
-    st.dataframe(
-        df_reversed.rename(columns=rename_map).style.applymap(style_result, subset=['🔍 ESITO']),
-        use_container_width=True, 
-        hide_index=True
-    )
-else:
-    st.info("⏳ In attesa di segnali...")
+            
+        # Mappatura colonne
+        rename_map = {
+            'time': '⏰ ORA', 'pair': '💱 COPPIA', 'dir': '🚀 TIPO',
+            'price': '💰 ENTRATA', 'params_bb': '↔️ BB (P/D)',
+            'params_rsi': '📉 RSI (B/S)', 'mercato': '🌍 MERCATO', 'result': '🔍 ESITO'
+        }
+            
+        def style_result(val):
+            color = 'white'
+            if '✅' in str(val): color = '#00ff00'
+            elif '❌' in str(val): color = '#ff4b4b'
+            elif '⏳' in str(val): color = '#ffa500'
+            return f'color: {color}'
+    
+        st.dataframe(
+            df_reversed.rename(columns=rename_map).style.applymap(style_result, subset=['🔍 ESITO']),
+            use_container_width=True, 
+            hide_index=True
+        )
+    else:
+        st.info("⏳ In attesa di segnali...")
 
 
     # --- LOGICA DI REFRESH AUTOMATICO ---
