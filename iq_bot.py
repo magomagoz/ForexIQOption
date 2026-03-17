@@ -784,18 +784,18 @@ if st.session_state.connected:
         
         st.divider()
             
-        # --- SEZIONE TRADING JOURNAL CON FILTRO ---
-        col_title, col_filter = st.columns([2, 1])
-        with col_title:
+    # --- SEZIONE TRADING JOURNAL CON FILTRO ---
+    col_title, col_filter = st.columns([2, 1])
+    with col_title:
         st.subheader("📋 Trading Journal & Performance Hub")
-        with col_filter:
-            # FILTRO A TENDINA
-            filtro_mercato = st.selectbox(
-                "Filtra per mercato:",
-                ["TUTTI", "🎯 OTC", "📊 LIVE"],
-                index=0,
-                label_visibility="collapsed"
-            )
+    with col_filter:
+        # FILTRO A TENDINA
+        filtro_mercato = st.selectbox(
+            "Mercato:",
+            ["TUTTI", "🎯 OTC", "📊 LIVE"],
+            index=0,
+            label_visibility="collapsed"
+        )
     
             # Applicazione del filtro al DataFrame della tabella
             df_display = df_journal.copy()
