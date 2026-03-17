@@ -273,8 +273,8 @@ with st.sidebar:
             st.session_state.scanner_on = not st.session_state.scanner_on
             st.rerun()
 
-        # 1. Messaggio discreto di stato dello scanner
-        st.caption(f"🔄 Scanner in esecuzione...  \nUltimo check: {now_roma.time().strftime('%H:%M:%S')}")
+            # 1. Messaggio discreto di stato dello scanner
+            st.caption(f"🔄 Scanner in esecuzione...  \nUltimo check: {now_roma.time().strftime('%H:%M:%S')}")
     
         # --- LOGICA SIDEBAR OTC ---
         if st.session_state.weekend_mode:
