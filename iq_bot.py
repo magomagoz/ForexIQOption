@@ -831,8 +831,8 @@ if st.session_state.connected:
             return 0.0
 
         # Creiamo una colonna temporanea per il calcolo del profitto nel set filtrato
-        df_display['pnl'] = df_display.apply(calcola_pnl, axis=1)
-        profitto_sessione = df_display['pnl'].sum()
+        df_display['P&L'] = df_display.apply(calcola_pnl, axis=1)
+        profitto_sessione = df_display['P&L'].sum()
         
         # Statistiche rapide basate sui dati FILTRATI
         total_f = len(df_display)
