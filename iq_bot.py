@@ -784,60 +784,57 @@ if st.session_state.connected:
     if st.session_state.signal_history:
         df_journal = pd.DataFrame(st.session_state.signal_history)
         
-        # Calcolo statistiche separate
-        def calc_stats(df_sub):
-            if df_sub.empty:
-                return 0, 0, 0.0
-            total = len(df_sub)
-            wins = len(df_sub[df_sub['result'].str.contains("WIN", na=False)])
-            accuracy = (wins / total * 100) if total > 0 else 0
-            return total, wins, accuracy
-
-        # Filtriamo i dati per tipo
-        df_sniper = df_journal[df_journal['mercato'] == "🎯 OTC"]
-        df_std = df_journal[df_journal['mercato'] == "📊 LIVE"]
-
-        t_sniper, w_sniper, acc_sniper = calc_stats(df_sniper)
-        t_std, w_std, acc_std = calc_stats(df_std)
-    
-        #st.divider()
+        st.divider()
+        st.subheader("📋 Trading Journal & Performance Hub")
         
-        # --- SEZIONE TRADING JOURNAL CON FILTRO ---
-        
-        col_title, col_filter = st.columns([2, 1])
-        with col_title:
-            st.subheader("📋 Trading Journal & Performance Hub")
-        with col_filter:
-            # FILTRO A TENDINA
-            filtro_mercato = st.selectbox(
-                "Mercato:",
-                ["TUTTI", "🎯 OTC", "📊 LIVE"],
-                index=0,
-                label_visibility="collapsed"
-            )
+        # --- NUOVA SEZIONE FILTRI (Mercato e Orario) ---
+        f1, f2, f3 = st.columns([1, 1, 1])
+        with f1:
+            filtro_mercato = st.selectbox("🌍 Filtro Mercato:", ["TUTTI", "🎯 OTC", "📊 LIVE"], index=0)
+        with f2:
+            time_start = st.time_input("🟢 Orario Inizio:", value=time(0, 0))
+        with f3:
+            time_end = st.time_input("🛑 Orario Fine:", value=time(23, 59))
 
-        # Applicazione del filtro al DataFrame della tabella
-        df_display = df_journal.copy()
+        # Creiamo una colonna temporanea per gestire i calcoli dell'ora reale
+        # Converte la stringa '16:02:50' in un vero oggetto 'time'
+        df_journal['ora_reale'] = pd.to_datetime(df_journal['time'], errors='coerce').dt.time
+        
+        # 1. Applichiamo il filtro ORARIO
+        df_display = df_journal[(df_journal['ora_reale'] >= time_start) & (df_journal['ora_reale'] <= time_end)].copy()
+        
+        # 2. Applichiamo il filtro MERCATO
         if filtro_mercato != "TUTTI":
             df_display = df_display[df_display['mercato'] == filtro_mercato]
             
-        # Invertiamo per vedere i più recenti in alto
-        df_reversed = df_display.iloc[::-1].copy()
+        # --- ESTRAZIONE PRIMO E ULTIMO TRADE ---
+        if not df_display.empty:
+            primo_trade = df_display['time'].iloc[0]   # Il primo registrato
+            ultimo_trade = df_display['time'].iloc[-1] # L'ultimo registrato
+        else:
+            primo_trade = "--:--:--"
+            ultimo_trade = "--:--:--"
             
-        # Statistiche rapide basate sul filtro selezionato
+        # Statistiche rapide basate sui dati FILTRATI
+        total_f = len(df_display)
         wins_f = sum(1 for s in df_display.to_dict('records') if "✅" in str(s.get('result', '')))
         loss_f = sum(1 for s in df_display.to_dict('records') if "❌" in str(s.get('result', '')))
+        accuracy_f = (wins_f / total_f * 100) if total_f > 0 else 0.0
         
+        # --- METRICHE VISIVE ---
         m1, m2, m3, m4 = st.columns(4)
         with m1:
             st.metric("💰 Saldo Corrente", f"{st.session_state.local_balance:.2f} €")
         with m2:
-            st.metric("🎯 Win/Loss", f"{wins_f}W - {loss_f}L", f"{len(df_display)} Totali")
+            st.metric(f"🎯 Win/Loss ({time_start.strftime('%H:%M')} - {time_end.strftime('%H:%M')})", f"{wins_f}W - {loss_f}L", f"Tot: {total_f}")
         with m3:
-            st.metric("📊 WR Live", f"{acc_std:.1f}%", f"{w_std}W / {t_std}T")
+            st.metric("📊 Win Rate (Filtrato)", f"{accuracy_f:.1f}%")
         with m4:
-            st.metric("📊 WR OTC", f"{acc_sniper:.1f}%", f"{w_sniper}W / {t_sniper}T")
-    
+            # Mostriamo l'intervallo operativo
+            st.metric("⏱️ Primo / Ultimo Segnale", f"{primo_trade}", f"Fine: {ultimo_trade}", delta_color="off")
+        
+        # Invertiamo per vedere i più recenti in alto nella tabella
+        df_reversed = df_display.iloc[::-1].copy()
             
         # Mappatura colonne
         rename_map = {
@@ -853,22 +850,17 @@ if st.session_state.connected:
             elif '⏳' in str(val): color = '#ffa500'
             return f'color: {color}'
     
-
-        # Creiamo un "buco" vuoto nell'interfaccia
+        # Usiamo il placeholder per evitare l'effetto fantasma che abbiamo discusso prima
         table_placeholder = st.empty()
-        
-        # Riempiamo il buco in modo pulito senza sovrapposizioni
         with table_placeholder.container():
+            # Rimuoviamo la colonna 'ora_reale' usata solo per i calcoli prima di stampare
+            if 'ora_reale' in df_reversed.columns:
+                df_reversed = df_reversed.drop(columns=['ora_reale'])
+                
             st.dataframe(
                 df_reversed.rename(columns=rename_map).style.applymap(style_result, subset=['🔍 ESITO']),
                 use_container_width=True,                 
                 hide_index=True
             )
-
     else:
-        st.warning("⏳ Accendi lo Scanner e resta in attesa di segnali!")
-                
-    # --- 8. REFRESH LOOP ---
-    if st.session_state.scanner_on:
-        time_module.sleep(3) 
-        st.rerun()
+        st.info("⏳ In attesa di segnali... Scanner attivo!")
