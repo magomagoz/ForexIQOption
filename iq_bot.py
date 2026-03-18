@@ -393,17 +393,6 @@ if st.session_state.connected:
 
     st.subheader("🌍 Live Market Flow 24h")
     
-    # CHIAMATA CORRETTA ALLA MAPPA
-    if st.session_state.weekend_mode or is_weekend_reale:
-        try:
-            st.image(Image.open("banner2.png"), use_column_width=True)
-        except:
-            st.warning("MODALITÀ WEEKEND: OTC ATTIVO")
-    else:
-        # Passiamo solo un argomento come definito nella funzione
-        st.plotly_chart(draw_market_map_inverted(trading_autorizzato), use_container_width=True)
-
-    
     if st.session_state.weekend_mode or is_weekend_reale:
         try:
             # Carica banner2.png se siamo in modalità weekend
