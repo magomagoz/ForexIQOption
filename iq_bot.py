@@ -410,25 +410,25 @@ if st.session_state.connected:
         # --- GESTIONE STATO SCANNER E PROTEZIONE ORARIA ---
         #esegui_scansione = False # Di default è spento
         
-        if st.session_state.scanner_on:
-            # Messaggio dinamico in base alla modalità
-            if st.session_state.weekend_mode:
-                st.success("SCANNER OTC ATTIVO su 🇪🇺🇬🇧-🇺🇸🇨🇭-🇦🇺🇺🇸-🇪🇺🇺🇸 ", icon="🎯")
-                esegui_scansione = True
+    if st.session_state.scanner_on:
+        # Messaggio dinamico in base alla modalità
+        if st.session_state.weekend_mode:
+            st.success("SCANNER OTC ATTIVO su 🇪🇺🇬🇧-🇺🇸🇨🇭-🇦🇺🇺🇸-🇪🇺🇺🇸 ", icon="🎯")
+            esegui_scansione = True
+        else:
+            if not trading_autorizzato:
+                st.warning("🛡️ PROTEZIONE ATTIVA: Mercato fuori orario. Scanner in pausa.")
+                esegui_scansione = False # IL VERO BLOCCO
             else:
-                if not trading_autorizzato:
-                    st.warning("🛡️ PROTEZIONE ATTIVA: Mercato fuori orario. Scanner in pausa.")
-                    esegui_scansione = False # IL VERO BLOCCO
-                else:
-                    st.success("SISTEMA IN SCANSIONE ATTIVA 🔥🔥🔥", icon="📡")
+                st.success("SISTEMA IN SCANSIONE ATTIVA 🔥🔥🔥", icon="📡")
  
-                    st.divider()
-                    st.subheader("🕵️ Coppie di valute osservate")
-                    cols = st.columns(5)
-                    for i, pair in enumerate(ALL_PAIRS):
-                        with cols[i % 5]: 
-                            st.code(f"{icons.get(pair, '🔍')} {pair}")
-                    esegui_scansione = True
+                st.divider()
+                st.subheader("🕵️ Coppie di valute osservate")
+                cols = st.columns(5)
+                for i, pair in enumerate(ALL_PAIRS):
+                    with cols[i % 5]: 
+                        st.code(f"{icons.get(pair, '🔍')} {pair}")
+                esegui_scansione = True
 
         for pair in ALL_PAIRS:
             try:
