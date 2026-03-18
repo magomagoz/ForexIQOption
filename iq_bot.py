@@ -859,104 +859,139 @@ if st.session_state.connected:
             except: continue
                                 
     # =========================================================
-    # --- 7. TABELLA JOURNAL & PERFORMANCE HUB (PRO VERSION) ---
+    # --- 7. TABELLA JOURNAL & PERFORMANCE HUB (FUORI DAL FOR) ---
     # =========================================================
+    #st.divider()
+    # --- SEZIONE STATISTICHE E SALDO AGGIORNATO ---
     st.subheader("📋 Trading Journal & Performance Hub")
     
     if st.session_state.signal_history:
-        # Carichiamo lo storico
         df_journal = pd.DataFrame(st.session_state.signal_history)
         
-        # --- FILTRI ---
+        #st.divider()
+        #st.subheader("📋 Trading Journal & Performance Hub")
+        
+        # --- NUOVA SEZIONE FILTRI (Mercato e Orario) ---
         f1, f2, f3 = st.columns([1, 1, 1])
         with f1:
-            filtro_mercato = st.selectbox("🌍 Filtro Mercato:", ["TUTTI", "OTC", "LIVE"], index=0)
+            filtro_mercato = st.selectbox("🌍 Filtro Mercato:", ["TUTTI", "🎯 OTC", "📊 LIVE"], index=0)
         with f2:
             time_start = st.time_input("🟢 Orario Inizio:", value=time(0, 0))
         with f3:
             time_end = st.time_input("🛑 Orario Fine:", value=time(23, 59))
 
-        # Prepariamo i dati filtrati
+        # Creiamo una colonna temporanea per gestire i calcoli dell'ora reale
+        # Converte la stringa '16:02:50' in un vero oggetto 'time'
         df_journal['ora_reale'] = pd.to_datetime(df_journal['time'], errors='coerce').dt.time
-        df_filtered = df_journal[(df_journal['ora_reale'] >= time_start) & (df_journal['ora_reale'] <= time_end)].copy()
         
+        # 1. Applichiamo il filtro ORARIO
+        df_display = df_journal[(df_journal['ora_reale'] >= time_start) & (df_journal['ora_reale'] <= time_end)].copy()
+        
+        # 2. Applichiamo il filtro MERCATO
         if filtro_mercato != "TUTTI":
-            df_filtered = df_filtered[df_filtered['mercato'].str.contains(filtro_mercato, na=False)]
+            df_display = df_display[df_display['mercato'] == filtro_mercato]
+            
+        # --- ESTRAZIONE PRIMO E ULTIMO TRADE ---
+        if not df_display.empty:
+            primo_trade = df_display['time'].iloc[0]   # Il primo registrato
+            ultimo_trade = df_display['time'].iloc[-1] # L'ultimo registrato
+        else:
+            primo_trade = "--:--:--"
+            ultimo_trade = "--:--:--"
 
-        # --- FUNZIONE INTERNA PER IL CALCOLO P&L ---
-        def calcola_pnl_veloce(row):
-            stake_u = float(row.get('stake', 100.0))
-            res = str(row.get('result', ''))
-            if "✅" in res or "WIN" in res: return round(stake_u * 0.85, 2)
-            if "❌" in res or "LOSS" in res: return round(-stake_u, 2)
+        # --- CALCOLO PROFITTO FILTRATO ---
+        # Estraiamo il profitto dai risultati (assumendo payout 85% o usando i dati salvati)
+        # Se hai salvato il profitto nel dizionario del segnale, usiamo quello, altrimenti lo simuliamo
+        def calcola_pnl(row):
+            # Usiamo lo stake salvato nel trade, se non c'è usiamo quello attuale
+            stake_usato = row.get('stake', st.session_state.stake)
+            
+            if "✅" in str(row['result']):
+                return round(stake_usato * 0.85, 2)
+            elif "❌" in str(row['result']):
+                return round(-float(stake_usato), 2)
             return 0.0
 
-        # Creiamo la colonna numerica per i calcoli e lo stile
-        df_filtered['pnl_numeric'] = df_filtered.apply(calcola_pnl_veloce, axis=1)
-        profitto_sessione = df_filtered['pnl_numeric'].sum()
+        # Creiamo una colonna temporanea per il calcolo del profitto nel set filtrato
+        df_display['💶 P&L'] = df_display.apply(calcola_pnl, axis=1)
+        profitto_sessione = df_display['💶 P&L'].sum()
         
-        # Statistiche filtrate
-        total_f = len(df_filtered)
-        wins_f = sum(1 for s in df_filtered['result'] if "✅" in str(s) or "WIN" in str(s))
-        loss_f = sum(1 for s in df_filtered['result'] if "❌" in str(s) or "LOSS" in str(s))
+        # Statistiche rapide basate sui dati FILTRATI
+        total_f = len(df_display)
+        wins_f = sum(1 for s in df_display.to_dict('records') if "✅" in str(s.get('result', '')))
+        loss_f = sum(1 for s in df_display.to_dict('records') if "❌" in str(s.get('result', '')))
         accuracy_f = (wins_f / total_f * 100) if total_f > 0 else 0.0
         
         # --- METRICHE VISIVE ---
         m1, m2, m3 = st.columns(3)
+        #with m1:
+            #st.metric("💰 Saldo Corrente", f"{st.session_state.local_balance:.2f} €")
         with m1:
-            colore_delta = "normal" if profitto_sessione >= 0 else "inverse"
-            st.metric("💰 Profitto Sessione", f"{profitto_sessione:.2f} €", 
-                      delta=f"Saldo: {st.session_state.local_balance:.2f} €", delta_color=colore_delta)
+            # Colore dinamico per il profitto di sessione
+            colore_pnl = "normal" if profitto_sessione >= 0 else "inverse"
+            st.metric(
+                label="💰 Profitto Sessione", 
+                value=f"{profitto_sessione:.2f} €", 
+                delta=f"Saldo Iniziale: {st.session_state.local_balance:.2f} €",
+                delta_color=colore_pnl
+            )
+      
         with m2:
-            st.metric("🎯 Win/Loss", f"{wins_f}W - {loss_f}L", f"Tot: {total_f}")
+            st.metric(f"🎯 Win/Loss ({time_start.strftime('%H:%M')} - {time_end.strftime('%H:%M')})", f"{wins_f}W - {loss_f}L", f"Tot: {total_f}")
         with m3:
-            st.metric("🏁 Win Rate", f"{accuracy_f:.1f}%")
-
-        # --- PREPARAZIONE TABELLA FINALE ---
-        # Invertiamo per vedere i più recenti in alto
-        df_visual = df_filtered.iloc[::-1].copy()
-
-        # Mappatura nomi colonne
+            st.metric("🏁 Win Rate (Filtrato)", f"{accuracy_f:.1f}%")
+        #with m4:
+            # Mostriamo l'intervallo operativo
+            #st.metric("⏱️ Primo / Ultimo Segnale", f"{primo_trade}", f"Fine: {ultimo_trade}", delta_color="off")
+            
+        # Invertiamo per vedere i più recenti in alto nella tabella
+        df_reversed = df_display.iloc[::-1].copy()
+            
+        # Mappatura colonne
         rename_map = {
-            'ora_attuale': '⏰ DATA', 
-            'pair': '💱 COPPIA', 
-            'dir': '🚀 TIPO',
-            'price': '💰 ENTRATA', 
-            'params_bb': '↔️ BB (P/D)',
-            'params_rsi': '📉 RSI (B/S)', 
-            'mercato': '🌍 MERCATO', 
-            'result': '🔍 ESITO', 
-            'pnl_numeric': '💶 P&L'
+            'time': '⏰ ORA', 'pair': '💱 COPPIA', 'dir': '🚀 TIPO',
+            'price': '💰 ENTRATA', 'params_bb': '↔️ BB (P/D)',
+            'params_rsi': '📉 RSI (B/S)', 'mercato': '🌍 MERCATO', 'result': '🔍 ESITO'
         }
-
-        # Applichiamo il rename solo alle colonne che vogliamo mostrare
-        cols_to_keep = ['time', 'pair', 'dir', 'price', 'params_bb', 'params_rsi', 'mercato', 'result', 'pnl_numeric']
-        df_visual = df_visual[cols_to_keep].rename(columns=rename_map)
-
-        # Etichette per lo stile
-        col_pnl_target = '💶 P&L'
-        col_esito_target = '🔍 ESITO'
-
-        # Rendering Tabella
-        try:
+            
+        def style_result(val):
+            color = 'white'
+            if '✅' in str(val): color = '#32CD32'
+            elif '❌' in str(val): color = '#ff4b4b'
+            elif '⏳' in str(val): color = '#ffa500'
+            return f'color: {color}; font-weight: bold;'
+    
+        # Usiamo il placeholder per evitare l'effetto fantasma
+        table_placeholder = st.empty()
+        with table_placeholder.container():
+            # Rimuoviamo la colonna 'ora_reale' usata solo per i calcoli
+            if 'ora_reale' in df_reversed.columns:
+                df_reversed = df_reversed.drop(columns=['ora_reale'])
+            
+            #Sfondo colorato
+            #def style_pnl(val):
+                # Sfondo verde scuro per profitto, rosso scuro per perdita
+                #bg_color = 'rgba(0, 255, 0, 0.1)' if val > 0 else 'rgba(255, 0, 0, 0.1)' if val < 0 else 'transparent'
+                #text_color = '#32CD32' if val > 0 else '#ff4b4b' if val < 0 else 'white'
+                #return f'background-color: {bg_color}; color: {text_color}; font-weight: bold;'
+           
+            def style_pnl(val):
+                # Colora in verde se > 0, rosso se < 0
+                color = '#32CD32' if val > 0 else '#ff4b4b' if val < 0 else 'white'
+                return f'color: {color}; font-weight: bold;'
+            
+            # Disegniamo la tabella DENTRO il container (indentazione corretta)
             st.dataframe(
-                df_visual.style
-                .applymap(style_result, subset=[col_esito_target])
-                .applymap(style_pnl, subset=[col_pnl_target])
-                .format({
-                    "💰 ENTRATA": "{:.5f}", 
-                    col_pnl_target: "{:.2f} €"
-                }),
+                df_reversed.rename(columns=rename_map)
+                .style.applymap(style_result, subset=['🔍 ESITO'])
+                .applymap(style_pnl, subset=['💶 P&L']) # <-- NOME CORRETTO QUI
+                .format({"💰 ENTRATA": "{:.5f}", "💶 P&L": "{:.2f} €"}), # <-- NOME CORRETTO QUI
                 use_container_width=True,                 
                 hide_index=True
             )
-        except Exception as e:
-            #st.error(f"Nota: Caricamento dati in corso...")
-            st.dataframe(df_visual, use_container_width=True, hide_index=True)
-
     else:
         st.info("⏳ Accendi lo Scanner e resta in attesa di segnali!")
-
+    
     # --- 8. REFRESH LOOP ---
     if st.session_state.scanner_on:
         time_module.sleep(3) 
