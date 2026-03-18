@@ -496,18 +496,17 @@ if st.session_state.connected:
     pair_display = st.selectbox("Seleziona asset per grafico", ALL_PAIRS)
     
     try:
-        token = st.session_state.get("oanda_token", "")
-        # LOGICA COERENTE CON L'OVERRIDE
+        # LOGICA COERENTE CON L'OVERRIDE (Niente 'token' passato alla funzione)
         if st.session_state.weekend_mode and pair_display in st.session_state.get('manual_prices', {}) and st.session_state.manual_prices[pair_display] > 0:
-            candles_ta = get_deriv_candles(pair_display, timeframe, 160, token)
+            candles_ta = get_deriv_candles(pair_display, timeframe, 160)
             if candles_ta:
                 candles_ta[-1]['close'] = st.session_state.manual_prices[pair_display]
         else:
-            candles_ta = get_deriv_candles(pair_display, timeframe, 160, token)
+            candles_ta = get_deriv_candles(pair_display, timeframe, 160)
             
         if candles_ta:
             df_raw = pd.DataFrame(candles_ta)
-
+            
             # Calcolo indicatori
             df_raw['RSI'] = ta.rsi(df_raw['close'], length=7)
             bb_ta = ta.bbands(df_raw['close'], length=bb_period, std=bb_std)
