@@ -884,8 +884,8 @@ if st.session_state.connected:
             use_container_width=True, hide_index=True
         )
 
-	else:
-        st.info("⏳ Accendi lo Scanner e resta in attesa di segnali!")
+	#else:
+    	#st.info("⏳ Accendi lo Scanner e resta in attesa di segnali!")
 		
     # --- LOGICA DI REFRESH AUTOMATICO ---
     
