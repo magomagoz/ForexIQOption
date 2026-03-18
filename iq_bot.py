@@ -920,12 +920,22 @@ if st.session_state.connected:
             color = '#00ff00' if val > 0 else '#ff4b4b' if val < 0 else 'white'
             return f'color: {color}; font-weight: bold;'
         
-        # Applica lo stile nella chiamata st.dataframe:
+        # 1. Prepariamo il DataFrame rinominato
+        df_final_table = df_reversed.rename(columns=rename_map)
+
+        # 2. Verifichiamo quali colonne esistono davvero per evitare il KeyError
+        # Se nel rename_map hai messo '💶 P&L', dobbiamo usare quello!
+        col_pnl = '💶 P&L' 
+        col_esito = '🔍 ESITO'
+
         st.dataframe(
-            df_reversed.rename(columns=rename_map)
-            .style.applymap(style_result, subset=['🔍 ESITO'])
-            .applymap(style_pnl, subset=['PNL']) # <-- Colora i soldi!
-            .format({"💰 ENTRATA": "{:.5f}", "PNL": "{:.2f} €"}),
+            df_final_table.style
+            .applymap(style_result, subset=[col_esito] if col_esito in df_final_table.columns else [])
+            .applymap(style_pnl, subset=[col_pnl] if col_pnl in df_final_table.columns else [])
+            .format({
+                "💰 ENTRATA": "{:.5f}", 
+                col_pnl: "{:.2f} €"
+            } if col_pnl in df_final_table.columns else {"💰 ENTRATA": "{:.5f}"}),
             use_container_width=True,                 
             hide_index=True
         )
