@@ -821,97 +821,64 @@ if st.session_state.connected:
             except: continue
                                 
     # =========================================================
-    # --- 7. TABELLA JOURNAL & PERFORMANCE HUB (FUORI DAL FOR) ---
+    # --- 7. TABELLA JOURNAL & PERFORMANCE HUB (PRO VERSION) ---
     # =========================================================
-    #st.divider()
-    # --- SEZIONE STATISTICHE E SALDO AGGIORNATO ---
     st.subheader("📋 Trading Journal & Performance Hub")
     
     if st.session_state.signal_history:
+        # Carichiamo lo storico
         df_journal = pd.DataFrame(st.session_state.signal_history)
         
-        #st.divider()
-        #st.subheader("📋 Trading Journal & Performance Hub")
-        
-        # --- NUOVA SEZIONE FILTRI (Mercato e Orario) ---
+        # --- FILTRI ---
         f1, f2, f3 = st.columns([1, 1, 1])
         with f1:
-            filtro_mercato = st.selectbox("🌍 Filtro Mercato:", ["TUTTI", "🎯 OTC", "📊 LIVE"], index=0)
+            filtro_mercato = st.selectbox("🌍 Filtro Mercato:", ["TUTTI", "OTC", "LIVE"], index=0)
         with f2:
             time_start = st.time_input("🟢 Orario Inizio:", value=time(0, 0))
         with f3:
             time_end = st.time_input("🛑 Orario Fine:", value=time(23, 59))
 
-        # Creiamo una colonna temporanea per gestire i calcoli dell'ora reale
-        # Converte la stringa '16:02:50' in un vero oggetto 'time'
+        # Prepariamo i dati filtrati
         df_journal['ora_reale'] = pd.to_datetime(df_journal['time'], errors='coerce').dt.time
+        df_filtered = df_journal[(df_journal['ora_reale'] >= time_start) & (df_journal['ora_reale'] <= time_end)].copy()
         
-        # 1. Applichiamo il filtro ORARIO
-        df_display = df_journal[(df_journal['ora_reale'] >= time_start) & (df_journal['ora_reale'] <= time_end)].copy()
-        
-        # 2. Applichiamo il filtro MERCATO
         if filtro_mercato != "TUTTI":
-            df_display = df_display[df_display['mercato'] == filtro_mercato]
-            
-        # --- ESTRAZIONE PRIMO E ULTIMO TRADE ---
-        if not df_display.empty:
-            primo_trade = df_display['time'].iloc[0]   # Il primo registrato
-            ultimo_trade = df_display['time'].iloc[-1] # L'ultimo registrato
-        else:
-            primo_trade = "--:--:--"
-            ultimo_trade = "--:--:--"
+            df_filtered = df_filtered[df_filtered['mercato'].str.contains(filtro_mercato, na=False)]
 
-        # 1. Creiamo una copia pulita dei dati filtrati
-        #df_final_table = df_reversed.copy()
-
-        # 2. Calcoliamo il PNL numerico (se non esiste già)
-        def calcola_pnl_raw(row):
-            stake_u = row.get('stake', 100.0)
+        # --- FUNZIONE INTERNA PER IL CALCOLO P&L ---
+        def calcola_pnl_veloce(row):
+            stake_u = float(row.get('stake', 100.0))
             res = str(row.get('result', ''))
-            if "✅" in res: return round(stake_u * 0.85, 2)
-            if "❌" in res: return round(-float(stake_u), 2)
+            if "✅" in res or "WIN" in res: return round(stake_u * 0.85, 2)
+            if "❌" in res or "LOSS" in res: return round(-stake_u, 2)
             return 0.0
 
-        # Creiamo una colonna temporanea per il calcolo del profitto nel set filtrato
-        df_display['💶 P&L'] = df_display.apply(calcola_pnl, axis=1)
-        profitto_sessione = df_display['💶 P&L'].sum()
+        # Creiamo la colonna numerica per i calcoli e lo stile
+        df_filtered['pnl_numeric'] = df_filtered.apply(calcola_pnl_veloce, axis=1)
+        profitto_sessione = df_filtered['pnl_numeric'].sum()
         
-        # Statistiche rapide basate sui dati FILTRATI
-        total_f = len(df_display)
-        wins_f = sum(1 for s in df_display.to_dict('records') if "✅" in str(s.get('result', '')))
-        loss_f = sum(1 for s in df_display.to_dict('records') if "❌" in str(s.get('result', '')))
+        # Statistiche filtrate
+        total_f = len(df_filtered)
+        wins_f = sum(1 for s in df_filtered['result'] if "✅" in str(s) or "WIN" in str(s))
+        loss_f = sum(1 for s in df_filtered['result'] if "❌" in str(s) or "LOSS" in str(s))
         accuracy_f = (wins_f / total_f * 100) if total_f > 0 else 0.0
         
         # --- METRICHE VISIVE ---
         m1, m2, m3 = st.columns(3)
-        #with m1:
-            #st.metric("💰 Saldo Corrente", f"{st.session_state.local_balance:.2f} €")
         with m1:
-            # Colore dinamico per il profitto di sessione
-            colore_pnl = "normal" if profitto_sessione >= 0 else "inverse"
-            st.metric(
-                label="💰 Profitto Sessione", 
-                value=f"{profitto_sessione:.2f} €", 
-                delta=f"Saldo Iniziale: {st.session_state.local_balance:.2f} €",
-                delta_color=colore_pnl
-            )
-      
+            colore_delta = "normal" if profitto_sessione >= 0 else "inverse"
+            st.metric("💰 Profitto Sessione", f"{profitto_sessione:.2f} €", 
+                      delta=f"Saldo: {st.session_state.local_balance:.2f} €", delta_color=colore_delta)
         with m2:
-            st.metric(f"🎯 Win/Loss ({time_start.strftime('%H:%M')} - {time_end.strftime('%H:%M')})", f"{wins_f}W - {loss_f}L", f"Tot: {total_f}")
+            st.metric("🎯 Win/Loss", f"{wins_f}W - {loss_f}L", f"Tot: {total_f}")
         with m3:
-            st.metric("🏁 Win Rate (Filtrato)", f"{accuracy_f:.1f}%")
-        #with m4:
-            # Mostriamo l'intervallo operativo
-            #st.metric("⏱️ Primo / Ultimo Segnale", f"{primo_trade}", f"Fine: {ultimo_trade}", delta_color="off")
-            
-        # Invertiamo per vedere i più recenti in alto nella tabella
-        df_reversed = df_display.iloc[::-1].copy()
-            
+            st.metric("🏁 Win Rate", f"{accuracy_f:.1f}%")
 
-        # Creiamo la colonna con i numeri (senza simboli) per permettere i calcoli di stile
-        df_final_table['pnl_numeric'] = df_final_table.apply(calcola_pnl_raw, axis=1)
+        # --- PREPARAZIONE TABELLA FINALE ---
+        # Invertiamo per vedere i più recenti in alto
+        df_visual = df_filtered.iloc[::-1].copy()
 
-        # 3. Mappatura Colonne (Assicurati che i nomi a sinistra esistano nel tuo signal_history)
+        # Mappatura nomi colonne
         rename_map = {
             'time': '⏰ ORA', 
             'pair': '💱 COPPIA', 
@@ -921,17 +888,18 @@ if st.session_state.connected:
             'params_rsi': '📉 RSI (B/S)', 
             'mercato': '🌍 MERCATO', 
             'result': '🔍 ESITO', 
-            'pnl_numeric': '💶 P&L'  # <--- Rinominiamo la colonna numerica qui
+            'pnl_numeric': '💶 P&L'
         }
 
-        # 4. Applichiamo il Rename
-        df_visual = df_final_table.rename(columns=rename_map)
+        # Applichiamo il rename solo alle colonne che vogliamo mostrare
+        cols_to_keep = ['time', 'pair', 'dir', 'price', 'params_bb', 'params_rsi', 'mercato', 'result', 'pnl_numeric']
+        df_visual = df_visual[cols_to_keep].rename(columns=rename_map)
 
-        # 5. Definiamo le etichette esatte per lo styling (devono corrispondere a rename_map)
+        # Etichette per lo stile
         col_pnl_target = '💶 P&L'
         col_esito_target = '🔍 ESITO'
 
-        # 6. Visualizzazione con protezione dagli errori
+        # Rendering Tabella
         try:
             st.dataframe(
                 df_visual.style
@@ -939,15 +907,14 @@ if st.session_state.connected:
                 .applymap(style_pnl, subset=[col_pnl_target])
                 .format({
                     "💰 ENTRATA": "{:.5f}", 
-                    col_pnl_target: "{:.2f} €" # Formatta il numero aggiungendo € solo visivamente
+                    col_pnl_target: "{:.2f} €"
                 }),
                 use_container_width=True,                 
                 hide_index=True
             )
         except Exception as e:
-            st.error(f"Errore nella visualizzazione tabella: {e}")
-            # Visualizzazione di emergenza senza stili se crasha ancora
-            st.dataframe(df_visual)
+            st.error(f"Nota: Caricamento dati in corso...")
+            st.dataframe(df_visual, use_container_width=True, hide_index=True)
 
     else:
         st.info("⏳ Accendi lo Scanner e resta in attesa di segnali!")
