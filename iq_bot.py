@@ -123,9 +123,9 @@ def draw_market_map_inverted(trading_autorizzato):
     # Oro se attivo, Blu se protetto
     color_laser = "#FFD700" if trading_autorizzato else "#0F3ADA"
 
-    # Linea Laser + Glow
+    # Linea Laser + Glow (CORRETTO L'OPACITY QUI)
     fig.add_shape(type="line", x0=x_pos, x1=x_pos, y0=0, y1=4.5, line=dict(color=color_laser, width=3))
-    fig.add_shape(type="line", x0=x_pos, x1=x_pos, y0=0, y1=4.5, line=dict(color=color_laser, width=15, opacity=0.15))
+    fig.add_shape(type="line", x0=x_pos, x1=x_pos, y0=0, y1=4.5, line=dict(color=color_laser, width=15), opacity=0.15)
 
     fig.update_layout(
         xaxis=dict(range=[24, 0], showgrid=False, visible=False, fixedrange=True),
@@ -683,7 +683,7 @@ if st.session_state.connected:
         
     except Exception as e:
             st.error(f"Errore grafico: {e}")
-        
+    
     # --- 6. VERIFICA ESITI TRADE CON DERIV (FIX FINALE) ---
     # Definiamo il timestamp corrente prima di iniziare il ciclo
     current_ts = time_module.time() 
