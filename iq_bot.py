@@ -68,7 +68,7 @@ def send_telegram_signal(signal_type, pair, price, rsi, trade_id, stake):
         f"🔔 *Segnale:* {signal_type}\n"
         f"🆔 ID: `{trade_id}`\n"
         f"📊 Asset: {pair}\n"
-        f"💵 Stake: `{stake:.2f} €` \n" 
+        f"💵 Stake: `{stake} €` \n" 
         f"💰 Prezzo: `{price:.5f}`\n"
         f"📊 RSI: `{rsi:.1f}`\n"
         f"⏰ Ora: {timestamp}"
@@ -802,7 +802,7 @@ if st.session_state.connected:
             'pnl_numeric': '💶 P&L'
         }
 
-        cols_to_keep = ['time', 'pair', 'dir', 'price', 'params_bb', 'params_rsi', 'mercato', 'result', 'pnl_numeric']
+        cols_to_keep = ['time', 'pair', 'dir', 'price', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'pnl_numeric']
         df_visual = df_visual[cols_to_keep].rename(columns=rename_map)
 
         col_pnl_target = '💶 P&L'
@@ -818,7 +818,7 @@ if st.session_state.connected:
                 .applymap(style_result, subset=['result'])
                 .applymap(style_pnl, subset=['pnl_numeric'])
                 .format({
-                    'pnl_numeric': "{:.2f} €",
+                    'pnl_numeric': "{:.0f} €",
                     'price': "{:.5f}"  # Assicurati che 'price' nel DF sia un numero, non f-string!
                 }),
                 use_container_width=True,
