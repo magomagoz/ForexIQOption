@@ -653,35 +653,6 @@ if st.session_state.connected:
                 print(f"Errore verifica per {pair}: {e}")
                 continue
 
-    # --- 7. TABELLA JOURNAL ---
-    st.divider()
-    st.subheader("📋 Trading Journal & Performance")
-    
-    if st.session_state.signal_history:
-        df_journal = pd.DataFrame(st.session_state.signal_history)
-        
-        # Invertiamo l'ordine per vedere i più recenti in alto
-        df_visual = df_journal.iloc[::-1].copy()
-        
-        # Mappatura nomi colonne per estetica
-        rename_map = {
-            'time': '⏰ DATA', 'pair': '💱 COPPIA', 'dir': '🚀 TIPO',
-            'price': '💰 ENTRATA', 'stake': '💶 STAKE', 'result': '🔍 ESITO', 'pnl_numeric': '📈 P&L'
-        }
-        
-        df_display = df_visual.rename(columns=rename_map)
-
-        # Visualizzazione formattata
-        st.dataframe(
-            df_display.style
-            .applymap(style_result, subset=['🔍 ESITO'] if '🔍 ESITO' in df_display.columns else [])
-            .applymap(style_pnl, subset=['📈 P&L'] if '📈 P&L' in df_display.columns else [])
-            .format({'💰 ENTRATA': "{:.5f}", '📈 P&L': "{:.2f} €"}, na_rep="-"),
-            use_container_width=True, hide_index=True
-        )
-    else:
-        st.info("⏳ Nessun segnale registrato. Lo scanner sta analizzando i mercati...")
-
     st.divider()
                                 
     # --- 7. TABELLA JOURNAL (STAKE FIX APPLICATO) ---
