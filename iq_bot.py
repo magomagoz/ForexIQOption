@@ -518,18 +518,22 @@ if st.session_state.connected:
                         params_bb = f"{bb_period}/{bb_std}"
                         params_rsi = f"{custom_rsi_buy}/{custom_rsi_sell}"
                     
+                         # --- FIX REGISTRAZIONE SEGNALE ---
                         st.session_state.active_trades[pair] = {
-                            'id': t_id, 'entry_price': price, 
-                            'entry_time': time_module.time(), 'direction': direction, 'stake_num': st.session_state.stake
+                            'id': t_id, 
+                            'entry_price': float(price), 
+                            'entry_time': time_module.time(), 
+                            'direction': direction, 
+                            'stake_num': float(st.session_state.stake)
                         }
                         
                         st.session_state.signal_history.append({
-                            'id': t_id, # Assicurati di aggiungere l'ID qui!
+                            'id': t_id,
                             'time': datetime.now(fuso_roma).strftime("%Y-%m-%d %H:%M:%S"),
                             'pair': pair, 
                             'dir': direction, 
-                            'price': float(price), # SALVA COME NUMERO, non come stringa f-string
-                            'stake': f"{int(st.session_state.stake)}€", 
+                            'price': float(price), 
+                            'stake': f"{int(st.session_state.stake)}€", # Formattato come 100€
                             'params_bb': params_bb,
                             'params_rsi': params_rsi,
                             'mercato': tipo_mercato,
@@ -740,91 +744,83 @@ if st.session_state.connected:
                 continue
                                 
     # =========================================================
-    # --- 7. TABELLA JOURNAL & PERFORMANCE HUB (PRO VERSION) ---
+    # --- 7. TABELLA JOURNAL & PERFORMANCE HUB (FIXED) ---
     # =========================================================
     st.subheader("📋 Trading Journal & Performance Hub")
     
     if st.session_state.signal_history:
         df_journal = pd.DataFrame(st.session_state.signal_history)
         
+        # Filtri UI
         f1, f2, f3 = st.columns([1, 1, 1])
-        with f1:
-            filtro_mercato = st.selectbox("🌍 Filtro Mercato:", ["TUTTI", "OTC", "LIVE"], index=0)
-        with f2:
-            time_start = st.time_input("🟢 Orario Inizio:", value=time(0, 0))
-        with f3:
-            time_end = st.time_input("🛑 Orario Fine:", value=time(23, 59))
+        with f1: filtro_mercato = st.selectbox("🌍 Filtro Mercato:", ["TUTTI", "OTC", "LIVE"], index=0)
+        with f2: time_start = st.time_input("🟢 Orario Inizio:", value=time(0, 0))
+        with f3: time_end = st.time_input("🛑 Orario Fine:", value=time(23, 59))
 
-        df_journal['ora_reale'] = pd.to_datetime(df_journal['time'], errors='coerce').dt.time
+        # Logica di filtraggio
+        df_journal['dt_obj'] = pd.to_datetime(df_journal['time'])
+        df_journal['ora_reale'] = df_journal['dt_obj'].dt.time
         df_filtered = df_journal[(df_journal['ora_reale'] >= time_start) & (df_journal['ora_reale'] <= time_end)].copy()
         
         if filtro_mercato != "TUTTI":
             df_filtered = df_filtered[df_filtered['mercato'].str.contains(filtro_mercato, na=False)]
 
-        def calcola_pnl_veloce(row):
-            stake_u = float(row.get('stake', 100.0))
-            res = str(row.get('result', ''))
-            if "✅" in res or "WIN" in res: return round(stake_u * 0.85, 2)
-            if "❌" in res or "LOSS" in res: return round(-stake_u, 2)
-            return 0.0
+        # Calcolo PNL per le metriche
+        def quick_pnl(row):
+            try:
+                # Prende lo stake numerico se esiste, altrimenti pulisce la stringa "100€"
+                s = float(str(row.get('stake', '100')).replace('€',''))
+                res = str(row.get('result', ''))
+                if "✅" in res or "WIN" in res: return round(s * 0.85, 2)
+                if "❌" in res or "LOSS" in res: return round(-s, 2)
+                return 0.0
+            except: return 0.0
 
-        df_filtered['pnl_numeric'] = df_filtered.apply(calcola_pnl_veloce, axis=1)
-        profitto_sessione = df_filtered['pnl_numeric'].sum()
+        df_filtered['pnl_numeric'] = df_filtered.apply(quick_pnl, axis=1)
         
-        total_f = len(df_filtered)
-        wins_f = sum(1 for s in df_filtered['result'] if "✅" in str(s) or "WIN" in str(s))
-        loss_f = sum(1 for s in df_filtered['result'] if "❌" in str(s) or "LOSS" in str(s))
-        accuracy_f = (wins_f / total_f * 100) if total_f > 0 else 0.0
-        
+        # Visualizzazione Metriche
         m1, m2, m3 = st.columns(3)
-        with m1:
-            colore_delta = "normal" if profitto_sessione >= 0 else "inverse"
-            st.metric("💰 Profitto Sessione", f"{profitto_sessione:.2f} €", 
-                      delta=f"Saldo: {st.session_state.local_balance:.2f} €", delta_color=colore_delta)
-        with m2:
-            st.metric("🎯 Win/Loss", f"{wins_f}W - {loss_f}L", f"Tot: {total_f}")
-        with m3:
-            st.metric("🏁 Win Rate", f"{accuracy_f:.1f}%")
+        wins = sum(1 for s in df_filtered['result'] if "✅" in str(s))
+        loss = sum(1 for s in df_filtered['result'] if "❌" in str(s))
+        with m1: st.metric("💰 Profitto", f"{df_filtered['pnl_numeric'].sum():.2f} €")
+        with m2: st.metric("🎯 Win/Loss", f"{wins}W - {loss}L")
+        with m3: st.metric("🏁 Win Rate", f"{(wins/(wins+loss)*100 if (wins+loss)>0 else 0):.1f}%")
 
-        df_visual = df_filtered.iloc[::-1].copy()
-
-        # BUG RISOLTO: la colonna originaria nel json si chiama 'time', non 'ora_attuale'
+        # --- PREPARAZIONE TABELLA FINALE ---
         rename_map = {
             'time': '⏰ DATA', 
             'pair': '💱 COPPIA', 
             'dir': '🚀 TIPO',
             'price': '💰 ENTRATA', 
+            'stake': '💶 STAKE',
             'params_bb': '↔️ BB (P/D)',
             'params_rsi': '📉 RSI (B/S)', 
             'mercato': '🌍 MERCATO', 
             'result': '🔍 ESITO', 
-            'pnl_numeric': '💶 P&L'
+            'pnl_numeric': '📈 P&L'
         }
 
-        cols_to_keep = ['time', 'pair', 'dir', 'price', 'params_bb', 'params_rsi', 'mercato', 'result', 'pnl_numeric']
-        df_visual = df_visual[cols_to_keep].rename(columns=rename_map)
+        # Selezioniamo solo le colonne presenti per evitare errori
+        df_visual = df_filtered.iloc[::-1].copy()
+        cols_presenti = [c for c in rename_map.keys() if c in df_visual.columns]
+        df_display = df_visual[cols_presenti].rename(columns=rename_map)
 
-        col_pnl_target = '💶 P&L'
-        col_esito_target = '🔍 ESITO'
-
+        # Rendering con Stile
         try:
-            # BUG RISOLTO: Tolto la formattazione .5f per il prezzo perché era GIA' testo. 
-            # E' quello che causava il ValueError della foto!
             st.dataframe(
-                df_visual.style
-                .applymap(style_result, subset=[col_esito_target])
-                .applymap(style_pnl, subset=[col_pnl_target])
+                df_display.style
+                .applymap(style_result, subset=['🔍 ESITO'] if '🔍 ESITO' in df_display.columns else [])
+                .applymap(style_pnl, subset=['📈 P&L'] if '📈 P&L' in df_display.columns else [])
                 .format({
-                    col_pnl_target: "{:.2f} €"
-                }),
-                use_container_width=True,                 
-                hide_index=True
+                    '💰 ENTRATA': "{:.5f}",
+                    '📈 P&L': "{:.2f} €"
+                }, na_rep="-"),
+                use_container_width=True, hide_index=True
             )
         except Exception as e:
-            st.dataframe(df_visual, use_container_width=True, hide_index=True)
-
+            st.dataframe(df_display, use_container_width=True, hide_index=True)
     else:
-        st.info("⏳ Accendi lo Scanner e resta in attesa di segnali!")
+        st.info("⏳ In attesa del primo segnale dallo scanner...")
 
     # --- 8. REFRESH LOOP ---
     if st.session_state.scanner_on:
