@@ -116,7 +116,7 @@ def draw_market_map_inverted(trading_autorizzato):
         bg_image = Image.open("banner2.png")
 
     fig.add_layout_image(dict(
-        source=bg_image, xref="x", yref="y", x=0, y=4.5,
+        source=bg_image, xref="x", yref="y", x=24, y=4.5,
         sizex=24, sizey=4.5, sizing="stretch", opacity=1.0, layer="below"
     ))
 
@@ -125,7 +125,7 @@ def draw_market_map_inverted(trading_autorizzato):
 
     # Linea Laser + Glow (CORRETTO L'OPACITY QUI)
     fig.add_shape(type="line", x0=x_pos, x1=x_pos, y0=0, y1=4.5, line=dict(color=color_laser, width=3))
-    fig.add_shape(type="line", x0=x_pos, x1=x_pos, y0=0, y1=4.5, line=dict(color=color_laser, width=15), opacity=0.15)
+    #fig.add_shape(type="line", x0=x_pos, x1=x_pos, y0=0, y1=4.5, line=dict(color=color_laser, width=15), opacity=0.15)
 
     fig.update_layout(
         xaxis=dict(range=[24, 0], showgrid=False, visible=False, fixedrange=True),
