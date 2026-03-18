@@ -62,7 +62,7 @@ def reset_manual_prices():
     st.rerun()
 
 def send_telegram_signal(signal_type, pair, price, rsi, trade_id, stake): 
-    timestamp = datetime.now().strftime("%H:%M:%S")
+    timestamp = datetime.now(pytz.timezone('Europe/Rome')).strftime("%H:%M:%S")
     message = (
         f"🚀 *NUOVO TRADE*\n"
         f"🔔 *Segnale:* {signal_type}\n"
@@ -84,7 +84,7 @@ def registra_trade(trade_id, pair, direction, risultato, profitto):
     data.append({
         "id": trade_id, "pair": pair, "direction": direction,
         "risultato": risultato, "profitto": profitto,
-        "timestamp": datetime.now().strftime("%d-%m-%Y %H:%M:%S")
+        "timestamp": datetime.now(pytz.timezone('Europe/Rome')).strftime("%d-%m-%Y %H:%M:%S")
     })
     with open(file_path, "w") as f:
         json.dump(data, f)
@@ -524,7 +524,7 @@ if st.session_state.connected:
                         }
                         
                         st.session_state.signal_history.append({
-                            'time': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                            'time': datetime.now(pytz.timezone('Europe/Rome')).strftime("%Y-%m-%d %H:%M:%S"),
                             'pair': pair, 
                             'dir': direction, 
                             'price': f"{price:.5f}", # È TESTO! (Importante per il blocco 7)
