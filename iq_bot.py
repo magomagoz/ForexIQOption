@@ -427,5 +427,5 @@ if st.session_state.connected:
 
     # --- 8. REFRESH LOOP ---
     if st.session_state.scanner_on:
-        time_module.sleep(3) 
+        time_module.sleep(5) 
         st.rerun()
