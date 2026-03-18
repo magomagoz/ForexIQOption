@@ -121,6 +121,22 @@ def save_journal(history):
     with open(JOURNAL_FILE, "w") as f:
         json.dump(history, f)
 
+def style_pnl(val):
+    try:
+        # Convertiamo in float nel caso arrivasse come stringa o formato strano
+        # Rimuoviamo eventuali simboli € o spazi per il calcolo
+        clean_val = str(val).replace('€', '').replace(' ', '').strip()
+        num_val = float(clean_val)
+        
+        if num_val > 0:
+            return 'color: #00ff88; font-weight: bold;' # Verde brillante
+        elif num_val < 0:
+            return 'color: #ff4b4b; font-weight: bold;' # Rosso acceso
+        else:
+            return 'color: white;'
+    except:
+        return 'color: white;' # In caso di errore (es. testo "⏳ In corso") non crasha
+
 def play_trade_sound(sound_type="buy"):
     sounds = {
         "buy": "https://actions.google.com/sounds/v1/alarms/beep_short.ogg",
@@ -914,31 +930,27 @@ if st.session_state.connected:
             # Rimuoviamo la colonna 'ora_reale' usata solo per i calcoli prima di stampare
             if 'ora_reale' in df_reversed.columns:
                 df_reversed = df_reversed.drop(columns=['ora_reale'])
-         
-        def style_pnl(val):
-            # Rimuoviamo il simbolo € se presente per fare il confronto numerico
-            color = '#00ff00' if val > 0 else '#ff4b4b' if val < 0 else 'white'
-            return f'color: {color}; font-weight: bold;'
-        
+                 
         # 1. Prepariamo il DataFrame rinominato
         df_final_table = df_reversed.rename(columns=rename_map)
 
-        # 2. Verifichiamo quali colonne esistono davvero per evitare il KeyError
-        # Se nel rename_map hai messo '💶 P&L', dobbiamo usare quello!
-        col_pnl = '💶 P&L' 
-        col_esito = '🔍 ESITO'
+        # Definiamo i nomi esatti usati nel rename_map per non sbagliare
+        col_pnl_rinominata = '💶 P&L'
+        col_esito_rinominata = '🔍 ESITO'
 
+        # Applichiamo lo styling
         st.dataframe(
-            df_final_table.style
-            .applymap(style_result, subset=[col_esito] if col_esito in df_final_table.columns else [])
-            .applymap(style_pnl, subset=[col_pnl] if col_pnl in df_final_table.columns else [])
+            df_reversed.rename(columns=rename_map)
+            .style.applymap(style_result, subset=[col_esito_rinominata])
+            .applymap(style_pnl, subset=[col_pnl_rinominata])
             .format({
                 "💰 ENTRATA": "{:.5f}", 
-                col_pnl: "{:.2f} €"
-            } if col_pnl in df_final_table.columns else {"💰 ENTRATA": "{:.5f}"}),
+                col_pnl_rinominata: "{:.2f} €"
+            }),
             use_container_width=True,                 
             hide_index=True
         )
+
     else:
         st.info("⏳ Accendi lo Scanner e resta in attesa di segnali!")
 
