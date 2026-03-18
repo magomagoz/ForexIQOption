@@ -489,20 +489,20 @@ if st.session_state.connected:
             except Exception as e:
                 continue
     
-    # --- 5. ANALISI TECNICA GRAFICA ---
+    # --- 5. ANALISI TECNICA GRAFICA (CORRETTA) ---
     st.divider()
     st.subheader("📈 Analisi Tecnica")
     pair_display = st.selectbox("Seleziona asset per grafico", ALL_PAIRS)
     
     try:
-        token = st.session_state.get("deriv_token", "")
+        token = st.session_state.get("oanda_token", "")
         # LOGICA COERENTE CON L'OVERRIDE
         if st.session_state.weekend_mode and pair_display in st.session_state.get('manual_prices', {}) and st.session_state.manual_prices[pair_display] > 0:
-            candles_ta = get_deriv_candles(pair_display, timeframe, 160, token)
+            candles_ta = get_oanda_candles(pair_display, timeframe, 160, token)
             if candles_ta:
                 candles_ta[-1]['close'] = st.session_state.manual_prices[pair_display]
         else:
-            candles_ta = get_deriv_candles(pair_display, timeframe, 160, token)
+            candles_ta = get_oanda_candles(pair_display, timeframe, 160, token)
             
         if candles_ta:
             df_raw = pd.DataFrame(candles_ta)
@@ -593,9 +593,97 @@ if st.session_state.connected:
             ), row=1, col=1)
 
             st.plotly_chart(fig, use_container_width=True)
-    except:
-        print(f"Errore")
-    
+
+            # --- DASHBOARD DISTANZA TARGET (SNIPER MODE) ---
+            if st.session_state.weekend_mode:
+                st.divider()
+                st.subheader("🎯 **Monitoraggio Sniper OTC**")
+                
+                ultimo_prezzo = df_final['close'].iloc[-1]
+                bbu_25 = df_final['BBU'].iloc[-1]
+                bbl_25 = df_final['BBL'].iloc[-1]
+                
+                # Calcolo distanze
+                distanza_su = bbu_25 - ultimo_prezzo
+                distanza_giu = ultimo_prezzo - bbl_25
+                
+                # Percentuale di avvicinamento (100% = segnale imminente)
+                # Calcoliamo quanto manca rispetto alla larghezza totale del canale
+                canale_totale = bbu_25 - bbl_25
+                perc_su = max(0, (1 - (distanza_su / (canale_totale/2))) * 100)
+                perc_giu = max(0, (1 - (distanza_giu / (canale_totale/2))) * 100)
+
+                m1, m2 = st.columns(2)
+                
+                with m1:
+                    color_su = "red" if distanza_su < 0 else "white"
+                    st.metric("DISTANZA BANDA SUPERIORE (SELL)", f"{distanza_su:.5f}", 
+                              delta=f"{perc_su:.1f}% al Target", delta_color="inverse")
+                if distanza_su <= 0: st.error("🔥 ZONA SELL RAGGIUNTA!")
+                
+                with m2:
+                    st.metric("DISTANZA BANDA INFERIORE (BUY)", f"{distanza_giu:.5f}", 
+                              delta=f"{perc_giu:.1f}% al Target", delta_color="normal")
+                if distanza_giu <= 0: st.success("🔥 ZONA BUY RAGGIUNTA!")
+
+                st.progress(min(max(perc_su, perc_giu) / 100, 1.0))
+            
+            st.write("---")
+            st.subheader("📊 Analisi Performance (1m)")
+            
+            # Calcoliamo i segnali attuali basati sui parametri scelti
+            n_buy = df_final['buy_sig'].notnull().sum()
+            n_sell = df_final['sell_sig'].notnull().sum()
+            totale_segnali = n_buy + n_sell
+
+            if st.button("🔍 VERIFICA ESITO (60s)", use_container_width=True, type="primary"):
+                wins_buy, wins_sell = 0, 0
+                
+                # Analizziamo le candele (escludiamo l'ultima perché non ha ancora l'esito a 60s)
+                for i in range(len(df_final) - 1):
+                    # Controllo BUY: se il prezzo della candela successiva è superiore
+                    if pd.notnull(df_final['buy_sig'].iloc[i]):
+                        if df_final['close'].iloc[i+1] > df_final['close'].iloc[i]:
+                            wins_buy += 1
+                    
+                    # Controllo SELL: se il prezzo della candela successiva è inferiore
+                    if pd.notnull(df_final['sell_sig'].iloc[i]):
+                        if df_final['close'].iloc[i+1] < df_final['close'].iloc[i]:
+                            wins_sell += 1
+
+                # Calcoli finali
+                tot_vinti = wins_buy + wins_sell
+                tot_persi = totale_segnali - tot_vinti
+                accuracy = (tot_vinti / totale_segnali * 100) if totale_segnali > 0 else 0
+                
+                # Simulazione economica (Payout medio 85%)
+                investimento_totale = totale_segnali * st.session_state.stake
+                profitto_lordo = (wins_buy + wins_sell) * (st.session_state.stake * 0.85)
+                perdita_totale = tot_persi * st.session_state.stake
+                bilancio_netto = profitto_lordo - perdita_totale
+
+                # Visualizzazione risultati
+                c1, c2, c3 = st.columns(3)
+                c1.metric("🟢 BUY VINCENTI", f"{wins_buy} / {n_buy}")
+                c2.metric("🔴 SELL VINCENTI", f"{wins_sell} / {n_sell}")
+                c3.metric("🎯 ACCURACY", f"{accuracy:.1f}%")
+
+                # Box riassuntivo con colore dinamico
+                colore_box = "green" if bilancio_netto > 0 else "red"
+                st.markdown(f"""
+                <div style="padding:20px; border-radius:10px; border: 2px solid {colore_box}; background-color: rgba(0,0,0,0.1);">
+                    <h3 style="margin-top:0;">💰 Risultato Economico Stimato</h3>
+                    <p>Segnali Totali: <b>{totale_segnali}</b> (Vinti: <span style="color:#00ff88;">{tot_vinti}</span> | Persi: <span style="color:#ff3333;">{tot_persi}</span>)</p>
+                    <h2 style="color:{colore_box}; margin-bottom:0;">Profitto Netto: {bilancio_netto:.2f} €</h2>
+                    <small>Basato su investimento di {st.session_state.stake}€ e payout 85%</small>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.info("**Regola i parametri e verifica il profitto**")
+        
+    except Exception as e:
+            st.error(f"Errore grafico: {e}")
+        
     # --- 6. VERIFICA ESITI TRADE CON DERIV (FIX FINALE) ---
     # Definiamo il timestamp corrente prima di iniziare il ciclo
     current_ts = time_module.time() 
