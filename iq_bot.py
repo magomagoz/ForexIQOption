@@ -340,7 +340,7 @@ with st.sidebar:
         st.divider()
 
         # --- SEZIONE GESTIONE DATI CSV ---
-        st.header("💾 GESTIONE STORICO (CSV)")
+        st.header("💾 GESTIONE SEGNALI")
 
         # 1. TASTO ESPORTA CSV
         if st.session_state.signal_history:
@@ -362,7 +362,7 @@ with st.sidebar:
         uploaded_file = st.file_uploader("📤 IMPORTA DATI", type=["csv"], label_visibility="collapsed")
         
         if uploaded_file is not None:
-            if st.button("🔄 UNISCI DATI CSV", use_container_width=True, type="secondary"):
+            if st.button("🔄 UNISCI DATI CARICATI", use_container_width=True, type="secondary"):
                 try:
                     # Legge il file caricato
                     df_import = pd.read_csv(uploaded_file)
@@ -735,7 +735,7 @@ if st.session_state.connected:
         except Exception:
             st.dataframe(df_display, use_container_width=True, hide_index=True)
     else:
-        st.info("⏳ In attesa del primo segnale dallo scanner...")
+        st.info("⏳ Avvia lo Scanner e attendi il primo segnale...")
 
     # --- 8. REFRESH LOOP ---
     if st.session_state.scanner_on:
