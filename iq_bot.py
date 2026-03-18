@@ -589,7 +589,6 @@ if st.session_state.connected:
             st.plotly_chart(fig, use_container_width=True)
     except:
         print(f"Errore")
-        continue
     
     # --- 6. VERIFICA ESITI TRADE CON DERIV (FIX FINALE) ---
     # Definiamo il timestamp corrente prima di iniziare il ciclo
