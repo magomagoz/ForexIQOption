@@ -8,3 +8,6 @@ streamlit-autorefresh
 plotly
 requests
 iqoptionapi @ git+https://github.com/Lu-Yi-Hsun/iqoptionapi.git
+pillow
+websocket-client
+
