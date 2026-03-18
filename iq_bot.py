@@ -745,6 +745,40 @@ if st.session_state.connected:
     # --- 7. TABELLA JOURNAL (STAKE FIX APPLICATO) ---
     st.subheader("📋 Trading Journal")
 
+    st.subheader("📋 Trading Journal & Performance Hub")
+    
+    if st.session_state.signal_history:
+        df_journal = pd.DataFrame(st.session_state.signal_history)
+        
+        f1, f2, f3 = st.columns([1, 1, 1])
+        with f1:
+            filtro_mercato = st.selectbox("🌍 Filtro Mercato:", ["TUTTI", "OTC", "LIVE"], index=0)
+        with f2:
+            time_start = st.time_input("🟢 Orario Inizio:", value=time(0, 0))
+        with f3:
+            time_end = st.time_input("🛑 Orario Fine:", value=time(23, 59))
+
+        df_journal['ora_reale'] = pd.to_datetime(df_journal['time'], errors='coerce').dt.time
+        df_filtered = df_journal[(df_journal['ora_reale'] >= time_start) & (df_journal['ora_reale'] <= time_end)].copy()
+        
+        if filtro_mercato != "TUTTI":
+            df_filtered = df_filtered[df_filtered['mercato'].str.contains(filtro_mercato, na=False)]
+
+        def calcola_pnl_veloce(row):
+            stake_u = float(row.get('stake', 100.0))
+            res = str(row.get('result', ''))
+            if "✅" in res or "WIN" in res: return round(stake_u * 0.85, 2)
+            if "❌" in res or "LOSS" in res: return round(-stake_u, 2)
+            return 0.0
+
+        df_filtered['pnl_numeric'] = df_filtered.apply(calcola_pnl_veloce, axis=1)
+        profitto_sessione = df_filtered['pnl_numeric'].sum()
+        
+        total_f = len(df_filtered)
+        wins_f = sum(1 for s in df_filtered['result'] if "✅" in str(s) or "WIN" in str(s))
+        loss_f = sum(1 for s in df_filtered['result'] if "❌" in str(s) or "LOSS" in str(s))
+        accuracy_f = (wins_f / total_f * 100) if total_f > 0 else 0.0
+    
     
     # --- CALCOLO STATISTICHE PER WIDGET ---
     history = st.session_state.signal_history
