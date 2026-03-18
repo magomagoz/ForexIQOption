@@ -794,7 +794,6 @@ if st.session_state.connected:
             'pair': '💱 COPPIA', 
             'dir': '🚀 TIPO',
             'price': '💰 ENTRATA', 
-            'stake': '💶 STAKE',
             'params_bb': '↔️ BB (P/D)',
             'params_rsi': '📉 RSI (B/S)', 
             'mercato': '🌍 MERCATO', 
@@ -802,31 +801,27 @@ if st.session_state.connected:
             'pnl_numeric': '💶 P&L'
         }
 
-        cols_to_keep = ['time', 'pair', 'dir', 'price', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'pnl_numeric']
+        cols_to_keep = ['time', 'pair', 'dir', 'price', 'params_bb', 'params_rsi', 'mercato', 'result', 'pnl_numeric']
         df_visual = df_visual[cols_to_keep].rename(columns=rename_map)
 
         col_pnl_target = '💶 P&L'
         col_esito_target = '🔍 ESITO'
 
         try:
-            # Creiamo una copia per la visualizzazione senza toccare i dati originali
-            df_visual = df_filtered.iloc[::-1].copy()
-            
-            # Applichiamo lo stile in modo sicuro
+            # BUG RISOLTO: Tolto la formattazione .5f per il prezzo perché era GIA' testo. 
+            # E' quello che causava il ValueError della foto!
             st.dataframe(
                 df_visual.style
-                .applymap(style_result, subset=['result'])
-                .applymap(style_pnl, subset=['pnl_numeric'])
+                .applymap(style_result, subset=[col_esito_target])
+                .applymap(style_pnl, subset=[col_pnl_target])
                 .format({
-                    'pnl_numeric': "{:.0f} €",
-                    'price': "{:.5f}"  # Assicurati che 'price' nel DF sia un numero, non f-string!
+                    col_pnl_target: "{:.2f} €"
                 }),
-                use_container_width=True,
+                use_container_width=True,                 
                 hide_index=True
             )
         except Exception as e:
-            st.error(f"Errore visualizzazione tabella: {e}")
-            st.dataframe(df_visual) # Backup senza stile in caso di errore
+            st.dataframe(df_visual, use_container_width=True, hide_index=True)
 
     else:
         st.info("⏳ Accendi lo Scanner e resta in attesa di segnali!")
