@@ -99,6 +99,35 @@ def get_market_status():
     else:
         return "💤 MERCATO LENTO"
 
+def draw_market_map_inverted(current_hour_float, trading_autorizzato):
+    fig = go.Figure()
+    try:
+        bg_image = Image.open("mondo.png")
+    except:
+        bg_image = "https://via.placeholder.com/1200x400/220044/white?text=MAPPA+SESSIONI"
+
+    fig.add_layout_image(dict(
+        source=bg_image, xref="x", yref="y", x=24, y=4.5,
+        sizex=24, sizey=4.5, sizing="stretch", opacity=1.0, layer="below"
+    ))
+
+    ritardo_ore = -5 / 60
+    x_pos = (current_hour_float - ritardo_ore) % 24
+    color_laser = "#0F3ADA" if not trading_autorizzato else "#FFD700"
+
+    fig.add_shape(
+        type="line", x0=x_pos, x1=x_pos, y0=0, y1=4.5, 
+        line=dict(color=color_laser, width=2)
+    )
+
+    fig.update_layout(
+        xaxis=dict(range=[24, 0], showgrid=False, visible=False, fixedrange=True),
+        yaxis=dict(range=[0, 4.5], showgrid=False, visible=False, fixedrange=True),
+        template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)", margin=dict(l=0, r=0, t=0, b=0), height=350
+    )
+    return fig
+
 def invia_telegram(messaggio):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     try:
