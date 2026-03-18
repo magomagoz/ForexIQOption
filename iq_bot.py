@@ -898,7 +898,7 @@ if st.session_state.connected:
         rename_map = {
             'time': '⏰ ORA', 'pair': '💱 COPPIA', 'dir': '🚀 TIPO',
             'price': '💰 ENTRATA', 'params_bb': '↔️ BB (P/D)',
-            'params_rsi': '📉 RSI (B/S)', 'mercato': '🌍 MERCATO', 'result': '🔍 ESITO'
+            'params_rsi': '📉 RSI (B/S)', 'mercato': '🌍 MERCATO', 'result': '🔍 ESITO', 'pnl': '💶 P&L'
         }
             
         def style_result(val):
