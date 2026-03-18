@@ -796,21 +796,63 @@ if st.session_state.connected:
     except Exception as e:
             st.error(f"Errore grafico: {e}")
 
-    # --- 6. VERIFICA ESITI TRADE ---
-    now = time_module.time()
+    # --- 6. VERIFICA ESITI TRADE (MODALITÀ YAHOO) ---
+    now_ts = time_module.time()
+    
     for pair, trade in list(st.session_state.active_trades.items()):
-        if now - trade['entry_time'] >= timeframe:
+        # Controlliamo se è passato il timeframe (es. 60s) + un piccolo buffer di 2s
+        if now_ts - trade['entry_time'] >= timeframe + 2:
             try:
+                # 1. Recuperiamo l'ultima candela da Yahoo per vedere il prezzo di chiusura
                 res = get_oanda_candles(pair, timeframe, 1, "YAHOO")
-                if not res: continue
-                exit_price = res[0]['close']
-                win = (exit_price > trade['entry_price']) if trade['direction'] == "BUY" else (exit_price < trade['entry_price'])
-                res_status = "WIN" if win else "LOSS"
-                profit = (st.session_state.stake * 0.85) if win else -st.session_state.stake
-                st.session_state.local_balance += profit
-                if win: play_trade_sound("win")
-                colore = "✅" if win else "❌"
-                invia_telegram(f"*ESITO* {colore} {res_status}\n📊 Asset: {pair}\n🆔 ID: {trade_id}\n💶 Profit: {profit:.2f}€")
+                
+                if res:
+                    exit_price = res[-1]['close']
+                    entry_price = trade['entry_price']
+                    direction = trade['direction']
+                    
+                    # 2. Calcolo Logico Esito
+                    if direction == "BUY":
+                        win = exit_price > entry_price
+                    else:
+                        win = exit_price < entry_price
+                        
+                    res_status = "WIN" if win else "LOSS"
+                    icona = "✅" if win else "❌"
+                    
+                    # 3. Calcolo Profitto (Assumendo payout 85%)
+                    profit = (st.session_state.stake * 0.85) if win else -st.session_state.stake
+                    st.session_state.local_balance += profit
+                    
+                    if win: play_trade_sound("win")
+                    
+                    # 4. Notifica Telegram
+                    invia_telegram(f"🏁 *ESITO* {colore} {res_status}\n📊 Asset: {pair}\n🆔 ID: {trade_id}\n💶 Profit: {profit:.2f}€")
+                
+                    #invia_telegram(f"🏁 *ESITO* {icona} {res_status}\n📊 Asset: {pair}\n💰 Profit: {profit:.2f}€")
+                    
+                    # 5. AGGIORNAMENTO STORICO (Fondamentale per la Tabella al Punto 7)
+                    for s in st.session_state.signal_history:
+                        # Troviamo il trade corrispondente che era "In corso"
+                        if s['pair'] == pair and "⏳" in str(s['result']):
+                            s['result'] = f"{icona} {res_status}"
+                            s['pnl_numeric'] = profit # Questo alimenta la colonna 💶 P&L
+                            break
+                    
+                    # 6. Salvataggio e Pulizia
+                    save_journal(st.session_state.signal_history)
+                    registra_trade(trade['id'], pair, direction, res_status, profit)
+                    del st.session_state.active_trades[pair]
+                    
+                    st.rerun() # Forza l'aggiornamento della UI
+            except Exception as e:
+                print(f"Errore verifica Yahoo: {e}")
+                continue
+
+                
+                
+                
+                
                 registra_trade(trade['id'], pair, trade['direction'], res_status, profit)
                 for s in reversed(st.session_state.signal_history):
                     if s['pair'] == pair and s['result'] == "⏳ In corso...":
