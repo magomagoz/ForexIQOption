@@ -399,7 +399,7 @@ if st.session_state.connected:
             st.warning("Immagine banner2.png non trovata. Carica il file nella cartella del progetto.")
     else:
         # Mostra il grafico Plotly originale "draw_market_map_inverted"
-        st.plotly_chart(draw_market_map_inverted(h_float, trading_autorizzato), use_container_width=True)
+        st.plotly_chart(draw_market_map_inverted(current_hour_float, trading_autorizzato), use_container_width=True)
 
         # --- GESTIONE STATO SCANNER E PROTEZIONE ORARIA ---
         esegui_scansione = False # Di default è spento
