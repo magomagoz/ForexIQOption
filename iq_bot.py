@@ -99,6 +99,10 @@ def get_market_status():
     else:
         return "💤 MERCATO LENTO"
 
+def reset_manual_prices():
+    st.session_state.manual_prices = {"EURGBP": 0.0, "USDCHF": 0.0, "AUDUSD": 0.0, "EURUSD": 0.0}
+    st.rerun()
+
 def draw_market_map_inverted(trading_autorizzato):
     fig = go.Figure()
     # Calcolo ora decimale di Roma interno per massima precisione
@@ -401,12 +405,10 @@ if st.session_state.connected:
         except:
             st.warning("Immagine banner2.png non trovata. Carica il file nella cartella del progetto.")
     else:
-        # Mostra il grafico Plotly originale "draw_market_map_inverted"
-        #st.plotly_chart(draw_market_map_inverted(current_hour_float, trading_autorizzato), use_container_width=True)
         st.plotly_chart(draw_market_map_inverted(trading_autorizzato), use_container_width=True)
 
         # --- GESTIONE STATO SCANNER E PROTEZIONE ORARIA ---
-        esegui_scansione = False # Di default è spento
+        #esegui_scansione = False # Di default è spento
         
         if st.session_state.scanner_on:
             # Messaggio dinamico in base alla modalità
@@ -419,6 +421,7 @@ if st.session_state.connected:
                     esegui_scansione = False # IL VERO BLOCCO
                 else:
                     st.success("SISTEMA IN SCANSIONE ATTIVA 🔥🔥🔥", icon="📡")
+ 
                     st.divider()
                     st.subheader("🕵️ Coppie di valute osservate")
                     cols = st.columns(5)
