@@ -400,7 +400,7 @@ if st.session_state.connected:
     else:
         # Mostra il grafico Plotly originale "draw_market_map_inverted"
         #st.plotly_chart(draw_market_map_inverted(h_float, trading_autorizzato), use_container_width=True)
-        st.plotly_chart(draw_market_map_inverted(h_float, trading_autorizzato), use_container_width=True)
+        #st.plotly_chart(draw_market_map_inverted(h_float, trading_autorizzato), use_container_width=True)
     
     esegui_scansione = False 
         
