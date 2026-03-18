@@ -861,17 +861,15 @@ if st.session_state.connected:
             primo_trade = "--:--:--"
             ultimo_trade = "--:--:--"
 
-        # --- CALCOLO PROFITTO FILTRATO ---
-        # Estraiamo il profitto dai risultati (assumendo payout 85% o usando i dati salvati)
-        # Se hai salvato il profitto nel dizionario del segnale, usiamo quello, altrimenti lo simuliamo
-        def calcola_pnl(row):
-            # Usiamo lo stake salvato nel trade, se non c'è usiamo quello attuale
-            stake_usato = row.get('stake', st.session_state.stake)
-            
-            if "✅" in str(row['result']):
-                return round(stake_usato * 0.85, 2)
-            elif "❌" in str(row['result']):
-                return round(-float(stake_usato), 2)
+        # 1. Creiamo una copia pulita dei dati filtrati
+        df_final_table = df_reversed.copy()
+
+        # 2. Calcoliamo il PNL numerico (se non esiste già)
+        def calcola_pnl_raw(row):
+            stake_u = row.get('stake', 100.0)
+            res = str(row.get('result', ''))
+            if "✅" in res: return round(stake_u * 0.85, 2)
+            if "❌" in res: return round(-float(stake_u), 2)
             return 0.0
 
         # Creiamo una colonna temporanea per il calcolo del profitto nel set filtrato
@@ -909,46 +907,47 @@ if st.session_state.connected:
         # Invertiamo per vedere i più recenti in alto nella tabella
         df_reversed = df_display.iloc[::-1].copy()
             
-        # Mappatura colonne
+
+        # Creiamo la colonna con i numeri (senza simboli) per permettere i calcoli di stile
+        df_final_table['pnl_numeric'] = df_final_table.apply(calcola_pnl_raw, axis=1)
+
+        # 3. Mappatura Colonne (Assicurati che i nomi a sinistra esistano nel tuo signal_history)
         rename_map = {
-            'time': '⏰ ORA', 'pair': '💱 COPPIA', 'dir': '🚀 TIPO',
-            'price': '💰 ENTRATA', 'params_bb': '↔️ BB (P/D)',
-            'params_rsi': '📉 RSI (B/S)', 'mercato': '🌍 MERCATO', 'result': '🔍 ESITO', 'pnl': '💶 P&L'
+            'time': '⏰ ORA', 
+            'pair': '💱 COPPIA', 
+            'dir': '🚀 TIPO',
+            'price': '💰 ENTRATA', 
+            'params_bb': '↔️ BB (P/D)',
+            'params_rsi': '📉 RSI (B/S)', 
+            'mercato': '🌍 MERCATO', 
+            'result': '🔍 ESITO', 
+            'pnl_numeric': '💶 P&L'  # <--- Rinominiamo la colonna numerica qui
         }
-            
-        def style_result(val):
-            color = 'white'
-            if '✅' in str(val): color = '#00ff00'
-            elif '❌' in str(val): color = '#ff4b4b'
-            elif '⏳' in str(val): color = '#ffa500'
-            return f'color: {color}'
-    
-        # Usiamo il placeholder per evitare l'effetto fantasma che abbiamo discusso prima
-        table_placeholder = st.empty()
-        with table_placeholder.container():
-            # Rimuoviamo la colonna 'ora_reale' usata solo per i calcoli prima di stampare
-            if 'ora_reale' in df_reversed.columns:
-                df_reversed = df_reversed.drop(columns=['ora_reale'])
-                 
-        # 1. Prepariamo il DataFrame rinominato
-        df_final_table = df_reversed.rename(columns=rename_map)
 
-        # Definiamo i nomi esatti usati nel rename_map per non sbagliare
-        col_pnl_rinominata = '💶 P&L'
-        col_esito_rinominata = '🔍 ESITO'
+        # 4. Applichiamo il Rename
+        df_visual = df_final_table.rename(columns=rename_map)
 
-        # Applichiamo lo styling
-        st.dataframe(
-            df_reversed.rename(columns=rename_map)
-            .style.applymap(style_result, subset=[col_esito_rinominata])
-            .applymap(style_pnl, subset=[col_pnl_rinominata])
-            .format({
-                "💰 ENTRATA": "{:.5f}", 
-                col_pnl_rinominata: "{:.2f} €"
-            }),
-            use_container_width=True,                 
-            hide_index=False
-        )
+        # 5. Definiamo le etichette esatte per lo styling (devono corrispondere a rename_map)
+        col_pnl_target = '💶 P&L'
+        col_esito_target = '🔍 ESITO'
+
+        # 6. Visualizzazione con protezione dagli errori
+        try:
+            st.dataframe(
+                df_visual.style
+                .applymap(style_result, subset=[col_esito_target])
+                .applymap(style_pnl, subset=[col_pnl_target])
+                .format({
+                    "💰 ENTRATA": "{:.5f}", 
+                    col_pnl_target: "{:.2f} €" # Formatta il numero aggiungendo € solo visivamente
+                }),
+                use_container_width=True,                 
+                hide_index=True
+            )
+        except Exception as e:
+            st.error(f"Errore nella visualizzazione tabella: {e}")
+            # Visualizzazione di emergenza senza stili se crasha ancora
+            st.dataframe(df_visual)
 
     else:
         st.info("⏳ Accendi lo Scanner e resta in attesa di segnali!")
