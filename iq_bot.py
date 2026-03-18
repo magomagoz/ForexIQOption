@@ -731,7 +731,7 @@ if st.session_state.connected:
                     
                     # BUG RISOLTO: Qui usavi "colore" invece di "icona" e "trade_id" invece di "trade['id']"
                     # Questo mandava in crash segreto il loop impedendo al trade di chiudersi!
-                    invia_telegram(f"🏁 *ESITO* {icona} {res_status}\n📊 Asset: {pair}\n🆔 ID: {trade['id']}\n💶 Profit: {profit:.2f}€")
+                    invia_telegram(f"🏁 *ESITO* {icona} {res_status}\n🆔 ID: {trade['id']}\n📊 Asset: {pair}\n💵 Stake: {stake:.2f} €\n💶 Profit: {profit:.2f}€")
                     
                     for s in st.session_state.signal_history:
                         if s['pair'] == pair and "⏳" in str(s['result']):
