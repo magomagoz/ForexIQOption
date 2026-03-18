@@ -99,7 +99,7 @@ def get_market_status():
     else:
         return "💤 MERCATO LENTO"
 
-def draw_market_map_inverted(current_hour_float, trading_autorizzato):
+def draw_market_map_inverted(current_h_float, trading_autorizzato):
     fig = go.Figure()
     try:
         bg_image = Image.open("mondo.png")
@@ -399,7 +399,6 @@ if st.session_state.connected:
             st.warning("Immagine banner2.png non trovata. Carica il file nella cartella del progetto.")
     else:
         # Mostra il grafico Plotly originale "draw_market_map_inverted"
-        #st.plotly_chart(draw_market_map_inverted(h_float, trading_autorizzato), use_container_width=True)
         st.plotly_chart(draw_market_map_inverted(h_float, trading_autorizzato), use_container_width=True)
 
         # --- GESTIONE STATO SCANNER E PROTEZIONE ORARIA ---
