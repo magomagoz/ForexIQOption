@@ -883,7 +883,8 @@ if st.session_state.connected:
             .format({"💰 ENTRATA": "{:.5f}", "💶 P&L": "{:.2f} €"}),
             use_container_width=True, hide_index=True
         )
-    else:
+
+	else:
         st.info("⏳ Accendi lo Scanner e resta in attesa di segnali!")
 		
     # --- LOGICA DI REFRESH AUTOMATICO ---
