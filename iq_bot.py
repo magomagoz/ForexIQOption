@@ -498,11 +498,11 @@ if st.session_state.connected:
         token = st.session_state.get("oanda_token", "")
         # LOGICA COERENTE CON L'OVERRIDE
         if st.session_state.weekend_mode and pair_display in st.session_state.get('manual_prices', {}) and st.session_state.manual_prices[pair_display] > 0:
-            candles_ta = get_oanda_candles(pair_display, timeframe, 160, token)
+            candles_ta = get_deriv_candles(pair_display, timeframe, 160, token)
             if candles_ta:
                 candles_ta[-1]['close'] = st.session_state.manual_prices[pair_display]
         else:
-            candles_ta = get_oanda_candles(pair_display, timeframe, 160, token)
+            candles_ta = get_deriv_candles(pair_display, timeframe, 160, token)
             
         if candles_ta:
             df_raw = pd.DataFrame(candles_ta)
