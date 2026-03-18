@@ -99,34 +99,53 @@ def get_market_status():
     else:
         return "💤 MERCATO LENTO"
 
-def draw_market_map_inverted(current_h_float, trading_autorizzato):
+def draw_market_map_inverted(trading_autorizzato):
+    """Genera la mappa delle sessioni con la linea temporale corretta"""
     fig = go.Figure()
+    
+    # 1. Calcolo dell'ora decimale attuale (es. 13:30 -> 13.5)
+    now_roma = datetime.now(pytz.timezone('Europe/Rome'))
+    current_h_float = now_roma.hour + (now_roma.minute / 60.0)
+
     try:
         bg_image = Image.open("mondo.png")
     except:
-        bg_image = "https://via.placeholder.com/1200x400/220044/white?text=MAPPA+SESSIONI"
+        # Fallback se l'immagine locale manca
+        bg_image = "https://via.placeholder.com/1200x400/220044/white?text=MAPPA+SESSIONI+SENTINEL"
 
+    # Sfondo della mappa
     fig.add_layout_image(dict(
-        source=bg_image, xref="x", yref="y", x=24, y=4.5,
+        source=bg_image, xref="x", yref="y", x=0, y=4.5,
         sizex=24, sizey=4.5, sizing="stretch", opacity=1.0, layer="below"
     ))
 
-    ritardo_ore = -5 / 60
-    x_pos = (current_hour_float - ritardo_ore) % 24
-    color_laser = "#0F3ADA" if not trading_autorizzato else "#FFD700"
+    # 2. Posizionamento della linea "Laser" (ora attuale)
+    # Poiché la tua asse X è invertita [24, 0], la linea si muove da destra a sinistra
+    x_pos = current_h_float 
+    color_laser = "#FFD700" if trading_autorizzato else "#0F3ADA" # Oro se OK, Blu se protetto
 
     fig.add_shape(
         type="line", x0=x_pos, x1=x_pos, y0=0, y1=4.5, 
-        line=dict(color=color_laser, width=2)
+        line=dict(color=color_laser, width=3, dash="solid")
+    )
+
+    # Aggiunge un fascio di luce (glow) attorno alla linea
+    fig.add_shape(
+        type="line", x0=x_pos, x1=x_pos, y0=0, y1=4.5, 
+        line=dict(color=color_laser, width=10, opacity=0.2)
     )
 
     fig.update_layout(
         xaxis=dict(range=[24, 0], showgrid=False, visible=False, fixedrange=True),
         yaxis=dict(range=[0, 4.5], showgrid=False, visible=False, fixedrange=True),
-        template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)", margin=dict(l=0, r=0, t=0, b=0), height=350
+        template="plotly_dark", 
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)", 
+        margin=dict(l=0, r=0, t=0, b=0), 
+        height=350
     )
     return fig
+
 
 def invia_telegram(messaggio):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
@@ -400,6 +419,7 @@ if st.session_state.connected:
     else:
         # Mostra il grafico Plotly originale "draw_market_map_inverted"
         #st.plotly_chart(draw_market_map_inverted(current_hour_float, trading_autorizzato), use_container_width=True)
+        st.plotly_chart(draw_market_map_inverted(trading_autorizzato), use_container_width=True)
 
         # --- GESTIONE STATO SCANNER E PROTEZIONE ORARIA ---
         esegui_scansione = False # Di default è spento
