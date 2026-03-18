@@ -162,7 +162,7 @@ if 'api_token' not in st.session_state: st.session_state.api_token = DERIV_TOKEN
 with st.sidebar:
     st.title("⚙️ DERIV TRADING")
     
-    st.session_state.api_token = st.text_input("🔑 Token Deriv (Opzionale per Demo)", value=st.session_state.api_token, type="password")
+    st.session_state.api_token = st.text_input("🔑 Token Deriv", value=st.session_state.api_token, type="password")
 
     if not st.session_state.connected:
         st.info("Connettiti ai server Deriv per i dati live.")
@@ -211,7 +211,41 @@ with st.sidebar:
             st.session_state.scanner_on = not st.session_state.scanner_on
             st.rerun()
         if st.session_state.scanner_on:
-            st.caption(f"🔄 Scanner WS attivo...  \nUltimo check: {now_roma.time().strftime('%H:%M:%S')}")
+            st.caption(f"🔄 Scanner attivo...  \nUltimo check: {now_roma.time().strftime('%H:%M:%S')}")
+
+        # --- LOGICA SIDEBAR OTC ---
+        if st.session_state.weekend_mode:
+            st.divider()
+            st.subheader("🎯 PREZZO MANUALE OTC")
+                            
+            st.info("Inserisci il prezzo dal Broker:")
+            
+            if 'manual_prices' not in st.session_state:
+                st.session_state.manual_prices = {"EURGBP": 0.0, "USDCHF": 0.0, "AUDUSD": 0.0, "EURUSD": 0.0}
+            
+            # Crea i 4 campi input
+            for pair in ["EURGBP", "USDCHF", "AUDUSD", "EURUSD"]:
+                st.session_state.manual_prices[pair] = st.number_input(
+                    f"Prezzo {pair}", 
+                    value=st.session_state.manual_prices.get(pair, 0.0), 
+                    format="%.5f",
+                    key=f"input_{pair}" # Aggiungiamo una key univoca per sicurezza
+                )
+
+            # Tasto di Reset Chirugico
+            if st.button("🧹 RESET PREZZI", use_container_width=True):
+                reset_manual_prices()
+        
+        st.divider()
+        st.subheader("🌍 SESSIONI DI MERCATO")
+        
+        # Sostituisci la logica dentro il ciclo for delle città con questa:
+        for city, (start, end) in {"🇬🇧 LONDRA:": (time(9,0), time(18,0)), "🇺🇸 NEW YORK:": (time(14,0), time(23,0)), "🇦🇺 SYDNEY:": (time(0,0), time(8,0)), "🇯🇵 TOKYO:": (time(0,0), time(9,0))}.items():
+            # Usiamo now_cet (che è già un .time()) invece di now_roma
+            status = "Open 🟢" if start <= now_cet <= end else "Closed 🔴"
+            st.write(f"{city} {status}")
+            
+        st.info(get_market_status())
         
         st.divider()
         st.subheader("🛠️ PARAMETRI TRADING")
@@ -222,13 +256,78 @@ with st.sidebar:
         st.divider()
         stress_test = st.toggle("🚀 **STRESS MODE (Test Rapido)**", value=False)
         if stress_test:
-            use_bb, use_rsi = False, True       
-            custom_rsi_buy, custom_rsi_sell = 45, 55 
-            
+            st.warning("⚠️ **Modalità TEST:** \nno BB - RSI (45/55)")
+            # --- OVERRIDE DI SISTEMA ---
+            use_bb = False       # Spegne forzatamente le BB
+            use_rsi = True       # Accende forzatamente l'RSI
+            custom_rsi_buy = 45  # Forza soglia BUY
+            custom_rsi_sell = 55 # Forza soglia SELL
+        else:
+            st.success("🟢 **Modalità REALE:** \nvedi gli indicatori scelti sopra")
+
+        #if stress_test:
+            #use_bb, use_rsi = False, True       
+            #custom_rsi_buy, custom_rsi_sell = 45, 55 
+
+        st.divider()
+        if st.button("🔔 **TEST AUDIO & TELEGRAM**", use_container_width=True):
+            play_trade_sound("buy")
+            invia_telegram("✅ **SENTINEL AI: SYSTEM CHECK**\nBot online e sincronizzato con Deriv 🚀")
+            st.toast("Test completato!", icon="📲")
+
+        st.divider()
         if st.button("🗑️ **PULISCI SEGNALI**", use_container_width=True):
             st.session_state.signal_history = []
             save_journal([]) 
             st.rerun()
+
+        st.divider()
+
+        # --- SEZIONE GESTIONE DATI CSV ---
+        st.header("💾 GESTIONE STORICO (CSV)")
+
+        # 1. TASTO ESPORTA CSV
+        if st.session_state.signal_history:
+            df_export = pd.DataFrame(st.session_state.signal_history)
+            csv_data = df_export.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label="📥 ESPORTA STORICO (CSV)",
+                data=csv_data,
+                file_name=f"sentinel_history_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
+        else:
+            # Tasto disabilitato se non ci sono segnali da esportare
+            st.button("📥 ESPORTA STORICO (CSV)", disabled=True, use_container_width=True)
+
+        # 2. WIDGET IMPORTA CSV
+        st.caption("Carica un file CSV per ripristinare o unire dati passati:")
+        uploaded_file = st.file_uploader("📤 IMPORTA DATI", type=["csv"], label_visibility="collapsed")
+        
+        if uploaded_file is not None:
+            if st.button("🔄 UNISCI DATI CSV", use_container_width=True, type="secondary"):
+                try:
+                    # Legge il file caricato
+                    df_import = pd.read_csv(uploaded_file)
+                    nuovi_dati = df_import.to_dict('records')
+                    
+                    # Uniamo la cronologia attuale con quella caricata dal file
+                    st.session_state.signal_history.extend(nuovi_dati)
+                    
+                    # Protezione: rimuove i duplicati esatti (stessa ora e stessa valuta)
+                    # per evitare di falsare le statistiche se importi file sovrapposti
+                    df_pulito = pd.DataFrame(st.session_state.signal_history).drop_duplicates(subset=['time', 'pair'], keep='last')
+                    st.session_state.signal_history = df_pulito.to_dict('records')
+                    
+                    # Salva anche nel file JSON locale per persistenza
+                    save_journal(st.session_state.signal_history) 
+                    
+                    st.success("✅ Storico fuso con successo!")
+                    time_module.sleep(1.5) # Pausa breve per mostrare il messaggio
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"⚠️ Errore nel file: {e}")
 
 # --- 4. MAIN DASHBOARD ---
 if st.session_state.connected:
@@ -240,22 +339,36 @@ if st.session_state.connected:
     is_trading_time = (window_1[0] <= now_cet <= window_1[1]) or (window_2[0] <= now_cet <= window_2[1])
     trading_autorizzato = is_trading_time or stress_test
 
-    st.subheader("🌍 Deriv Live Market")
+    st.subheader("🌍 Live Market Flow 24h")
+    
+    if st.session_state.weekend_mode or is_weekend_reale:
+        try:
+            # Carica banner2.png se siamo in modalità weekend
+            img_weekend = Image.open("banner2.png")
+            st.image(img_weekend, use_column_width=True, caption="MODALITÀ WEEKEND ATTIVA 🔴 MERCATI CHIUSI")
+        except:
+            st.warning("Immagine banner2.png non trovata. Carica il file nella cartella del progetto.")
+    else:
+        # Mostra il grafico Plotly originale "draw_market_map_inverted"
+        #st.plotly_chart(draw_market_map_inverted(h_float, trading_autorizzato), use_container_width=True)
+        st.plotly_chart(draw_market_map_inverted(h_float, trading_autorizzato), use_container_width=True)
     
     esegui_scansione = False 
-    
+        
     # --- FIX SCANNER LOGIC APPLICATO ---
     if st.session_state.scanner_on:
         if st.session_state.weekend_mode and not stress_test:
-            st.warning("Mercato chiuso. Attiva STRESS MODE per forzare i test nel weekend.")
-            esegui_scansione = False
+            st.success("SCANNER OTC ATTIVO su 🇪🇺🇬🇧-🇺🇸🇨🇭-🇦🇺🇺🇸-🇪🇺🇺🇸 ", icon="🎯")
+            esegui_scansione = True
         elif not trading_autorizzato:
-            st.warning("🛡️ PROTEZIONE: Mercato chiuso. Scanner in pausa.")
+            st.warning("🛡️ PROTEZIONE ATTIVA: Mercato fuori orario. Scanner in pausa.")
             esegui_scansione = False 
-        else:
-            st.success("📡 COLLEGATO A DERIV - SCANSIONE ATTIVA", icon="📡")
+        else:    
+            st.success("SISTEMA IN SCANSIONE ATTIVA 🔥🔥🔥", icon="📡")
             esegui_scansione = True
 
+    st.divider()
+    st.subheader("🕵️ Coppie di valute osservate")
     if esegui_scansione:
         cols = st.columns(5)
         for i, pair in enumerate(ALL_PAIRS):
