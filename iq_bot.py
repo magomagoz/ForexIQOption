@@ -590,7 +590,7 @@ if st.session_state.connected:
 
 
     # --- 6. VERIFICA ESITI TRADE CON DERIV (FIX APPLICATO) ---
-    #now = time_module.time()
+    now = time_module.time()
     for pair, trade in list(st.session_state.active_trades.items()):
         # Aspettiamo il timeframe + 5 sec di tolleranza
         if now - trade['entry_time'] >= timeframe + 5:
@@ -619,9 +619,9 @@ if st.session_state.connected:
                     del st.session_state.active_trades[pair]
                     save_journal(st.session_state.signal_history)
                     st.rerun()
-            except Exception as e:
-                print(f"Errore verifica esito per {pair}: {e}")
-                continue
+    except Exception as e:
+        print(f"Errore verifica esito per {pair}: {e}")
+        continue
                                 
     # --- 7. TABELLA JOURNAL (STAKE FIX APPLICATO) ---
     st.subheader("📋 Trading Journal")
