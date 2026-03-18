@@ -397,16 +397,17 @@ if st.session_state.connected:
 
     st.subheader("🌍 Live Market Flow 24h")
     
-    #if st.session_state.weekend_mode or is_weekend_reale:
-        #try:
-            #img_weekend = Image.open("banner2.png")
-            #st.image(img_weekend, use_column_width=True, caption="MODALITÀ WEEKEND ATTIVA 🔴 MERCATI CHIUSI")
-        #except:
-            #st.warning("Immagine banner2.png non trovata. Carica il file nella cartella del progetto.")
-    #else:
-        #st.plotly_chart(draw_market_map_inverted(trading_autorizzato), use_container_width=True)
+    # Rimosso il commento (#) per riattivare la visualizzazione
+    if st.session_state.weekend_mode or is_weekend_reale:
+        try:
+            img_weekend = Image.open("banner2.png")
+            st.image(img_weekend, use_column_width=True, caption="MODALITÀ WEEKEND ATTIVA 🔴 MERCATI CHIUSI")
+        except:
+            st.warning("Immagine banner2.png non trovata. Carica il file nella cartella del progetto.")
+    else:
+        st.plotly_chart(draw_market_map_inverted(trading_autorizzato), use_container_width=True)
 
-        # --- GESTIONE STATO SCANNER E PROTEZIONE ORARIA ---
+    # --- GESTIONE STATO SCANNER E PROTEZIONE ORARIA ---
         #esegui_scansione = False # Di default è spento
         
     if st.session_state.scanner_on:
