@@ -408,7 +408,7 @@ if st.session_state.connected:
         #st.plotly_chart(draw_market_map_inverted(trading_autorizzato), use_container_width=True)
 
         # --- GESTIONE STATO SCANNER E PROTEZIONE ORARIA ---
-        esegui_scansione = False # Di default è spento
+        #esegui_scansione = False # Di default è spento
         
         if st.session_state.scanner_on:
             # Messaggio dinamico in base alla modalità
