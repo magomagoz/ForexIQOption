@@ -918,7 +918,7 @@ if st.session_state.connected:
 
         # Mappatura nomi colonne
         rename_map = {
-            'time': '⏰ ORA', 
+            'time': '⏰ DATA', 
             'pair': '💱 COPPIA', 
             'dir': '🚀 TIPO',
             'price': '💰 ENTRATA', 
