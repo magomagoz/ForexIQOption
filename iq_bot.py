@@ -831,6 +831,9 @@ if st.session_state.connected:
         except Exception as e:
             st.dataframe(df_display, use_container_width=True, hide_index=True)
 
+    else:
+        st.info("⏳ Accendi lo Scanner e resta in attesa di segnali!")
+        
     # --- 8. REFRESH LOOP ---
     if st.session_state.scanner_on:
         time_module.sleep(3) 
