@@ -489,31 +489,105 @@ if st.session_state.connected:
     pair_display = st.selectbox("Seleziona asset per grafico", ALL_PAIRS)
     
     try:
-        candles_ta = get_deriv_candles(pair_display, timeframe, 160)
+        token = st.session_state.get("deriv_token", "")
+        # LOGICA COERENTE CON L'OVERRIDE
+        if st.session_state.weekend_mode and pair_display in st.session_state.get('manual_prices', {}) and st.session_state.manual_prices[pair_display] > 0:
+            candles_ta = get_deriv_candles(pair_display, timeframe, 160, token)
+            if candles_ta:
+                candles_ta[-1]['close'] = st.session_state.manual_prices[pair_display]
+        else:
+            candles_ta = get_deriv_candles(pair_display, timeframe, 160, token)
             
         if candles_ta:
             df_raw = pd.DataFrame(candles_ta)
+
+            # Calcolo indicatori
             df_raw['RSI'] = ta.rsi(df_raw['close'], length=7)
             bb_ta = ta.bbands(df_raw['close'], length=bb_period, std=bb_std)
             
-            if bb_ta is not None and not bb_ta.empty:
-                bb_ta.columns = ['BBL', 'BBM', 'BBU', 'BBB', 'BBP'] 
-                df_final = pd.concat([df_raw, bb_ta[['BBL', 'BBM', 'BBU']]], axis=1).tail(100)
+            # --- AGGIUNGI QUESTO CONTROLLO SICUREZZA ---
+            if bb_ta is None or bb_ta.empty:
+                st.error(f"⚠️ Impossibile calcolare le Bande di Bollinger per {pair_display}. Prova a cambiare periodo o asset.")
+                st.stop() # Ferma l'esecuzione di questo blocco senza crashare l'app
+            
+            # Rinominiano le colonne per sicurezza (gestisce nomi diversi della libreria)
+            bb_ta.columns = ['BBL', 'BBM', 'BBU', 'BBB', 'BBP'] 
+                        
+            df_final = pd.concat([df_raw, bb_ta[['BBL', 'BBM', 'BBU']]], axis=1).tail(100)
 
-                asse_x = df_final['time']
-                fig = make_subplots(rows=2, cols=1, shared_xaxes=True, row_heights=[0.5, 0.25], vertical_spacing=0.07)
+            df_final['buy_sig'] = df_final.apply(lambda x: x['close'] if (
+                ((x['RSI'] < custom_rsi_buy) if use_rsi else True) and 
+                ((x['close'] <= x['BBL']) if use_bb else True) 
+            ) else None, axis=1)
+            
+            df_final['sell_sig'] = df_final.apply(lambda x: x['close'] if (
+                ((x['RSI'] > custom_rsi_sell) if use_rsi else True) and 
+                ((x['close'] >= x['BBU']) if use_bb else True)
+            ) else None, axis=1)
+         
+            asse_x = df_final['time']
+            
+            fig = make_subplots(rows=2, cols=1, shared_xaxes=True, 
+                                row_heights=[0.5, 0.25], 
+                                vertical_spacing=0.07, 
+                                subplot_titles=("📊 Prezzo & Volatilità", "📉 Oscillatore RSI"))
+            
+            # --- PANNELLO 1: Candele + Bollinger ---
+            fig.add_trace(go.Candlestick(x=asse_x, open=df_final['open'], high=df_final['max'], 
+                                         low=df_final['min'], close=df_final['close'], name="Prezzo"), row=1, col=1)
+            
+            fig.add_trace(go.Scatter(x=asse_x, y=df_final['BBU'], line=dict(color='rgba(0,71,171,0.4)', width=1), name="BBU"), row=1, col=1)
+            fig.add_trace(go.Scatter(x=asse_x, y=df_final['BBM'], line=dict(color='rgba(170,170,170,0.3)', width=1), name="BBM"), row=1, col=1)
+            fig.add_trace(go.Scatter(x=asse_x, y=df_final['BBL'], line=dict(color='rgba(0,71,171,0.4)', width=1), 
+                                     fill='tonexty', fillcolor='rgba(100, 100, 255, 0.05)', name="BBL"), row=1, col=1)
+
+            # Subplot 2: RSI con soglie dinamiche
+            fig.add_trace(go.Scatter(x=asse_x, y=df_final['RSI'], line=dict(color='#AB63FA'), name="RSI"), row=2, col=1)
+            fig.add_hline(y=custom_rsi_buy, line_color="green", row=2, col=1, line_dash="dash")
+            fig.add_hline(y=custom_rsi_sell, line_color="red", row=2, col=1, line_dash="dash")
+
+            fig.update_layout(
+                xaxis_rangeslider_visible=False,
+                hovermode="x unified",
+                template="plotly_dark",
+                height=800
+            )
+
+            # --- AGGIUNGI QUESTO PER LE RIGHE VERTICALI E IL MIRINO ---
+            
+            fig.update_xaxes(
+                type='category', 
+                tickangle=45, 
+                nticks=20, 
                 
-                fig.add_trace(go.Candlestick(x=asse_x, open=df_final['open'], high=df_final['max'], low=df_final['min'], close=df_final['close'], name="Prezzo"), row=1, col=1)
-                fig.add_trace(go.Scatter(x=asse_x, y=df_final['BBU'], line=dict(color='rgba(0,71,171,0.4)', width=1), name="BBU"), row=1, col=1)
-                fig.add_trace(go.Scatter(x=asse_x, y=df_final['BBL'], line=dict(color='rgba(0,71,171,0.4)', width=1), fill='tonexty', fillcolor='rgba(100, 100, 255, 0.05)', name="BBL"), row=1, col=1)
-                fig.add_trace(go.Scatter(x=asse_x, y=df_final['RSI'], line=dict(color='#AB63FA'), name="RSI"), row=2, col=1)
-                fig.add_hline(y=custom_rsi_buy, line_color="green", row=2, col=1, line_dash="dash")
-                fig.add_hline(y=custom_rsi_sell, line_color="red", row=2, col=1, line_dash="dash")
+                showgrid=True, 
+                gridcolor='rgba(130,130,130,0.08)', # Righe verticali fisse leggere
+                
+                showspikes=True, 
+                spikemode='across', 
+                spikecolor="black", 
+                spikethickness=1, 
+                spikedash="solid"
+            )
+          
+            # Freccia BUY (posizionata leggermente sotto il minimo della candela)
+            fig.add_trace(go.Scatter(
+                x=asse_x, y=df_final['buy_sig'] * 0.9998, # Offset per non coprire la candela
+                mode='markers', 
+                marker=dict(symbol='triangle-up', size=15, color='#00ff88', line=dict(width=1, color='white')), 
+                name="Entry BUY"
+            ), row=1, col=1)
+            
+            # Freccia SELL (posizionata leggermente sopra il massimo della candela)
+            fig.add_trace(go.Scatter(
+                x=asse_x, y=df_final['sell_sig'] * 1.0002, # Offset per non coprire la candela
+                mode='markers', 
+                marker=dict(symbol='triangle-down', size=15, color='#ff3333', line=dict(width=1, color='white')), 
+                name="Entry SELL"
+            ), row=1, col=1)
 
-                fig.update_layout(xaxis_rangeslider_visible=False, hovermode="x unified", template="plotly_dark", height=600)
-                st.plotly_chart(fig, use_container_width=True)
-    except Exception as e:
-        st.error(f"Errore grafico: {e}")
+            st.plotly_chart(fig, use_container_width=True)
+
 
     # --- 6. VERIFICA ESITI TRADE CON DERIV (FIX APPLICATO) ---
     now_ts = time_module.time()
