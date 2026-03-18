@@ -759,7 +759,7 @@ if st.session_state.connected:
         time_end = st.time_input("🛑 Orario Fine:", value=time(23, 59))
 
     #df_journal['ora_attuale'] = pd.to_datetime(df_journal['time'], errors='coerce').dt.time
-    df_filtered = df_journal[(df_journal['ora_attuale'] >= time_start) & (df_journal['ora_attuale'] <= time_end)].copy()
+    #df_filtered = df_journal[(df_journal['ora_attuale'] >= time_start) & (df_journal['ora_attuale'] <= time_end)].copy()
         
     if filtro_mercato != "TUTTI":
         df_filtered = df_filtered[df_filtered['mercato'].str.contains(filtro_mercato, na=False)]
