@@ -101,8 +101,7 @@ def get_market_status():
 
 def draw_market_map_inverted(trading_autorizzato):
     fig = go.Figure()
-    
-    # Calcolo ora decimale di Roma (es. 14:30 -> 14.5)
+    # Calcolo ora decimale di Roma interno per massima precisione
     tz_roma = pytz.timezone('Europe/Rome')
     now_roma = datetime.now(tz_roma)
     x_pos = float(now_roma.hour + (now_roma.minute / 60.0))
@@ -110,28 +109,19 @@ def draw_market_map_inverted(trading_autorizzato):
     try:
         bg_image = Image.open("mondo.png")
     except:
-        bg_image = "https://via.placeholder.com/1200x400/220044/white?text=MAPPA+SESSIONI"
+        bg_image = "https://via.placeholder.com/1200x400/220044/white?text=MAPPA+SESSIONI+SENTINEL"
 
-    # Sfondo
     fig.add_layout_image(dict(
         source=bg_image, xref="x", yref="y", x=0, y=4.5,
         sizex=24, sizey=4.5, sizing="stretch", opacity=1.0, layer="below"
     ))
 
-    # Colore Laser: Oro se trading attivo, Blu se in pausa
+    # Oro se attivo, Blu se protetto
     color_laser = "#FFD700" if trading_autorizzato else "#0F3ADA"
 
-    # Linea temporale principale
-    fig.add_shape(
-        type="line", x0=x_pos, x1=x_pos, y0=0, y1=4.5, 
-        line=dict(color=color_laser, width=3)
-    )
-    
-    # Effetto Glow (bagliore) - Questo causava l'errore se x_pos era nullo
-    fig.add_shape(
-        type="line", x0=x_pos, x1=x_pos, y0=0, y1=4.5, 
-        line=dict(color=color_laser, width=15, opacity=0.15)
-    )
+    # Linea Laser + Glow
+    fig.add_shape(type="line", x0=x_pos, x1=x_pos, y0=0, y1=4.5, line=dict(color=color_laser, width=3))
+    fig.add_shape(type="line", x0=x_pos, x1=x_pos, y0=0, y1=4.5, line=dict(color=color_laser, width=15, opacity=0.15))
 
     fig.update_layout(
         xaxis=dict(range=[24, 0], showgrid=False, visible=False, fixedrange=True),
@@ -402,6 +392,17 @@ if st.session_state.connected:
     trading_autorizzato = is_trading_time or stress_test
 
     st.subheader("🌍 Live Market Flow 24h")
+    
+    # CHIAMATA CORRETTA ALLA MAPPA
+    if st.session_state.weekend_mode or is_weekend_reale:
+        try:
+            st.image(Image.open("banner2.png"), use_column_width=True)
+        except:
+            st.warning("MODALITÀ WEEKEND: OTC ATTIVO")
+    else:
+        # Passiamo solo un argomento come definito nella funzione
+        st.plotly_chart(draw_market_map_inverted(trading_autorizzato), use_container_width=True)
+
     
     if st.session_state.weekend_mode or is_weekend_reale:
         try:
@@ -689,11 +690,26 @@ if st.session_state.connected:
     else:
         st.info("⏳ Nessun segnale registrato. Lo scanner sta analizzando i mercati...")
 
-
+    st.divider()
                                 
     # --- 7. TABELLA JOURNAL (STAKE FIX APPLICATO) ---
     st.subheader("📋 Trading Journal")
+
     
+    # --- CALCOLO STATISTICHE PER WIDGET ---
+    history = st.session_state.signal_history
+    total_trades = len(history)
+    wins = sum(1 for x in history if "WIN" in str(x.get('result', '')))
+    losses = sum(1 for x in history if "LOSS" in str(x.get('result', '')))
+    win_rate = (wins / (wins + losses) * 100) if (wins + losses) > 0 else 0.0
+    total_pnl = sum(float(x.get('pnl_numeric', 0)) for x in history)
+
+    # Visualizzazione Widget Statistici
+    c1, c2, c3 = st.columns(3)
+    c1.metric("💰 Profitto Sessione", f"{total_pnl:.2f} €", delta=f"{total_pnl:.2f} €")
+    c2.metric("🎯 Win/Loss", f"{wins}W - {losses}L", delta=f"Tot: {total_trades}")
+    c3.metric("🏁 Win Rate", f"{win_rate:.1f}%")
+
     if st.session_state.signal_history:
         df_journal = pd.DataFrame(st.session_state.signal_history)
         
