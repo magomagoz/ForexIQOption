@@ -590,10 +590,10 @@ if st.session_state.connected:
 
 
     # --- 6. VERIFICA ESITI TRADE CON DERIV (FIX APPLICATO) ---
-    now_ts = time_module.time()
+    now = time_module.time()
     for pair, trade in list(st.session_state.active_trades.items()):
         # Aspettiamo il timeframe + 5 sec di tolleranza
-        if now_ts - trade['entry_time'] >= timeframe + 5:
+        if now - trade['entry_time'] >= timeframe + 5:
             try:
                 res = get_deriv_candles(pair, timeframe, 2)
                 if res and len(res) > 0:
