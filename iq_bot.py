@@ -15,6 +15,13 @@ from datetime import datetime, time, timedelta
 TELEGRAM_TOKEN = st.secrets.get("TELEGRAM_TOKEN", "IL_TUO_TOKEN_QUI")
 TELEGRAM_CHAT_ID = st.secrets.get("TELEGRAM_CHAT_ID", "IL_TUO_CHAT_ID_QUI")
 
+fuso_roma = pytz.timezone('Europe/Rome')
+now_roma = datetime.now(pytz.timezone('Europe/Rome'))
+giorno_settimana = now_roma.weekday() # 0 = Lunedì ... 5 = Sabato, 6 = Domenica
+is_weekend_reale = giorno_settimana >= 5  # True se Sabato (5) o Domenica (6)
+now_cet = now_roma.time()
+ora_attuale = now_roma.hour
+
 def get_oanda_candles(pair, timeframe_sec, count, api_token):
     symbol = f"{pair}=X"
     interval = "1m" if timeframe_sec <= 60 else "5m"
@@ -65,7 +72,7 @@ def send_telegram_signal(signal_type, pair, price, rsi, trade_id, stake): # <---
         f"💵 Stake: `{stake:.2f} €` \n" # <--- Nuova riga
         f"💰 Prezzo: `{price:.5f}`\n"
         f"📊 RSI: `{rsi:.1f}`\n"
-        f"⏰ Ora: {timestamp}"
+        f"⏰ Ora: {now_roma}"
     )
     invia_telegram(message)
 
@@ -246,14 +253,6 @@ if st.session_state.signal_history:
 
 # Il saldo reale è il deposito iniziale (es. 10000) + i profitti/perdite
 saldo_dinamico = 10000.0 + profitto_totale_sessione 
-
-# --- LOGICA RILEVAMENTO AUTOMATICO OTC ---
-fuso_roma = pytz.timezone('Europe/Rome')
-now_roma = datetime.now(pytz.timezone('Europe/Rome'))
-giorno_settimana = now_roma.weekday() # 0 = Lunedì ... 5 = Sabato, 6 = Domenica
-is_weekend_reale = giorno_settimana >= 5  # True se Sabato (5) o Domenica (6)
-now_cet = now_roma.time()
-ora_attuale = now_roma.hour
 
 # Il mercato reale chiude Venerdì alle 23:00 e riapre Domenica alle 23:00.
 # Quindi è OTC se è Sabato (5) o se è Domenica (6) prima delle 23:00.
