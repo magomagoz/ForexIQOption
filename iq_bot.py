@@ -760,10 +760,7 @@ if st.session_state.connected:
         
     if filtro_mercato != "TUTTI":
         df_filtered = df_filtered[df_filtered['mercato'].str.contains(filtro_mercato, na=False)]
-
-    df_filtered['pnl_numeric'] = df_filtered.apply(calcola_pnl_veloce, axis=1)
-    profitto_sessione = df_filtered['pnl_numeric'].sum()
-        
+    
     total_f = len(df_filtered)
         
     
