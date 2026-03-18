@@ -541,8 +541,8 @@ if st.session_state.connected:
                     play_trade_sound("buy")
 
 
-                except Exception as e:
-                    continue
+            except Exception as e:
+                continue
     
     # --- 5. ANALISI TECNICA GRAFICA (CORRETTA) ---
     st.divider()
