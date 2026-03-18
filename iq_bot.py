@@ -58,7 +58,7 @@ def reset_manual_prices():
 def send_telegram_signal(signal_type, pair, price, rsi, trade_id, stake): # <--- Aggiunto stake qui
     timestamp = datetime.now().strftime("%H:%M:%S")
     message = (
-        f"🚀 *NUOVA OPERAZIONE*\n"
+        f"🚀 *NUOVO TRADE*\n"
         f"🔔 *Segnale:* {signal_type}\n"
         f"🆔 ID: `{trade_id}`\n"
         f"📊 Asset: {pair}\n"
