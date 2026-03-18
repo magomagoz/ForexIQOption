@@ -862,7 +862,7 @@ if st.session_state.connected:
             ultimo_trade = "--:--:--"
 
         # 1. Creiamo una copia pulita dei dati filtrati
-        df_final_table = df_reversed.copy()
+        #df_final_table = df_reversed.copy()
 
         # 2. Calcoliamo il PNL numerico (se non esiste già)
         def calcola_pnl_raw(row):
