@@ -848,11 +848,7 @@ if st.session_state.connected:
             except Exception as e:
                 print(f"Errore verifica Yahoo: {e}")
                 continue
-
-                
-                
-                
-                
+              
                 registra_trade(trade['id'], pair, trade['direction'], res_status, profit)
                 for s in reversed(st.session_state.signal_history):
                     if s['pair'] == pair and s['result'] == "⏳ In corso...":
