@@ -241,6 +241,16 @@ with st.sidebar:
             st.rerun()
 
         st.divider()
+        st.subheader("👁️ CONTROLLO SCANNER")
+        label = "🛑 STOP SCANNER" if st.session_state.scanner_on else "🚀 AVVIA SCANNER"
+        if st.button(label, use_container_width=True, type="primary"):
+            st.session_state.scanner_on = not st.session_state.scanner_on
+            st.rerun()
+        if st.session_state.scanner_on:
+            st.caption(f"🔄 Scanner attivo...  \nUltimo check: {now_roma.time().strftime('%H:%M:%S')}")
+
+        st.divider()
+
         st.subheader("💸 **MERCATO LIVE/OTC**")
         
         if st.session_state.weekend_mode:
@@ -260,14 +270,6 @@ with st.sidebar:
             bb_std = c_bb2.selectbox("Dev BB", [1.80, 2.00, 2.20], index = 1)
             custom_rsi_sell = c_rsi2.selectbox("RSI Sell", [70, 72, 75], index = 2)
 
-        st.divider()
-        st.subheader("👁️ CONTROLLO SCANNER")
-        label = "🛑 STOP SCANNER" if st.session_state.scanner_on else "🚀 AVVIA SCANNER"
-        if st.button(label, use_container_width=True, type="primary"):
-            st.session_state.scanner_on = not st.session_state.scanner_on
-            st.rerun()
-        if st.session_state.scanner_on:
-            st.caption(f"🔄 Scanner attivo...  \nUltimo check: {now_roma.time().strftime('%H:%M:%S')}")
 
         # --- LOGICA SIDEBAR OTC ---
         if st.session_state.weekend_mode:
@@ -385,6 +387,7 @@ with st.sidebar:
                 except Exception as e:
                     st.error(f"⚠️ Errore nel file: {e}")
 
+        st.divider()
 # --- 4. MAIN DASHBOARD ---
 if st.session_state.connected:
     ALL_PAIRS = ["EURGBP", "USDCHF", "USDJPY", "EURUSD", "GBPUSD", "AUDUSD", "USDCAD", "NZDUSD", "EURJPY", "GBPJPY"]
