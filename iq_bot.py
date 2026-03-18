@@ -100,52 +100,46 @@ def get_market_status():
         return "💤 MERCATO LENTO"
 
 def draw_market_map_inverted(trading_autorizzato):
-    """Genera la mappa delle sessioni con la linea temporale corretta"""
     fig = go.Figure()
     
-    # 1. Calcolo dell'ora decimale attuale (es. 13:30 -> 13.5)
-    now_roma = datetime.now(pytz.timezone('Europe/Rome'))
-    current_h_float = now_roma.hour + (now_roma.minute / 60.0)
+    # Calcolo ora decimale di Roma (es. 14:30 -> 14.5)
+    tz_roma = pytz.timezone('Europe/Rome')
+    now_roma = datetime.now(tz_roma)
+    x_pos = float(now_roma.hour + (now_roma.minute / 60.0))
 
     try:
         bg_image = Image.open("mondo.png")
     except:
-        # Fallback se l'immagine locale manca
-        bg_image = "https://via.placeholder.com/1200x400/220044/white?text=MAPPA+SESSIONI+SENTINEL"
+        bg_image = "https://via.placeholder.com/1200x400/220044/white?text=MAPPA+SESSIONI"
 
-    # Sfondo della mappa
+    # Sfondo
     fig.add_layout_image(dict(
         source=bg_image, xref="x", yref="y", x=0, y=4.5,
         sizex=24, sizey=4.5, sizing="stretch", opacity=1.0, layer="below"
     ))
 
-    # 2. Posizionamento della linea "Laser" (ora attuale)
-    # Poiché la tua asse X è invertita [24, 0], la linea si muove da destra a sinistra
-    x_pos = current_h_float 
-    color_laser = "#FFD700" if trading_autorizzato else "#0F3ADA" # Oro se OK, Blu se protetto
+    # Colore Laser: Oro se trading attivo, Blu se in pausa
+    color_laser = "#FFD700" if trading_autorizzato else "#0F3ADA"
 
+    # Linea temporale principale
     fig.add_shape(
         type="line", x0=x_pos, x1=x_pos, y0=0, y1=4.5, 
-        line=dict(color=color_laser, width=3, dash="solid")
+        line=dict(color=color_laser, width=3)
     )
-
-    # Aggiunge un fascio di luce (glow) attorno alla linea
+    
+    # Effetto Glow (bagliore) - Questo causava l'errore se x_pos era nullo
     fig.add_shape(
         type="line", x0=x_pos, x1=x_pos, y0=0, y1=4.5, 
-        line=dict(color=color_laser, width=10, opacity=0.2)
+        line=dict(color=color_laser, width=15, opacity=0.15)
     )
 
     fig.update_layout(
         xaxis=dict(range=[24, 0], showgrid=False, visible=False, fixedrange=True),
         yaxis=dict(range=[0, 4.5], showgrid=False, visible=False, fixedrange=True),
-        template="plotly_dark", 
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)", 
-        margin=dict(l=0, r=0, t=0, b=0), 
-        height=350
+        template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)", margin=dict(l=0, r=0, t=0, b=0), height=350
     )
     return fig
-
 
 def invia_telegram(messaggio):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
