@@ -589,7 +589,7 @@ if st.session_state.connected:
             st.plotly_chart(fig, use_container_width=True)
 
     # --- 6. VERIFICA ESITI TRADE CON DERIV (FIX APPLICATO) ---
-    now = time_module.time()
+    #now = time_module.time()
     
     for pair, trade in list(st.session_state.active_trades.items()):
         # Aspettiamo il timeframe + 5 sec di tolleranza
@@ -619,6 +619,7 @@ if st.session_state.connected:
                     del st.session_state.active_trades[pair]
                     save_journal(st.session_state.signal_history)
                     st.rerun()
+    
     except Exception as e:
         print(f"Errore verifica esito per {pair}: {e}")
         continue
