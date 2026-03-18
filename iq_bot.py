@@ -733,7 +733,7 @@ if st.session_state.connected:
                             s['result'] = f"{icona} {res_status}"
                             s['pnl_numeric'] = profit
                     
-                    invia_telegram(f"🏁 *ESITO* {icona}\nID: `{trade['id']}`\nAsset: {pair}\nProfit: {profit:.2f}€")
+                    invia_telegram(f"🏁 *ESITO* {icona}\n🆔 ID: `{trade['id']}`\n📊 Asset: {pair}\n💵 Profit: {profit:.2f}€")
                     if win: play_trade_sound("win")
                     
                     del st.session_state.active_trades[pair]
