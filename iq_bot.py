@@ -106,9 +106,9 @@ def reset_manual_prices():
 def draw_market_map_inverted(trading_autorizzato):
     fig = go.Figure()
     # Calcolo ora decimale di Roma interno per massima precisione
-    tz_roma = pytz.timezone('Europe/Rome')
-    now_roma = datetime.now(tz_roma)
-    x_pos = float(now_roma.hour + (now_roma.minute / 60.0))
+    #tz_roma = pytz.timezone('Europe/Rome')
+    #now_roma = datetime.now(tz_roma)
+    #x_pos = float(now_roma.hour + (now_roma.minute / 60.0))
 
     try:
         bg_image = Image.open("mondo.png")
