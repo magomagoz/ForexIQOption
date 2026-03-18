@@ -948,7 +948,7 @@ if st.session_state.connected:
                 col_pnl_rinominata: "{:.2f} €"
             }),
             use_container_width=True,                 
-            hide_index=True
+            hide_index=False
         )
 
     else:
