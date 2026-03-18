@@ -214,7 +214,7 @@ with st.sidebar:
     st.session_state.api_token = st.text_input("🔑 Token Deriv", value=st.session_state.api_token, type="password")
 
     if not st.session_state.connected:
-        st.info("Connettiti ai server Deriv per i dati live.")
+        st.info("Connettiti per i dati live.")
         if st.button("🔌 CONNETTI DERIV", use_container_width=True, type="primary"):
             with st.spinner("Sincronizzazione WS..."):
                 test_data = get_deriv_candles("EURUSD", 60, 1)
