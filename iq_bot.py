@@ -113,7 +113,7 @@ def draw_market_map_inverted(trading_autorizzato):
     try:
         bg_image = Image.open("mondo.png")
     except:
-        bg_image = "https://via.placeholder.com/1200x400/220044/white?text=MAPPA+SESSIONI+SENTINEL"
+        bg_image = Image.open("banner2.png")
 
     fig.add_layout_image(dict(
         source=bg_image, xref="x", yref="y", x=0, y=4.5,
