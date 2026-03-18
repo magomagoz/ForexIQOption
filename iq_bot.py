@@ -588,9 +588,9 @@ if st.session_state.connected:
 
             st.plotly_chart(fig, use_container_width=True)
 
-
     # --- 6. VERIFICA ESITI TRADE CON DERIV (FIX APPLICATO) ---
     now = time_module.time()
+    
     for pair, trade in list(st.session_state.active_trades.items()):
         # Aspettiamo il timeframe + 5 sec di tolleranza
         if now - trade['entry_time'] >= timeframe + 5:
