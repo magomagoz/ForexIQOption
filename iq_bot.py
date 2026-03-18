@@ -416,12 +416,12 @@ if st.session_state.connected:
             st.success("SISTEMA IN SCANSIONE ATTIVA 🔥🔥🔥", icon="📡")
             esegui_scansione = True
 
-    st.divider()
-    st.subheader("🕵️ Coppie di valute osservate")
-    if esegui_scansione:
-        cols = st.columns(5)
-        for i, pair in enumerate(ALL_PAIRS):
-            with cols[i % 5]: st.code(f"{icons.get(pair, '🔍')} {pair}")
+        st.divider()
+        st.subheader("🕵️ Coppie di valute osservate")
+        if esegui_scansione:
+            cols = st.columns(5)
+            for i, pair in enumerate(ALL_PAIRS):
+                with cols[i % 5]: st.code(f"{icons.get(pair, '🔍')} {pair}")
 
         for pair in ALL_PAIRS:
             try:
