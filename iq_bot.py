@@ -524,10 +524,11 @@ if st.session_state.connected:
                         }
                         
                         st.session_state.signal_history.append({
-                            'time': datetime.now(pytz.timezone('Europe/Rome')).strftime("%Y-%m-%d %H:%M:%S"),
+                            'id': t_id, # Assicurati di aggiungere l'ID qui!
+                            'time': datetime.now(fuso_roma).strftime("%Y-%m-%d %H:%M:%S"),
                             'pair': pair, 
                             'dir': direction, 
-                            'price': f"{price:.5f}", # È TESTO! (Importante per il blocco 7)
+                            'price': float(price), # SALVA COME NUMERO, non come stringa f-string
                             'stake': st.session_state.stake, 
                             'params_bb': params_bb,
                             'params_rsi': params_rsi,
@@ -707,45 +708,35 @@ if st.session_state.connected:
     now_ts = time_module.time()
     
     for pair, trade in list(st.session_state.active_trades.items()):
-        if now_ts - trade['entry_time'] >= timeframe + 2:
+        # Aggiungi un margine di 2-5 secondi per dare tempo a Yahoo di aggiornare la candela
+        if time_module.time() - trade['entry_time'] >= timeframe + 5:
             try:
                 res = get_oanda_candles(pair, timeframe, 1, "YAHOO")
-                
                 if res:
                     exit_price = res[-1]['close']
                     entry_price = trade['entry_price']
-                    direction = trade['direction']
                     
-                    if direction == "BUY":
-                        win = exit_price > entry_price
-                    else:
-                        win = exit_price < entry_price
-                        
+                    win = (exit_price > entry_price) if trade['direction'] == "BUY" else (exit_price < entry_price)
+                    
                     res_status = "WIN" if win else "LOSS"
                     icona = "✅" if win else "❌"
-                    
                     profit = (st.session_state.stake * 0.85) if win else -st.session_state.stake
-                    st.session_state.local_balance += profit
                     
+                    # Aggiorna il bilancio e il journal
+                    st.session_state.local_balance += profit
+                    for s in st.session_state.signal_history:
+                        if s.get('id') == trade['id']: # Usa l'ID univoco
+                            s['result'] = f"{icona} {res_status}"
+                            s['pnl_numeric'] = profit
+                    
+                    invia_telegram(f"🏁 *ESITO* {icona}\nID: `{trade['id']}`\nAsset: {pair}\nProfit: {profit:.2f}€")
                     if win: play_trade_sound("win")
                     
-                    # BUG RISOLTO: Qui usavi "colore" invece di "icona" e "trade_id" invece di "trade['id']"
-                    # Questo mandava in crash segreto il loop impedendo al trade di chiudersi!
-                    invia_telegram(f"🏁 *ESITO* {icona} {res_status}\n🆔 ID: {trade['id']}\n📊 Asset: {pair}\n💵 Stake: {stake:.2f} €\n💶 Profit: {profit:.2f}€")
-                    
-                    for s in st.session_state.signal_history:
-                        if s['pair'] == pair and "⏳" in str(s['result']):
-                            s['result'] = f"{icona} {res_status}"
-                            s['pnl_numeric'] = profit 
-                            break
-                    
-                    save_journal(st.session_state.signal_history)
-                    registra_trade(trade['id'], pair, direction, res_status, profit)
                     del st.session_state.active_trades[pair]
-                    
-                    st.rerun() 
+                    save_journal(st.session_state.signal_history)
+                    st.rerun()
             except Exception as e:
-                print(f"Errore verifica Yahoo: {e}")
+                print(f"Errore verifica: {e}")
                 continue
                                 
     # =========================================================
@@ -817,20 +808,24 @@ if st.session_state.connected:
         col_esito_target = '🔍 ESITO'
 
         try:
-            # BUG RISOLTO: Tolto la formattazione .5f per il prezzo perché era GIA' testo. 
-            # E' quello che causava il ValueError della foto!
+            # Creiamo una copia per la visualizzazione senza toccare i dati originali
+            df_visual = df_filtered.iloc[::-1].copy()
+            
+            # Applichiamo lo stile in modo sicuro
             st.dataframe(
                 df_visual.style
-                .applymap(style_result, subset=[col_esito_target])
-                .applymap(style_pnl, subset=[col_pnl_target])
+                .applymap(style_result, subset=['result'])
+                .applymap(style_pnl, subset=['pnl_numeric'])
                 .format({
-                    col_pnl_target: "{:.2f} €"
+                    'pnl_numeric': "{:.2f} €",
+                    'price': "{:.5f}"  # Assicurati che 'price' nel DF sia un numero, non f-string!
                 }),
-                use_container_width=True,                 
+                use_container_width=True,
                 hide_index=True
             )
         except Exception as e:
-            st.dataframe(df_visual, use_container_width=True, hide_index=True)
+            st.error(f"Errore visualizzazione tabella: {e}")
+            st.dataframe(df_visual) # Backup senza stile in caso di errore
 
     else:
         st.info("⏳ Accendi lo Scanner e resta in attesa di segnali!")
