@@ -764,7 +764,7 @@ if st.session_state.connected:
     if filtro_mercato != "TUTTI":
         df_filtered = df_filtered[df_filtered['mercato'].str.contains(filtro_mercato, na=False)]
     
-    total_f = len(df_filtered)
+    #total_f = len(df_filtered)
         
     
     # --- CALCOLO STATISTICHE PER WIDGET ---
