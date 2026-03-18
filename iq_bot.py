@@ -801,7 +801,7 @@ if st.session_state.connected:
             'pnl_numeric': '💶 P&L'
         }
 
-        cols_to_keep = ['⏰ DATA', '💱 COPPIA', '🚀 TIPO', '💰 ENTRATA', '↔️ BB (P/D)', '📉 RSI (B/S)', '🌍 MERCATO', '🔍 ESITO', '💶 P&L']
+        cols_to_keep = ['time', 'pair', 'dir', 'price', 'params_bb', 'params_rsi', 'mercato', 'result', 'pnl_numeric']
         df_visual = df_visual[cols_to_keep].rename(columns=rename_map)
 
         col_pnl_target = '💶 P&L'
