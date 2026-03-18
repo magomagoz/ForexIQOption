@@ -68,7 +68,7 @@ def send_telegram_signal(signal_type, pair, price, rsi, trade_id, stake):
         f"🔔 *Segnale:* {signal_type}\n"
         f"🆔 ID: `{trade_id}`\n"
         f"📊 Asset: {pair}\n"
-        f"💵 Stake: `{stake:.0f} €` \n" 
+        f"💵 Stake: `{stake:.2f} €` \n" 
         f"💰 Prezzo: `{price:.5f}`\n"
         f"📊 RSI: `{rsi:.1f}`\n"
         f"⏰ Ora: {timestamp}"
@@ -518,22 +518,17 @@ if st.session_state.connected:
                         params_bb = f"{bb_period}/{bb_std}"
                         params_rsi = f"{custom_rsi_buy}/{custom_rsi_sell}"
                     
-                         # --- FIX REGISTRAZIONE SEGNALE ---
                         st.session_state.active_trades[pair] = {
-                            'id': t_id, 
-                            'entry_price': float(price), 
-                            'entry_time': time_module.time(), 
-                            'direction': direction, 
-                            'stake_num': float(st.session_state.stake)
+                            'id': t_id, 'entry_price': price, 
+                            'entry_time': time_module.time(), 'direction': direction
                         }
                         
                         st.session_state.signal_history.append({
-                            'id': t_id,
-                            'time': datetime.now(fuso_roma).strftime("%Y-%m-%d %H:%M:%S"),
+                            'time': datetime.now(pytz.timezone('Europe/Rome')).strftime("%Y-%m-%d %H:%M:%S"),
                             'pair': pair, 
                             'dir': direction, 
-                            'price': float(price), 
-                            'stake': f"{int(st.session_state.stake)}€", # Formattato come 100€
+                            'price': f"{price:.5f}", # È TESTO! (Importante per il blocco 7)
+                            'stake': st.session_state.stake, 
                             'params_bb': params_bb,
                             'params_rsi': params_rsi,
                             'mercato': tipo_mercato,
@@ -712,115 +707,133 @@ if st.session_state.connected:
     now_ts = time_module.time()
     
     for pair, trade in list(st.session_state.active_trades.items()):
-        # Aggiungi un margine di 2-5 secondi per dare tempo a Yahoo di aggiornare la candela
-        if time_module.time() - trade['entry_time'] >= timeframe + 5:
+        if now_ts - trade['entry_time'] >= timeframe + 2:
             try:
                 res = get_oanda_candles(pair, timeframe, 1, "YAHOO")
+                
                 if res:
                     exit_price = res[-1]['close']
                     entry_price = trade['entry_price']
+                    direction = trade['direction']
                     
-                    win = (exit_price > entry_price) if trade['direction'] == "BUY" else (exit_price < entry_price)
-                    
+                    if direction == "BUY":
+                        win = exit_price > entry_price
+                    else:
+                        win = exit_price < entry_price
+                        
                     res_status = "WIN" if win else "LOSS"
                     icona = "✅" if win else "❌"
+                    
                     profit = (st.session_state.stake * 0.85) if win else -st.session_state.stake
-                    
-                    # Aggiorna il bilancio e il journal
                     st.session_state.local_balance += profit
-                    for s in st.session_state.signal_history:
-                        if s.get('id') == trade['id']: # Usa l'ID univoco
-                            s['result'] = f"{icona} {res_status}"
-                            s['pnl_numeric'] = profit
                     
-                    invia_telegram(f"🏁 *ESITO* {icona}\n🆔 ID: `{trade['id']}`\n📊 Asset: {pair}\n💵 Profit: {profit:.2f}€")
                     if win: play_trade_sound("win")
                     
-                    del st.session_state.active_trades[pair]
+                    # BUG RISOLTO: Qui usavi "colore" invece di "icona" e "trade_id" invece di "trade['id']"
+                    # Questo mandava in crash segreto il loop impedendo al trade di chiudersi!
+                    invia_telegram(f"🏁 *ESITO* {icona} {res_status}\n🆔 ID: {trade['id']}\n📊 Asset: {pair}\n💵 Stake: {stake:.2f} €\n💶 Profit: {profit:.2f}€")
+                    
+                    for s in st.session_state.signal_history:
+                        if s['pair'] == pair and "⏳" in str(s['result']):
+                            s['result'] = f"{icona} {res_status}"
+                            s['pnl_numeric'] = profit 
+                            break
+                    
                     save_journal(st.session_state.signal_history)
-                    st.rerun()
+                    registra_trade(trade['id'], pair, direction, res_status, profit)
+                    del st.session_state.active_trades[pair]
+                    
+                    st.rerun() 
             except Exception as e:
-                print(f"Errore verifica: {e}")
+                print(f"Errore verifica Yahoo: {e}")
                 continue
                                 
     # =========================================================
-    # --- 7. TABELLA JOURNAL & PERFORMANCE HUB (FIXED) ---
+    # --- 7. TABELLA JOURNAL & PERFORMANCE HUB (PRO VERSION) ---
     # =========================================================
     st.subheader("📋 Trading Journal & Performance Hub")
     
     if st.session_state.signal_history:
         df_journal = pd.DataFrame(st.session_state.signal_history)
         
-        # Filtri UI
         f1, f2, f3 = st.columns([1, 1, 1])
-        with f1: filtro_mercato = st.selectbox("🌍 Filtro Mercato:", ["TUTTI", "OTC", "LIVE"], index=0)
-        with f2: time_start = st.time_input("🟢 Orario Inizio:", value=time(0, 0))
-        with f3: time_end = st.time_input("🛑 Orario Fine:", value=time(23, 59))
+        with f1:
+            filtro_mercato = st.selectbox("🌍 Filtro Mercato:", ["TUTTI", "OTC", "LIVE"], index=0)
+        with f2:
+            time_start = st.time_input("🟢 Orario Inizio:", value=time(0, 0))
+        with f3:
+            time_end = st.time_input("🛑 Orario Fine:", value=time(23, 59))
 
-        # Logica di filtraggio
-        df_journal['dt_obj'] = pd.to_datetime(df_journal['time'])
-        df_journal['ora_reale'] = df_journal['dt_obj'].dt.time
+        df_journal['ora_reale'] = pd.to_datetime(df_journal['time'], errors='coerce').dt.time
         df_filtered = df_journal[(df_journal['ora_reale'] >= time_start) & (df_journal['ora_reale'] <= time_end)].copy()
         
         if filtro_mercato != "TUTTI":
             df_filtered = df_filtered[df_filtered['mercato'].str.contains(filtro_mercato, na=False)]
 
-        # Calcolo PNL per le metriche
-        def quick_pnl(row):
-            try:
-                # Prende lo stake numerico se esiste, altrimenti pulisce la stringa "100€"
-                s = float(str(row.get('stake', '100')).replace('€',''))
-                res = str(row.get('result', ''))
-                if "✅" in res or "WIN" in res: return round(s * 0.85, 2)
-                if "❌" in res or "LOSS" in res: return round(-s, 2)
-                return 0.0
-            except: return 0.0
+        def calcola_pnl_veloce(row):
+            stake_u = float(row.get('stake', 100.0))
+            res = str(row.get('result', ''))
+            if "✅" in res or "WIN" in res: return round(stake_u * 0.85, 2)
+            if "❌" in res or "LOSS" in res: return round(-stake_u, 2)
+            return 0.0
 
-        df_filtered['pnl_numeric'] = df_filtered.apply(quick_pnl, axis=1)
+        df_filtered['pnl_numeric'] = df_filtered.apply(calcola_pnl_veloce, axis=1)
+        profitto_sessione = df_filtered['pnl_numeric'].sum()
         
-        # Visualizzazione Metriche
+        total_f = len(df_filtered)
+        wins_f = sum(1 for s in df_filtered['result'] if "✅" in str(s) or "WIN" in str(s))
+        loss_f = sum(1 for s in df_filtered['result'] if "❌" in str(s) or "LOSS" in str(s))
+        accuracy_f = (wins_f / total_f * 100) if total_f > 0 else 0.0
+        
         m1, m2, m3 = st.columns(3)
-        wins = sum(1 for s in df_filtered['result'] if "✅" in str(s))
-        loss = sum(1 for s in df_filtered['result'] if "❌" in str(s))
-        with m1: st.metric("💰 Profitto", f"{df_filtered['pnl_numeric'].sum():.2f} €")
-        with m2: st.metric("🎯 Win/Loss", f"{wins}W - {loss}L")
-        with m3: st.metric("🏁 Win Rate", f"{(wins/(wins+loss)*100 if (wins+loss)>0 else 0):.1f}%")
+        with m1:
+            colore_delta = "normal" if profitto_sessione >= 0 else "inverse"
+            st.metric("💰 Profitto Sessione", f"{profitto_sessione:.2f} €", 
+                      delta=f"Saldo: {st.session_state.local_balance:.2f} €", delta_color=colore_delta)
+        with m2:
+            st.metric("🎯 Win/Loss", f"{wins_f}W - {loss_f}L", f"Tot: {total_f}")
+        with m3:
+            st.metric("🏁 Win Rate", f"{accuracy_f:.1f}%")
 
-        # --- PREPARAZIONE TABELLA FINALE ---
+        df_visual = df_filtered.iloc[::-1].copy()
+
+        # BUG RISOLTO: la colonna originaria nel json si chiama 'time', non 'ora_attuale'
         rename_map = {
             'time': '⏰ DATA', 
             'pair': '💱 COPPIA', 
             'dir': '🚀 TIPO',
             'price': '💰 ENTRATA', 
-            'stake': '💶 STAKE',
             'params_bb': '↔️ BB (P/D)',
             'params_rsi': '📉 RSI (B/S)', 
             'mercato': '🌍 MERCATO', 
             'result': '🔍 ESITO', 
-            'pnl_numeric': '📈 P&L'
+            'pnl_numeric': '💶 P&L'
         }
 
-        # Selezioniamo solo le colonne presenti per evitare errori
-        df_visual = df_filtered.iloc[::-1].copy()
-        cols_presenti = [c for c in rename_map.keys() if c in df_visual.columns]
-        df_display = df_visual[cols_presenti].rename(columns=rename_map)
+        cols_to_keep = ['time', 'pair', 'dir', 'price', 'params_bb', 'params_rsi', 'mercato', 'result', 'pnl_numeric']
+        df_visual = df_visual[cols_to_keep].rename(columns=rename_map)
 
-        # Rendering con Stile
+        col_pnl_target = '💶 P&L'
+        col_esito_target = '🔍 ESITO'
+
         try:
+            # BUG RISOLTO: Tolto la formattazione .5f per il prezzo perché era GIA' testo. 
+            # E' quello che causava il ValueError della foto!
             st.dataframe(
-                df_display.style
-                .applymap(style_result, subset=['🔍 ESITO'] if '🔍 ESITO' in df_display.columns else [])
-                .applymap(style_pnl, subset=['📈 P&L'] if '📈 P&L' in df_display.columns else [])
+                df_visual.style
+                .applymap(style_result, subset=[col_esito_target])
+                .applymap(style_pnl, subset=[col_pnl_target])
                 .format({
-                    '💰 ENTRATA': "{:.5f}",
-                    '📈 P&L': "{:.2f} €"
-                }, na_rep="-"),
-                use_container_width=True, hide_index=True
+                    col_pnl_target: "{:.2f} €"
+                }),
+                use_container_width=True,                 
+                hide_index=True
             )
         except Exception as e:
-            st.dataframe(df_display, use_container_width=True, hide_index=True)
+            st.dataframe(df_visual, use_container_width=True, hide_index=True)
+
     else:
-        st.info("⏳ In attesa del primo segnale dallo scanner...")
+        st.info("⏳ Accendi lo Scanner e resta in attesa di segnali!")
 
     # --- 8. REFRESH LOOP ---
     if st.session_state.scanner_on:
