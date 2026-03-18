@@ -133,7 +133,7 @@ def style_pnl(val):
         clean_val = str(val).replace('€', '').replace(' ', '').strip()
         num_val = float(clean_val)
         if num_val > 0:
-            return 'color: #00ff88; font-weight: bold;'
+            return 'color: #32cd32; font-weight: bold;'
         elif num_val < 0:
             return 'color: #ff4b4b; font-weight: bold;'
         else:
@@ -144,11 +144,11 @@ def style_pnl(val):
 def style_result(val):
     val_str = str(val)
     if "✅" in val_str or "WIN" in val_str:
-        return 'color: #00ff88; font-weight: bold;'
+        return 'color: #32cd32; font-weight: bold;'
     elif "❌" in val_str or "LOSS" in val_str:
         return 'color: #ff4b4b; font-weight: bold;'
     elif "⏳" in val_str:
-        return 'color: #ffd700; font-style: italic;'
+        return 'color: #bf8801; font-style: bold;'
     return ''
 
 def play_trade_sound(sound_type="buy"):
