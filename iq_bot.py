@@ -520,7 +520,7 @@ if st.session_state.connected:
                     
                         st.session_state.active_trades[pair] = {
                             'id': t_id, 'entry_price': price, 
-                            'entry_time': time_module.time(), 'direction': direction
+                            'entry_time': time_module.time(), 'direction': direction, 'stake_num': st.session_state.stake
                         }
                         
                         st.session_state.signal_history.append({
@@ -529,7 +529,7 @@ if st.session_state.connected:
                             'pair': pair, 
                             'dir': direction, 
                             'price': float(price), # SALVA COME NUMERO, non come stringa f-string
-                            'stake': st.session_state.stake, 
+                            'stake': f"{int(st.session_state.stake)}€", 
                             'params_bb': params_bb,
                             'params_rsi': params_rsi,
                             'mercato': tipo_mercato,
@@ -794,6 +794,7 @@ if st.session_state.connected:
             'pair': '💱 COPPIA', 
             'dir': '🚀 TIPO',
             'price': '💰 ENTRATA', 
+            'stake': '💶 STAKE',
             'params_bb': '↔️ BB (P/D)',
             'params_rsi': '📉 RSI (B/S)', 
             'mercato': '🌍 MERCATO', 
