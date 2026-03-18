@@ -589,16 +589,19 @@ if st.session_state.connected:
             st.plotly_chart(fig, use_container_width=True)
 
     # --- 6. VERIFICA ESITI TRADE CON DERIV (FIX FINALE) ---
+    # Definiamo il timestamp corrente prima di iniziare il ciclo
     current_ts = time_module.time() 
     
-    # Usiamo una copia della lista per evitare errori di iterazione
-    for pair, trade in list(st.session_state.active_trades.items()):
-        # Calcoliamo se il tempo è scaduto
+    # Creiamo una lista fissa dei trade attivi per evitare errori di mutazione del dizionario
+    trades_pendenti = list(st.session_state.active_trades.items())
+    
+    for pair, trade in trades_pendenti:
+        # Calcoliamo quando deve scadere il trade (Entrata + Timeframe + 5 secondi di sicurezza)
         scadenza = trade['entry_time'] + timeframe + 5
         
         if current_ts >= scadenza:
             try:
-                # Recuperiamo le candele per verificare il prezzo di chiusura
+                # Recuperiamo le candele recenti per verificare il prezzo di chiusura
                 res = get_deriv_candles(pair, timeframe, 2)
                 if res and len(res) > 0:
                     exit_price = res[-1]['close']
@@ -609,30 +612,67 @@ if st.session_state.connected:
                     res_status = "WIN" if win else "LOSS"
                     icona = "✅" if win else "❌"
                     
-                    # Calcolo Profitto
+                    # Calcolo Profitto (Assumiamo payout 85%)
                     stake_usato = trade.get('stake_num', float(st.session_state.stake))
                     profit = (stake_usato * 0.85) if win else -stake_usato
                     
-                    # Aggiornamento Saldo e Journal
+                    # 1. Aggiornamento Saldo Locale
                     st.session_state.local_balance += profit
+                    
+                    # 2. Aggiornamento Storico (Journal)
                     for s in st.session_state.signal_history:
                         if s.get('id') == trade['id']: 
                             s['result'] = f"{icona} {res_status}"
                             s['pnl_numeric'] = profit
                     
-                    # Notifiche e Suoni
+                    # 3. Notifiche Telegram e Suoni
                     invia_telegram(f"🏁 *ESITO* {icona}\n🆔 ID: `{trade['id']}`\n📊 Asset: {pair}\n💵 Profit: {profit:.2f}€")
-                    if win: play_trade_sound("win")
+                    if win: 
+                        play_trade_sound("win")
                     
-                    # Pulizia trade attivo
-                    del st.session_state.active_trades[pair]
+                    # 4. Rimoziome dalla lista dei trade attivi e salvataggio
+                    if pair in st.session_state.active_trades:
+                        del st.session_state.active_trades[pair]
+                    
                     save_journal(st.session_state.signal_history)
+                    
+                    # Forza il refresh per aggiornare la tabella journal e i box statistici
                     st.rerun()
 
             except Exception as e:
-                # Questo except chiude correttamente il try sopra
+                # Gestisce eventuali errori di connessione durante la verifica
                 print(f"Errore verifica per {pair}: {e}")
                 continue
+
+    # --- 7. TABELLA JOURNAL ---
+    st.divider()
+    st.subheader("📋 Trading Journal & Performance")
+    
+    if st.session_state.signal_history:
+        df_journal = pd.DataFrame(st.session_state.signal_history)
+        
+        # Invertiamo l'ordine per vedere i più recenti in alto
+        df_visual = df_journal.iloc[::-1].copy()
+        
+        # Mappatura nomi colonne per estetica
+        rename_map = {
+            'time': '⏰ DATA', 'pair': '💱 COPPIA', 'dir': '🚀 TIPO',
+            'price': '💰 ENTRATA', 'stake': '💶 STAKE', 'result': '🔍 ESITO', 'pnl_numeric': '📈 P&L'
+        }
+        
+        df_display = df_visual.rename(columns=rename_map)
+
+        # Visualizzazione formattata
+        st.dataframe(
+            df_display.style
+            .applymap(style_result, subset=['🔍 ESITO'] if '🔍 ESITO' in df_display.columns else [])
+            .applymap(style_pnl, subset=['📈 P&L'] if '📈 P&L' in df_display.columns else [])
+            .format({'💰 ENTRATA': "{:.5f}", '📈 P&L': "{:.2f} €"}, na_rep="-"),
+            use_container_width=True, hide_index=True
+        )
+    else:
+        st.info("⏳ Nessun segnale registrato. Lo scanner sta analizzando i mercati...")
+
 
                                 
     # --- 7. TABELLA JOURNAL (STAKE FIX APPLICATO) ---
