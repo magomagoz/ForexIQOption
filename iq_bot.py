@@ -215,7 +215,7 @@ with st.sidebar:
 
     if not st.session_state.connected:
         st.info("Connettiti per i dati live.")
-        if st.button("🔌 CONNETTI DERIV", use_container_width=True, type="primary"):
+        if st.button("🔌 CONNETTI SERVER DERIV", use_container_width=True, type="primary"):
             with st.spinner("Sincronizzazione WS..."):
                 test_data = get_deriv_candles("EURUSD", 60, 1)
                 if test_data:
@@ -303,7 +303,7 @@ with st.sidebar:
         timeframe = st.selectbox("⏱️ TIMEFRAME (s)", [60, 300], index=0)
                 
         st.divider()
-        stress_test = st.toggle("🚀 **STRESS MODE (Test Rapido)**", value=False)
+        stress_test = st.toggle("🚀 **STRESS MODE**", value=False)
         if stress_test:
             st.warning("⚠️ **Modalità TEST:** \nno BB - RSI (45/55)")
             # --- OVERRIDE DI SISTEMA ---
