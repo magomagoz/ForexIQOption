@@ -396,7 +396,9 @@ if st.session_state.connected:
     trading_autorizzato = is_trading_time or stress_test
 
     st.subheader("🌍 Live Market Flow 24h")
-    
+
+    st.plotly_chart(draw_market_map_inverted(trading_autorizzato), use_container_width=True)
+
     #if st.session_state.weekend_mode or is_weekend_reale:
         #try:
             # Carica banner2.png se siamo in modalità weekend
