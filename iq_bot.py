@@ -79,6 +79,26 @@ def get_deriv_candles(pair, timeframe_sec, count):
 def genera_trade_id():
     return f"TRD-{int(datetime.now().timestamp()) % 1000000}"
 
+def get_market_status():
+    fuso_roma = pytz.timezone('Europe/Rome')
+    now_roma = datetime.now(fuso_roma)
+    now_time = now_roma.time()
+
+    londra = (time(9,0), time(18,0))
+    new_york = (time(14,0), time(23,0))
+    
+    is_londra = londra[0] <= now_time <= londra[1]
+    is_ny = new_york[0] <= now_time <= new_york[1]
+    
+    if is_londra and is_ny:
+        return "🔥 SOVRAPPOSIZIONE (EU/USA)\n\nAlta Volatilità"
+    elif is_londra:
+        return "🇪🇺 SESSIONE LONDRA"
+    elif is_ny:
+        return "🇺🇸 SESSIONE NEW YORK"
+    else:
+        return "💤 MERCATO LENTO"
+
 def invia_telegram(messaggio):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     try:
@@ -245,7 +265,7 @@ with st.sidebar:
             status = "Open 🟢" if start <= now_cet <= end else "Closed 🔴"
             st.write(f"{city} {status}")
             
-            st.info(get_market_status())
+        st.info(get_market_status())
         
         st.divider()
         st.subheader("🛠️ PARAMETRI TRADING")
