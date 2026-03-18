@@ -951,7 +951,7 @@ if st.session_state.connected:
                 hide_index=True
             )
         except Exception as e:
-            st.error(f"Nota: Caricamento dati in corso...")
+            #st.error(f"Nota: Caricamento dati in corso...")
             st.dataframe(df_visual, use_container_width=True, hide_index=True)
 
     else:
