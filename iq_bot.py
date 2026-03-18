@@ -397,7 +397,7 @@ if st.session_state.connected:
             st.image(img_weekend, use_column_width=True, caption="MODALITÀ WEEKEND ATTIVA 🔴 MERCATI CHIUSI")
         except:
             st.warning("Immagine banner2.png non trovata. Carica il file nella cartella del progetto.")
-    else:
+    #else:
         # Mostra il grafico Plotly originale "draw_market_map_inverted"
         #st.plotly_chart(draw_market_map_inverted(h_float, trading_autorizzato), use_container_width=True)
         #st.plotly_chart(draw_market_map_inverted(h_float, trading_autorizzato), use_container_width=True)
