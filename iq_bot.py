@@ -588,16 +588,17 @@ if st.session_state.connected:
 
             st.plotly_chart(fig, use_container_width=True)
 
-    # --- 6. VERIFICA ESITI TRADE CON DERIV (FIX APPLICATO) ---
-    current_ts = time_module.time() # Rinominato per evitare conflitti con 'time'
+    # --- 6. VERIFICA ESITI TRADE CON DERIV (FIX FINALE) ---
+    current_ts = time_module.time() 
     
-    # Creiamo una lista delle chiavi per evitare errori di mutazione durante il ciclo
-    active_pairs = list(st.session_state.active_trades.items())
-    
-    for pair, trade in active_pairs:
-        # Aspettiamo il timeframe (es. 60s) + 5 sec di tolleranza per i dati Deriv
-        if current_ts - trade['entry_time'] >= timeframe + 5:
+    # Usiamo una copia della lista per evitare errori di iterazione
+    for pair, trade in list(st.session_state.active_trades.items()):
+        # Calcoliamo se il tempo è scaduto
+        scadenza = trade['entry_time'] + timeframe + 5
+        
+        if current_ts >= scadenza:
             try:
+                # Recuperiamo le candele per verificare il prezzo di chiusura
                 res = get_deriv_candles(pair, timeframe, 2)
                 if res and len(res) > 0:
                     exit_price = res[-1]['close']
@@ -608,33 +609,31 @@ if st.session_state.connected:
                     res_status = "WIN" if win else "LOSS"
                     icona = "✅" if win else "❌"
                     
-                    # Recupero stake salvato nel trade
+                    # Calcolo Profitto
                     stake_usato = trade.get('stake_num', float(st.session_state.stake))
                     profit = (stake_usato * 0.85) if win else -stake_usato
                     
-                    # 1. Aggiorna saldo locale
+                    # Aggiornamento Saldo e Journal
                     st.session_state.local_balance += profit
-                    
-                    # 2. Aggiorna lo storico (Journal)
                     for s in st.session_state.signal_history:
                         if s.get('id') == trade['id']: 
                             s['result'] = f"{icona} {res_status}"
                             s['pnl_numeric'] = profit
                     
-                    # 3. Notifiche
+                    # Notifiche e Suoni
                     invia_telegram(f"🏁 *ESITO* {icona}\n🆔 ID: `{trade['id']}`\n📊 Asset: {pair}\n💵 Profit: {profit:.2f}€")
-                    if win: 
-                        play_trade_sound("win")
+                    if win: play_trade_sound("win")
                     
-                    # 4. Rimuovi dai pendenti e salva
+                    # Pulizia trade attivo
                     del st.session_state.active_trades[pair]
                     save_journal(st.session_state.signal_history)
                     st.rerun()
-                    
+
             except Exception as e:
-                # Questo except ora è correttamente allineato al try interno
-                print(f"Errore verifica esito per {pair}: {e}")
-                continue 
+                # Questo except chiude correttamente il try sopra
+                print(f"Errore verifica per {pair}: {e}")
+                continue
+
                                 
     # --- 7. TABELLA JOURNAL (STAKE FIX APPLICATO) ---
     st.subheader("📋 Trading Journal")
