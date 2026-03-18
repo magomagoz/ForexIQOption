@@ -215,7 +215,7 @@ with st.sidebar:
 
     if not st.session_state.connected:
         st.info("Connettiti per i dati live.")
-        if st.button("🔌 CONNETTI SERVER DERIV", use_container_width=True, type="primary"):
+        if st.button("🔌 CONNETTI SISTEMA", use_container_width=True, type="primary"):
             with st.spinner("Sincronizzazione WS..."):
                 test_data = get_deriv_candles("EURUSD", 60, 1)
                 if test_data:
@@ -397,31 +397,32 @@ if st.session_state.connected:
             st.image(img_weekend, use_column_width=True, caption="MODALITÀ WEEKEND ATTIVA 🔴 MERCATI CHIUSI")
         except:
             st.warning("Immagine banner2.png non trovata. Carica il file nella cartella del progetto.")
-    #else:
+    else:
         # Mostra il grafico Plotly originale "draw_market_map_inverted"
         #st.plotly_chart(draw_market_map_inverted(h_float, trading_autorizzato), use_container_width=True)
-        #st.plotly_chart(draw_market_map_inverted(h_float, trading_autorizzato), use_container_width=True)
-    
-    esegui_scansione = False 
-        
-    # --- FIX SCANNER LOGIC APPLICATO ---
-    if st.session_state.scanner_on:
-        if st.session_state.weekend_mode and not stress_test:
-            st.success("SCANNER OTC ATTIVO su 🇪🇺🇬🇧-🇺🇸🇨🇭-🇦🇺🇺🇸-🇪🇺🇺🇸 ", icon="🎯")
-            esegui_scansione = True
-        elif not trading_autorizzato:
-            st.warning("🛡️ PROTEZIONE ATTIVA: Mercato fuori orario. Scanner in pausa.")
-            esegui_scansione = False 
-        else:    
-            st.success("SISTEMA IN SCANSIONE ATTIVA 🔥🔥🔥", icon="📡")
-            esegui_scansione = True
+        st.plotly_chart(draw_market_map_inverted(h_float, trading_autorizzato), use_container_width=True)
 
-        st.divider()
-        st.subheader("🕵️ Coppie di valute osservate")
-        if esegui_scansione:
-            cols = st.columns(5)
-            for i, pair in enumerate(ALL_PAIRS):
-                with cols[i % 5]: st.code(f"{icons.get(pair, '🔍')} {pair}")
+        # --- GESTIONE STATO SCANNER E PROTEZIONE ORARIA ---
+        esegui_scansione = False # Di default è spento
+        
+        if st.session_state.scanner_on:
+            # Messaggio dinamico in base alla modalità
+            if st.session_state.weekend_mode:
+                st.success("SCANNER OTC ATTIVO su 🇪🇺🇬🇧-🇺🇸🇨🇭-🇦🇺🇺🇸-🇪🇺🇺🇸 ", icon="🎯")
+                esegui_scansione = True
+            else:
+                if not trading_autorizzato:
+                    st.warning("🛡️ PROTEZIONE ATTIVA: Mercato fuori orario. Scanner in pausa.")
+                    esegui_scansione = False # IL VERO BLOCCO
+                else:
+                    st.success("SISTEMA IN SCANSIONE ATTIVA 🔥🔥🔥", icon="📡")
+                    st.divider()
+                    st.subheader("🕵️ Coppie di valute osservate")
+                    cols = st.columns(5)
+                    for i, pair in enumerate(ALL_PAIRS):
+                        with cols[i % 5]: 
+                            st.code(f"{icons.get(pair, '🔍')} {pair}")
+                    esegui_scansione = True
 
         for pair in ALL_PAIRS:
             try:
@@ -485,7 +486,7 @@ if st.session_state.connected:
     
     # --- 5. ANALISI TECNICA GRAFICA ---
     st.divider()
-    st.subheader("📈 Analisi Tecnica (Dati Deriv)")
+    st.subheader("📈 Analisi Tecnica")
     pair_display = st.selectbox("Seleziona asset per grafico", ALL_PAIRS)
     
     try:
