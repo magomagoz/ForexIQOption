@@ -824,7 +824,8 @@ if st.session_state.connected:
                 .applymap(style_pnl, subset=['📈 P&L'] if '📈 P&L' in df_display.columns else [])
                 .format({
                     '💰 ENTRATA': "{:.5f}",
-                    '📈 P&L': "{:.2f} €"
+                    '📈 P&L': "{:.2f} €",
+                    '💶 STAKE': "{:.0f} €"
                 }, na_rep="-"),
                 use_container_width=True, hide_index=True
             )
