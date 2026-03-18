@@ -750,12 +750,15 @@ if st.session_state.connected:
     
     df_journal = pd.DataFrame(st.session_state.signal_history)
         
-    f1, f2, f3 = st.columns([1, 1, 1])
+    f1, f2, f3, f4 = st.columns([1, 1, 1, 1])
     with f1:
         filtro_mercato = st.selectbox("🌍 Filtro Mercato:", ["TUTTI", "OTC", "LIVE"], index=0)
     with f2:
-        time_start = st.time_input("🟢 Orario Inizio:", value=time(0, 0))
+        pair = st.selectbox("💱 Coppia di valute:", ["EURGBP", "USDCHF", "USDJPY", "EURUSD", "GBPUSD", "AUDUSD", "USDCAD", "NZDUSD", "EURJPY", "GBPJPY"]
+, index=0)
     with f3:
+        time_start = st.time_input("🟢 Orario Inizio:", value=time(0, 0))
+    with f4:
         time_end = st.time_input("🛑 Orario Fine:", value=time(23, 59))
 
     #df_journal['ora_attuale'] = pd.to_datetime(df_journal['time'], errors='coerce').dt.time
