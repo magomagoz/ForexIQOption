@@ -707,45 +707,41 @@ if st.session_state.connected:
     now_ts = time_module.time()
     
     for pair, trade in list(st.session_state.active_trades.items()):
-        if now_ts - trade['entry_time'] >= timeframe + 2:
+        # Verifica se è passato il timeframe (es. 60s) + un margine di sicurezza di 5s
+        if now_ts - trade['entry_time'] >= timeframe + 5:
             try:
-                res = get_oanda_candles(pair, timeframe, 1, "YAHOO")
-                
-                if res:
+                # Chiediamo le ultime 2 candele per assicurarci di avere dati freschi
+                res = get_oanda_candles(pair, timeframe, 2, "YAHOO")
+                if res and len(res) > 0:
                     exit_price = res[-1]['close']
                     entry_price = trade['entry_price']
-                    direction = trade['direction']
                     
-                    if direction == "BUY":
-                        win = exit_price > entry_price
-                    else:
-                        win = exit_price < entry_price
-                        
+                    # Logica di vincita/perdita
+                    win = (exit_price > entry_price) if trade['direction'] == "BUY" else (exit_price < entry_price)
+                    
                     res_status = "WIN" if win else "LOSS"
                     icona = "✅" if win else "❌"
                     
-                    profit = (st.session_state.stake * 0.85) if win else -st.session_state.stake
-                    st.session_state.local_balance += profit
+                    # Usiamo lo stake salvato all'apertura del trade
+                    stake_usato = trade.get('stake_num', float(st.session_state.stake))
+                    profit = (stake_usato * 0.85) if win else -stake_usato
                     
+                    # Aggiorna il bilancio e il journal
+                    st.session_state.local_balance += profit
+                    for s in st.session_state.signal_history:
+                        if s.get('id') == trade['id']: 
+                            s['result'] = f"{icona} {res_status}"
+                            s['pnl_numeric'] = profit
+                    
+                    invia_telegram(f"🏁 *ESITO* {icona}\n🆔 ID: `{trade['id']}`\n📊 Asset: {pair}\n💵 Profit: {profit:.2f}€")
                     if win: play_trade_sound("win")
                     
-                    # BUG RISOLTO: Qui usavi "colore" invece di "icona" e "trade_id" invece di "trade['id']"
-                    # Questo mandava in crash segreto il loop impedendo al trade di chiudersi!
-                    invia_telegram(f"🏁 *ESITO* {icona} {res_status}\n🆔 ID: {trade['id']}\n📊 Asset: {pair}\n💵 Stake: {stake:.2f} €\n💶 Profit: {profit:.2f}€")
-                    
-                    for s in st.session_state.signal_history:
-                        if s['pair'] == pair and "⏳" in str(s['result']):
-                            s['result'] = f"{icona} {res_status}"
-                            s['pnl_numeric'] = profit 
-                            break
-                    
-                    save_journal(st.session_state.signal_history)
-                    registra_trade(trade['id'], pair, direction, res_status, profit)
+                    # Rimuoviamo il trade dai pendenti e salviamo
                     del st.session_state.active_trades[pair]
-                    
-                    st.rerun() 
+                    save_journal(st.session_state.signal_history)
+                    st.rerun()
             except Exception as e:
-                print(f"Errore verifica Yahoo: {e}")
+                print(f"Errore verifica esito per {pair}: {e}")
                 continue
                                 
     # =========================================================
@@ -797,43 +793,43 @@ if st.session_state.connected:
 
         df_visual = df_filtered.iloc[::-1].copy()
 
-        # BUG RISOLTO: la colonna originaria nel json si chiama 'time', non 'ora_attuale'
+        # --- PREPARAZIONE TABELLA FINALE ---
         rename_map = {
             'time': '⏰ DATA', 
             'pair': '💱 COPPIA', 
             'dir': '🚀 TIPO',
             'price': '💰 ENTRATA', 
+            'stake': '💶 STAKE',  # <- Assicuriamoci che sia mappata!
             'params_bb': '↔️ BB (P/D)',
             'params_rsi': '📉 RSI (B/S)', 
             'mercato': '🌍 MERCATO', 
             'result': '🔍 ESITO', 
-            'pnl_numeric': '💶 P&L'
+            'pnl_numeric': '📈 P&L'
         }
 
-        cols_to_keep = ['time', 'pair', 'dir', 'price', 'params_bb', 'params_rsi', 'mercato', 'result', 'pnl_numeric']
-        df_visual = df_visual[cols_to_keep].rename(columns=rename_map)
+        df_visual = df_filtered.iloc[::-1].copy()
+        
+        # IMPORTANTE: Aggiunto 'stake' in questa lista, prima veniva cancellato!
+        cols_to_keep = ['time', 'pair', 'dir', 'price', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'pnl_numeric']
+        
+        # Filtriamo in modo sicuro
+        cols_presenti = [c for c in cols_to_keep if c in df_visual.columns]
+        df_display = df_visual[cols_presenti].rename(columns=rename_map)
 
-        col_pnl_target = '💶 P&L'
-        col_esito_target = '🔍 ESITO'
-
+        # Rendering con Stile
         try:
-            # BUG RISOLTO: Tolto la formattazione .5f per il prezzo perché era GIA' testo. 
-            # E' quello che causava il ValueError della foto!
             st.dataframe(
-                df_visual.style
-                .applymap(style_result, subset=[col_esito_target])
-                .applymap(style_pnl, subset=[col_pnl_target])
+                df_display.style
+                .applymap(style_result, subset=['🔍 ESITO'] if '🔍 ESITO' in df_display.columns else [])
+                .applymap(style_pnl, subset=['📈 P&L'] if '📈 P&L' in df_display.columns else [])
                 .format({
-                    col_pnl_target: "{:.2f} €"
-                }),
-                use_container_width=True,                 
-                hide_index=True
+                    '💰 ENTRATA': "{:.5f}",
+                    '📈 P&L': "{:.2f} €"
+                }, na_rep="-"),
+                use_container_width=True, hide_index=True
             )
         except Exception as e:
-            st.dataframe(df_visual, use_container_width=True, hide_index=True)
-
-    else:
-        st.info("⏳ Accendi lo Scanner e resta in attesa di segnali!")
+            st.dataframe(df_display, use_container_width=True, hide_index=True)
 
     # --- 8. REFRESH LOOP ---
     if st.session_state.scanner_on:
