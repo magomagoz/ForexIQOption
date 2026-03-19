@@ -467,8 +467,9 @@ if st.session_state.connected:
                     direction = "BUY" if is_buy else "SELL"
                     t_id = genera_trade_id()
                     tipo_mercato = "OTC" if st.session_state.weekend_mode else "LIVE"
-                    params_bb = f"{bb_period}/{bb_std}"
-                    params_rsi = f"{custom_rsi_buy}/{custom_rsi_sell}"
+                    # Se use_bb è falso, scriviamo "OFF" nel Journal
+                    params_bb = f"{b_per}/{b_std}" if use_bb else "OFF"
+                    params_rsi = f"{r_buy}/{r_sell}"
                 
                     st.session_state.active_trades[pair] = {
                         'id': t_id, 
@@ -484,9 +485,9 @@ if st.session_state.connected:
                         'pair': pair, 
                         'dir': direction, 
                         'price': float(price), 
-                        'stake': f"{st.session_state.stake:.0f}€", 
-                        'params_bb': f"{b_per}/{b_std}",
-                        'params_rsi': f"{r_buy}/{r_sell}",
+                        'stake': f"{st.session_state.stake:.0f}€",                         
+                        'params_bb': params_bb, # Usa la variabile corretta
+                        'params_rsi': params_rsi, # Usa la variabile corretta
                         'mercato': tipo_mercato,
                         'result': "⏳ In corso...",
                         'pnl_numeric': 0.0
