@@ -268,10 +268,7 @@ with st.sidebar:
                 st.session_state.connected = False
                 st.error("❌ Impossibile connettersi. Controlla il Token o la connessione internet.")
                 st.toast("Errore di connessione", icon="🚨")
-                
-    if not st.session_state.connected:
-        st.info("Connettiti per i dati live.")
-        if st.button("🔌 CONNETTI SISTEMA", use_container_width=True, type="primary"):
+   
             with st.spinner("Sincronizzazione WS..."):
                 test_data = get_deriv_candles("EURUSD", 60, 1)
                 if test_data:
