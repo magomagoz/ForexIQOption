@@ -236,7 +236,7 @@ with st.sidebar:
                 if tipo_conto == "DEMO":
                     st.session_state.api_token = token_demo
                     st.session_state.account_type = "DEMO"
-                    st.session_state.local_balance = 10000.0 # Saldo finto di default se il token fallisce
+                    st.session_state.local_balance = 5000.0 # Saldo finto di default se il token fallisce
                 else:
                     st.session_state.api_token = token_reale
                     st.session_state.account_type = "REALE"
