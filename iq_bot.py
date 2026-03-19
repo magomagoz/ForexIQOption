@@ -218,10 +218,11 @@ if 'api_token' not in st.session_state: st.session_state.api_token = DERIV_TOKEN
 with st.sidebar:
     st.title("⚙️ DERIV TRADING")
     
-    st.session_state.api_token = st.text_input("🔑 Token Deriv", value=st.session_state.api_token, type="password")
-
+    # Se NON siamo connessi, mostra Input e bottone Connetti
     if not st.session_state.connected:
-        st.info("Connettiti per i dati live.")
+        st.session_state.api_token = st.text_input("🔑 Token Deriv", value=st.session_state.api_token, type="password")
+        st.info("Inserisci il token e connettiti per i dati live.")
+        
         if st.button("🔌 CONNETTI SISTEMA", use_container_width=True, type="primary"):
             with st.spinner("Sincronizzazione WS..."):
                 test_data = get_deriv_candles("EURUSD", 60, 1)
@@ -234,11 +235,13 @@ with st.sidebar:
                     st.rerun()
                 else:
                     st.error("Errore connessione a Deriv API.")
+    # Se SIAMO connessi, nascondi tutto e mostra SOLO Disconnetti
     else:
         if st.button("🔴 DISCONNETTI", use_container_width=True):
             st.session_state.connected = False
             st.session_state.scanner_on = False
             st.rerun()
+
 
         st.divider()
         st.subheader("👁️ CONTROLLO SCANNER")
@@ -793,22 +796,37 @@ if st.session_state.connected:
 
         # 4. Ricalcolo Statistiche Dinamiche basate SOLO sui dati filtrati
         total_trades = len(df_filtered)
+        best_pairs_str = "" # Stringa vuota di default
         
         if total_trades > 0:
             # Conta quante volte compare WIN o LOSS nella colonna result
             wins = df_filtered['result'].astype(str).str.contains("WIN").sum()
             losses = df_filtered['result'].astype(str).str.contains("LOSS").sum()
             total_pnl = df_filtered['pnl_numeric'].sum()
+            
+            # --- CALCOLO VALUTA PIÙ PROFITTEVOLE ---
+            # Raggruppa per valuta e somma i profitti/perdite
+            profit_by_pair = df_filtered.groupby('pair')['pnl_numeric'].sum()
+            
+            if not profit_by_pair.empty:
+                max_profit = profit_by_pair.max()
+                # Se c'è almeno un profitto positivo, troviamo le valute corrispondenti
+                if max_profit > 0:
+                    best_pairs = profit_by_pair[profit_by_pair == max_profit].index.tolist()
+                    best_pairs_str = ", ".join(best_pairs) # Unisce se ce n'è più di una
         else:
             wins, losses, total_pnl = 0, 0, 0.0
             
         win_rate = (wins / (wins + losses) * 100) if (wins + losses) > 0 else 0.0
 
-        # 5. Mostriamo le Metriche aggiornate in tempo reale
-        c1, c2, c3 = st.columns(3)
+        # 5. Mostriamo le Metriche aggiornate in tempo reale (ORA SU 4 COLONNE)
+        c1, c2, c3, c4 = st.columns(4)
         c1.metric("💰 Profitto Filtrato", f"{total_pnl:.2f} €", delta=f"{total_pnl:.2f} €")
-        c2.metric("🎯 Win/Loss", f"{wins}W - {losses}L", delta=f"Tot trades: {total_trades}")
+        c2.metric("🎯 Win/Loss", f"{wins}W - {losses}L", delta=f"Tot: {total_trades}")
         c3.metric("🏁 Win Rate", f"{win_rate:.1f}%")
+        
+        # Mostra la metrica Top Asset (vuota se best_pairs_str è vuota, con un trattino o "N/A" per pulizia visiva)
+        c4.metric("🏆 Top Asset", best_pairs_str if best_pairs_str else "-")
 
         # 6. Preparazione e Visualizzazione Tabella
         rename_map = {
