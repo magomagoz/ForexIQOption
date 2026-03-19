@@ -242,7 +242,7 @@ with st.sidebar:
 
         st.divider()
         st.subheader("👁️ CONTROLLO SCANNER")
-        label = "🛑 STOP SCANNER" if st.session_state.scanner_on else "🚀 AVVIA SCANNER"
+        label = "🛑 **STOP SCANNER**" if st.session_state.scanner_on else "🚀 **AVVIA SCANNER**"
         if st.button(label, use_container_width=True, type="primary"):
             st.session_state.scanner_on = not st.session_state.scanner_on
             st.rerun()
@@ -645,7 +645,7 @@ if st.session_state.connected:
             n_sell = df_final['sell_sig'].notnull().sum()
             totale_segnali = n_buy + n_sell
 
-            if st.button("🔍 VERIFICA ESITO (60s)", use_container_width=True, type="primary"):
+            if st.button("🔍 **VERIFICA ESITO (60s)**", use_container_width=True, type="primary"):
                 wins_buy, wins_sell = 0, 0
                 
                 # Analizziamo le candele (escludiamo l'ultima perché non ha ancora l'esito a 60s)
@@ -688,7 +688,7 @@ if st.session_state.connected:
                 </div>
                 """, unsafe_allow_html=True)
             else:
-                st.info("**Regola i parametri e verifica il profitto**")
+                st.info("Regola i parametri e verifica il profitto")
         
     except Exception as e:
             st.error(f"Errore grafico: {e}")
