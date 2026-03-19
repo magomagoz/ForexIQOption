@@ -220,27 +220,65 @@ with st.sidebar:
     
     # --- GESTIONE LOGIN / DISCONNESSIONE ---
     if not st.session_state.connected:
-        st.session_state.api_token = st.text_input("🔑 Token API Deriv", value=st.session_state.api_token, type="password")
-        st.info("Inserisci il token e connettiti per i dati live.")
+        st.info("Inserisci i token API generati su Deriv.")
+        
+        # Usiamo i Token invece di Email/Password
+        token_demo = st.text_input("🔑 Token API DEMO", value=st.session_state.get("token_demo", ""), type="password")
+        token_reale = st.text_input("🔑 Token API REALE", value=st.session_state.get("token_reale", ""), type="password")
+        
+        # Selezione del tipo di conto
+        tipo_conto = st.radio("Seleziona il conto da utilizzare:", ["DEMO", "REALE"], index=0)
         
         if st.button("🔌 CONNETTI SISTEMA", use_container_width=True, type="primary"):
-            with st.spinner("Sincronizzazione WS..."):
+            with st.spinner(f"Sincronizzazione conto {tipo_conto}..."):
+                
+                # Impostiamo il token e le variabili in base alla scelta
+                if tipo_conto == "DEMO":
+                    st.session_state.api_token = token_demo
+                    st.session_state.account_type = "DEMO"
+                    st.session_state.local_balance = 10000.0 # Saldo finto di default se il token fallisce
+                else:
+                    st.session_state.api_token = token_reale
+                    st.session_state.account_type = "REALE"
+                    st.session_state.local_balance = 0.0
+
+                # Salviamo i token in sessione per non doverli riscrivere se ci si disconnette
+                st.session_state.token_demo = token_demo
+                st.session_state.token_reale = token_reale
+
+                # 1. Testiamo la connessione base (candele)
                 test_data = get_deriv_candles("EURUSD", 60, 1)
+                
                 if test_data:
                     st.session_state.connected = True
-                    # Tenta di prendere il saldo vero se c'è il token
+                    
+                    # 2. Se c'è un token inserito, prendiamo il saldo VERO dal broker
                     if st.session_state.api_token:
                         bal = get_deriv_balance(st.session_state.api_token)
-                        if bal: st.session_state.local_balance = bal
+                        if bal is not None: 
+                            st.session_state.local_balance = float(bal)
+                        elif tipo_conto == "REALE":
+                            st.warning("Connesso, ma impossibile leggere il saldo reale. Controlla i permessi del Token.")
+                    
                     st.rerun()
                 else:
-                    st.error("Errore connessione a Deriv API. Controlla la rete o il token.")
+                    st.error("Errore connessione a Deriv API. Controlla la rete.")
     else:
-        # Quando sei connesso, il campo sparisce e rimane solo il tasto per uscire
+        # Quando sei connesso, mostra un badge per ricordarti in che conto sei
+        if st.session_state.account_type == "REALE":
+            st.error("🔴 CONTO REALE ATTIVO (Trading con soldi veri)")
+        else:
+            st.success("🟢 CONTO DEMO ATTIVO")
+
+        # Tasto per disconnettersi
         if st.button("🔴 DISCONNETTI", use_container_width=True):
             st.session_state.connected = False
             st.session_state.scanner_on = False
+            st.session_state.api_token = None
             st.rerun()
+            
+    st.divider()
+
 
         st.divider()
         st.subheader("👁️ CONTROLLO SCANNER")
