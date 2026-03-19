@@ -234,7 +234,7 @@ with st.sidebar:
                 else:
                     st.session_state.api_token = token_reale
                     st.session_state.account_type = "REALE"
-                    st.session_state.local_balance = 0.0
+                    st.session_state.local_balance = 99.0
 
                 st.session_state.token_demo = token_demo
                 st.session_state.token_reale = token_reale
