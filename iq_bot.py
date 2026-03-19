@@ -233,7 +233,67 @@ if 'signal_history' not in st.session_state: st.session_state.signal_history = l
 if 'local_balance' not in st.session_state: st.session_state.local_balance = 5000.0
 if 'scanner_on' not in st.session_state: st.session_state.scanner_on = False
 if 'weekend_mode' not in st.session_state: st.session_state.weekend_mode = is_weekend_reale 
-if 'api_token' not in st.session_state: st.session_state.api_token = DERIV_TOKEN
+#if 'api_token' not in st.session_state: st.session_state.api_token = DERIV_TOKEN
+
+
+# --- 3. SIDEBAR ---
+with st.sidebar:
+    st.title("⚙️ DERIV TRADING")
+    
+    token_demo = st.text_input("🔑 Token API DEMO", value="XOHbXvx9tNeviqI", type="password")
+    token_reale = st.text_input("🔑 Token API REALE", value="WOs2xoHrWBhypgR", type="password")
+    tipo_conto = st.radio("Seleziona il conto da utilizzare:", ["DEMO", "REALE"], index=0)
+        
+    if st.button("🔌 CONNETTI SISTEMA", use_container_width=True, type="primary"):
+        # Determiniamo quale token usare
+        token_scelto = token_demo if tipo_conto == "DEMO" else token_reale
+            
+        with st.spinner(f"Connessione a {tipo_conto}..."):
+            # 1. Tentiamo di recuperare il saldo (che fa anche da test autorizzazione)
+            nuovo_saldo = get_deriv_balance(token_scelto)
+                
+            if nuovo_saldo is not None:
+                # SALVATAGGIO STATO
+                st.session_state.api_token = token_scelto
+                st.session_state.account_type = tipo_conto
+                st.session_state.local_balance = float(nuovo_saldo)
+                st.session_state.connected = True
+                    
+                # Messaggi di conferma
+                st.toast(f"✅ Connesso a {tipo_conto}!", icon="🚀")
+                st.success(f"Saldo aggiornato: {nuovo_saldo} €")
+                time_module.sleep(1)
+                st.rerun()
+            else:
+                st.session_state.connected = False
+                st.error("❌ Impossibile connettersi. Controlla il Token o la connessione internet.")
+                st.toast("Errore di connessione", icon="🚨")
+                
+    if not st.session_state.connected:
+        st.info("Connettiti per i dati live.")
+        if st.button("🔌 CONNETTI SISTEMA", use_container_width=True, type="primary"):
+            with st.spinner("Sincronizzazione WS..."):
+                test_data = get_deriv_candles("EURUSD", 60, 1)
+                if test_data:
+                    st.session_state.connected = True
+                    # Tenta di prendere il saldo vero se c'è il token
+                    if st.session_state.api_token:
+                        bal = get_deriv_balance(st.session_state.api_token)
+                        if bal: st.session_state.local_balance = bal
+                    st.rerun()
+                else:
+                    st.error("Errore connessione a Deriv API.")
+    else:
+        if st.button("🔴 DISCONNETTI", use_container_width=True):
+            st.session_state.connected = False
+            st.session_state.scanner_on = False
+            st.rerun()
+
+
+
+
+
+
 
 # --- GESTIONE LOGIN / DISCONNESSIONE ---
 if not st.session_state.connected:
