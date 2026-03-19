@@ -307,9 +307,9 @@ with st.sidebar:
         
         st.divider()
         st.subheader("🛠️ PARAMETRI TRADING")
-        st.metric(label=f"💰 SALDO DEMO", value=f"{st.session_state.local_balance:.2f} €")
+        #st.metric(label=f"💰 SALDO DEMO", value=f"{st.session_state.local_balance:.2f} €")
         st.session_state.stake = st.number_input("💶 INVESTIMENTO (€)", value=100.0)
-        timeframe = st.selectbox("⏱️ TIMEFRAME (s)", [60, 300], index=0)
+        timeframe = st.selectbox("⏱️ TIMEFRAME (s)", [60, 75, 300], index=0)
                 
         st.divider()
         stress_test = st.toggle("🚀 **STRESS MODE**", value=False)
@@ -752,7 +752,7 @@ if st.session_state.connected:
     st.subheader("📋 Trading Journal & Performance Hub")
     
     if not st.session_state.signal_history:
-        st.info("⏳ Nessun trade registrato in questa sessione. Avvia lo Scanner...")
+        #st.info("⏳ Nessun trade registrato in questa sessione. Avvia lo Scanner...")
     else:
         # 1. Creiamo il DataFrame base con tutti i dati
         df_journal = pd.DataFrame(st.session_state.signal_history)
