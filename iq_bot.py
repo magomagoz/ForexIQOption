@@ -378,47 +378,51 @@ with st.sidebar:
 
         st.divider()
 
+        # --- SEZIONE GESTIONE DATI CSV ---
+        st.header("💾 GESTIONE SEGNALI")
+
+        # 1. TASTO ESPORTA CSV
+        if st.session_state.signal_history:
+            df_export = pd.DataFrame(st.session_state.signal_history)
+            csv_data = df_export.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label="📥 ESPORTA SEGNALI (CSV)",
+                data=csv_data,
+                file_name=f"sentinel_history_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
+        else:
+            # Tasto disabilitato se non ci sono segnali da esportare
+            st.button("📥 ESPORTA SEGNALI (CSV)", disabled=True, use_container_width=True)
+
         # 2. WIDGET IMPORTA CSV
         st.caption("Carica un file CSV per ripristinare o unire dati passati:")
         uploaded_file = st.file_uploader("📤 IMPORTA DATI", type=["csv"], label_visibility="collapsed")
         
         if uploaded_file is not None:
-            if st.button("🔄 UNISCI DATI CARICATI", use_container_width=True, type="secondary"):
+            if st.button("🔄 UNISCI DATI CARICATI CON GLI ATTUALI", use_container_width=True, type="secondary"):
                 try:
-                    # 1. Legge il file caricato
+                    # Legge il file caricato
                     df_import = pd.read_csv(uploaded_file)
-                    
-                    # 2. Rimuove colonne vuote e sostituisce i NaN di Pandas con None (compatibile con JSON)
-                    df_import = df_import.dropna(how='all', axis=1)
-                    df_import = df_import.where(pd.notnull(df_import), None)
-                    
                     nuovi_dati = df_import.to_dict('records')
                     
-                    # 3. Uniamo la cronologia attuale con quella caricata
+                    # Uniamo la cronologia attuale con quella caricata dal file
                     st.session_state.signal_history.extend(nuovi_dati)
                     
-                    # 4. Creiamo un DataFrame unico con tutto lo storico
-                    df_unito = pd.DataFrame(st.session_state.signal_history)
-                    
-                    # 5. Rimozione duplicati molto più sicura basata sull'ID del trade
-                    if 'id' in df_unito.columns:
-                        df_pulito = df_unito.drop_duplicates(subset=['id'], keep='last')
-                    else:
-                        # Fallback di sicurezza se importi un CSV vecchissimo senza ID
-                        df_pulito = df_unito.drop_duplicates(subset=['time', 'pair'], keep='last')
-                    
-                    # 6. Riconvertiamo in dizionario pulendo eventuali NaN residui
-                    df_pulito = df_pulito.where(pd.notnull(df_pulito), None)
+                    # Protezione: rimuove i duplicati esatti (stessa ora e stessa valuta)
+                    # per evitare di falsare le statistiche se importi file sovrapposti
+                    df_pulito = pd.DataFrame(st.session_state.signal_history).drop_duplicates(subset=['time', 'pair'], keep='last')
                     st.session_state.signal_history = df_pulito.to_dict('records')
                     
-                    # 7. Salva nel file JSON per non perderli al riavvio
+                    # Salva anche nel file JSON locale per persistenza
                     save_journal(st.session_state.signal_history) 
                     
-                    st.success(f"✅ Storico fuso con successo! Totale segnali: {len(st.session_state.signal_history)}")
-                    time_module.sleep(1.5)
+                    st.success("✅ Storico fuso con successo!")
+                    time_module.sleep(1.5) # Pausa breve per mostrare il messaggio
                     st.rerun()
                 except Exception as e:
-                    st.error(f"⚠️ Errore durante l'unione dei dati: {e}")
+                    st.error(f"⚠️ Errore nel file: {e}")
 
 
         st.divider()
