@@ -344,13 +344,17 @@ with st.sidebar:
         
         st.divider()
         st.subheader("🛠️ PARAMETRI TRADING")
-        
+        # --- Calcolo Saldo Dinamico ---
+        # Partiamo dal valore iniziale (es. 5000) e aggiungiamo il profitto calcolato nel Journal
         saldo_attuale = st.session_state.local_balance + total_pnl
-        st.metric(
-            label=f"💰 SALDO {st.session_state.account_type}", 
-            value=f"{saldo_attuale:.2f} €", 
-            delta=f"{total_pnl:.2f} €" if total_pnl != 0 else None
-        )
+        
+        with st.sidebar:
+            st.subheader("💰 GESTIONE CAPITALE")
+            st.metric(
+                label=f"SALDO {st.session_state.account_type}", 
+                value=f"{saldo_attuale:.2f} €", 
+                delta=f"{total_pnl:.2f} €" if total_pnl != 0 else None
+            )
         
         st.session_state.stake = st.number_input("💶 INVESTIMENTO (€)", value=100.0)
         timeframe = st.selectbox("⏱️ TIMEFRAME (s)", [60, 300], index=0)
