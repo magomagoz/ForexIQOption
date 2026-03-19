@@ -775,7 +775,10 @@ if st.session_state.connected:
         with f4:
             time_end = st.time_input("🛑 Orario Fine:", value=time(23, 59))
 
-        st.diveder()
+        # --- LINEA TRATTEGGIATA ---
+        st.markdown('<hr style="border: none; border-top: 2px dashed #555; margin: 15px 0; opacity: 0.4;">', unsafe_allow_html=True)
+
+        #st.diveder()
         # 3. Applichiamo le regole di filtraggio al DataFrame
         df_filtered = df_journal.copy()
 
