@@ -223,7 +223,7 @@ with st.sidebar:
         st.info("Inserisci i token API generati su Deriv.")
         
         # Usiamo i Token invece di Email/Password
-        token_demo = st.text_input("🔑 Token API DEMO", value=st.session_state.get("token_demo", ""), type="password")
+        token_demo = st.text_input("🔑 Token API DEMO", value=st.session_state.get("token_demo", "Ae0VqrCzX3IpaLK"), type="password")
         token_reale = st.text_input("🔑 Token API REALE", value=st.session_state.get("token_reale", ""), type="password")
         
         # Selezione del tipo di conto
