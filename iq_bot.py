@@ -748,48 +748,72 @@ if st.session_state.connected:
 
     st.divider()
                                 
-    # --- 7. TABELLA JOURNAL (STAKE FIX APPLICATO) ---
+    # --- 7. TABELLA JOURNAL E FILTRI DINAMICI ---
     st.subheader("📋 Trading Journal & Performance Hub")
     
-    df_journal = pd.DataFrame(st.session_state.signal_history)
-        
-    f1, f2, f3, f4 = st.columns([1, 1, 1, 1])
-    with f1:
-        filtro_mercato = st.selectbox("🌍 Filtro Mercato:", ["TUTTI", "OTC", "LIVE"], index=0)
-    with f2:
-        pair = st.selectbox("💱 Coppia di valute:", ["EURGBP", "USDCHF", "USDJPY", "EURUSD", "GBPUSD", "AUDUSD", "USDCAD", "NZDUSD", "EURJPY", "GBPJPY"]
-, index=0)
-    with f3:
-        time_start = st.time_input("🟢 Orario Inizio:", value=time(0, 0))
-    with f4:
-        time_end = st.time_input("🛑 Orario Fine:", value=time(23, 59))
-
-    #df_journal['ora_attuale'] = pd.to_datetime(df_journal['time'], errors='coerce').dt.time
-    #df_filtered = df_journal[(df_journal['ora_attuale'] >= time_start) & (df_journal['ora_attuale'] <= time_end)].copy()
-        
-    if filtro_mercato != "TUTTI":
-        df_filtered = df_filtered[df_filtered['mercato'].str.contains(filtro_mercato, na=False)]
-    
-    #total_f = len(df_filtered)
-        
-    
-    # --- CALCOLO STATISTICHE PER WIDGET ---
-    history = st.session_state.signal_history
-    total_trades = len(history)
-    wins = sum(1 for x in history if "WIN" in str(x.get('result', '')))
-    losses = sum(1 for x in history if "LOSS" in str(x.get('result', '')))
-    win_rate = (wins / (wins + losses) * 100) if (wins + losses) > 0 else 0.0
-    total_pnl = sum(float(x.get('pnl_numeric', 0)) for x in history)
-
-    # Visualizzazione Widget Statistici
-    c1, c2, c3 = st.columns(3)
-    c1.metric("💰 Profitto Sessione", f"{total_pnl:.2f} €", delta=f"{total_pnl:.2f} €")
-    c2.metric("🎯 Win/Loss", f"{wins}W - {losses}L", delta=f"Tot: {total_trades}")
-    c3.metric("🏁 Win Rate", f"{win_rate:.1f}%")
-
-    if st.session_state.signal_history:
+    if not st.session_state.signal_history:
+        st.info("⏳ Nessun trade registrato in questa sessione. Avvia lo Scanner...")
+    else:
+        # 1. Creiamo il DataFrame base con tutti i dati
         df_journal = pd.DataFrame(st.session_state.signal_history)
         
+        # Assicuriamoci che 'pnl_numeric' esista e sia un numero (per sicurezza)
+        if 'pnl_numeric' not in df_journal.columns:
+            df_journal['pnl_numeric'] = 0.0
+        else:
+            df_journal['pnl_numeric'] = pd.to_numeric(df_journal['pnl_numeric'], errors='coerce').fillna(0.0)
+
+        # 2. Setup dei 4 Filtri nella UI
+        f1, f2, f3, f4 = st.columns(4)
+        with f1:
+            filtro_mercato = st.selectbox("🌍 Filtro Mercato:", ["TUTTI", "OTC", "LIVE"], index=0)
+        with f2:
+            # Aggiungo "TUTTE" come prima opzione per non bloccare la vista su una sola coppia
+            lista_valute = ["TUTTE"] + ALL_PAIRS
+            filtro_coppia = st.selectbox("💱 Coppia di valute:", lista_valute, index=0)
+        with f3:
+            time_start = st.time_input("🟢 Orario Inizio:", value=time(0, 0))
+        with f4:
+            time_end = st.time_input("🛑 Orario Fine:", value=time(23, 59))
+
+        # 3. Applichiamo le regole di filtraggio al DataFrame
+        df_filtered = df_journal.copy()
+
+        # Filtro Mercato
+        if filtro_mercato != "TUTTI":
+            df_filtered = df_filtered[df_filtered['mercato'].str.contains(filtro_mercato, na=False)]
+            
+        # Filtro Coppia di Valute
+        if filtro_coppia != "TUTTE":
+            df_filtered = df_filtered[df_filtered['pair'] == filtro_coppia]
+
+        # Filtro Orario (estrae l'orario dalla stringa 'time' e lo confronta)
+        try:
+            orari_df = pd.to_datetime(df_filtered['time']).dt.time
+            df_filtered = df_filtered[(orari_df >= time_start) & (orari_df <= time_end)]
+        except Exception as e:
+            pass # Ignora se ci sono errori nei formati data vecchi
+
+        # 4. Ricalcolo Statistiche Dinamiche basate SOLO sui dati filtrati
+        total_trades = len(df_filtered)
+        
+        if total_trades > 0:
+            # Conta quante volte compare WIN o LOSS nella colonna result
+            wins = df_filtered['result'].astype(str).str.contains("WIN").sum()
+            losses = df_filtered['result'].astype(str).str.contains("LOSS").sum()
+            total_pnl = df_filtered['pnl_numeric'].sum()
+        else:
+            wins, losses, total_pnl = 0, 0, 0.0
+            
+        win_rate = (wins / (wins + losses) * 100) if (wins + losses) > 0 else 0.0
+
+        # 5. Mostriamo le Metriche aggiornate in tempo reale
+        c1, c2, c3 = st.columns(3)
+        c1.metric("💰 Profitto Filtrato", f"{total_pnl:.2f} €", delta=f"{total_pnl:.2f} €")
+        c2.metric("🎯 Win/Loss", f"{wins}W - {losses}L", delta=f"Tot trades: {total_trades}")
+        c3.metric("🏁 Win Rate", f"{win_rate:.1f}%")
+
+        # 6. Preparazione e Visualizzazione Tabella
         rename_map = {
             'time': '⏰ DATA', 
             'pair': '💱 COPPIA', 
@@ -798,29 +822,34 @@ if st.session_state.connected:
             'stake': '💶 STAKE',
             'params_bb': '↔️ BB (P/D)',
             'params_rsi': '📉 RSI (B/S)', 
-            'mercato': '🌍 MERCATO', 
+            'mercato': '🌍 MERC.', 
             'result': '🔍 ESITO', 
             'pnl_numeric': '📈 P&L'
         }
 
-        df_visual = df_journal.iloc[::-1].copy()
+        # Invertiamo l'ordine per avere i trade più recenti in alto
+        df_visual = df_filtered.iloc[::-1].copy()
         
         cols_to_keep = ['time', 'pair', 'dir', 'price', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'pnl_numeric']
         cols_presenti = [c for c in cols_to_keep if c in df_visual.columns]
         df_display = df_visual[cols_presenti].rename(columns=rename_map)
 
-        try:
-            st.dataframe(
-                df_display.style
-                .applymap(style_result, subset=['🔍 ESITO'] if '🔍 ESITO' in df_display.columns else [])
-                .applymap(style_pnl, subset=['📈 P&L'] if '📈 P&L' in df_display.columns else [])
-                .format({'💰 ENTRATA': "{:.5f}", '📈 P&L': "{:.2f} €"}, na_rep="-"),
-                use_container_width=True, hide_index=True
-            )
-        except Exception:
-            st.dataframe(df_display, use_container_width=True, hide_index=True)
-    else:
-        st.info("⏳ Avvia lo Scanner e attendi il primo segnale...")
+        if not df_display.empty:
+            try:
+                # Usa applymap per compatibilità con versioni Pandas meno recenti
+                st.dataframe(
+                    df_display.style
+                    .applymap(style_result, subset=['🔍 ESITO'] if '🔍 ESITO' in df_display.columns else [])
+                    .applymap(style_pnl, subset=['📈 P&L'] if '📈 P&L' in df_display.columns else [])
+                    .format({'💰 ENTRATA': "{:.5f}", '📈 P&L': "{:.2f} €"}, na_rep="-"),
+                    use_container_width=True, hide_index=True
+                )
+            except Exception:
+                # Fallback se lo styling fallisce
+                st.dataframe(df_display, use_container_width=True, hide_index=True)
+        else:
+            st.warning("Nessun risultato trovato con i filtri attuali.")
+
 
     # --- 8. REFRESH LOOP ---
     if st.session_state.scanner_on:
