@@ -868,7 +868,7 @@ if st.session_state.connected:
             use_container_width=True, hide_index=True
         )
 
-    except Exception:
+        except Exception:
             st.dataframe(df_display, use_container_width=True, hide_index=True)
     else:
         # Mostra un bel messaggio invece di una tabella rotta se i filtri nascondono tutto o se non ci sono ancora trade
@@ -876,7 +876,7 @@ if st.session_state.connected:
              st.info("⏳ Avvia lo Scanner e attendi il primo segnale...")
         else:
              st.warning("🕵️ Nessun segnale corrisponde ai filtri selezionati.")
-
+    
     # --- 8. REFRESH LOOP ---
     if st.session_state.scanner_on:
         time_module.sleep(5) 
