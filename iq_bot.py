@@ -218,9 +218,9 @@ if 'api_token' not in st.session_state: st.session_state.api_token = DERIV_TOKEN
 with st.sidebar:
     st.title("⚙️ DERIV TRADING")
     
-    # Se NON siamo connessi, mostra Input e bottone Connetti
+    # --- GESTIONE LOGIN / DISCONNESSIONE ---
     if not st.session_state.connected:
-        st.session_state.api_token = st.text_input("🔑 Token Deriv", value=st.session_state.api_token, type="password")
+        st.session_state.api_token = st.text_input("🔑 Token API Deriv", value=st.session_state.api_token, type="password")
         st.info("Inserisci il token e connettiti per i dati live.")
         
         if st.button("🔌 CONNETTI SISTEMA", use_container_width=True, type="primary"):
@@ -234,14 +234,13 @@ with st.sidebar:
                         if bal: st.session_state.local_balance = bal
                     st.rerun()
                 else:
-                    st.error("Errore connessione a Deriv API.")
-    # Se SIAMO connessi, nascondi tutto e mostra SOLO Disconnetti
+                    st.error("Errore connessione a Deriv API. Controlla la rete o il token.")
     else:
+        # Quando sei connesso, il campo sparisce e rimane solo il tasto per uscire
         if st.button("🔴 DISCONNETTI", use_container_width=True):
             st.session_state.connected = False
             st.session_state.scanner_on = False
             st.rerun()
-
 
         st.divider()
         st.subheader("👁️ CONTROLLO SCANNER")
@@ -776,6 +775,7 @@ if st.session_state.connected:
         with f4:
             time_end = st.time_input("🛑 Orario Fine:", value=time(23, 59))
 
+        st.diveder()
         # 3. Applichiamo le regole di filtraggio al DataFrame
         df_filtered = df_journal.copy()
 
