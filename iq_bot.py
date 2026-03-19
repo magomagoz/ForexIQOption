@@ -85,7 +85,7 @@ def get_market_status():
     now_time = now_roma.time()
 
     londra = (time(9,0), time(18,0))
-    new_york = (time(14,0), time(22,59))
+    new_york = (time(14,0), time(23,0))
     
     is_londra = londra[0] <= now_time <= londra[1]
     is_ny = new_york[0] <= now_time <= new_york[1]
