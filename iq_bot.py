@@ -684,7 +684,7 @@ if st.session_state.connected:
                 </div>
                 """, unsafe_allow_html=True)
             else:
-                st.info("**Regola i parametri e verifica il profitto**")
+                st.info("Regola i parametri e verifica il profitto")
         
     except Exception as e:
             st.error(f"Errore grafico: {e}")
