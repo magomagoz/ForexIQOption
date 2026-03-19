@@ -828,6 +828,9 @@ if st.session_state.connected:
     c3.metric("🏁 Win Rate", f"{win_rate:.1f}%")
     c4.metric("🏆 Top Asset", best_pairs_str if best_pairs_str else "-")
 
+    if st.session_state.scanner_on:
+            st.caption(f"🔄 Scanner attivo... Ultimo check: {now_roma.time().strftime('%H:%M:%S')}")
+
     # 6. Costruzione della Tabella (Visualizza i dati FILTRATI)
     if not df_filtered.empty:
         rename_map = {
