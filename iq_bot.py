@@ -855,7 +855,7 @@ if st.session_state.connected:
             st.dataframe(df_display, use_container_width=True, hide_index=True)
     else:
         # Mostra un bel messaggio invece di una tabella rotta se i filtri nascondono tutto o se non ci sono ancora trade
-        if non st.session_state.signal_history:
+        if not st.session_state.signal_history:
              st.info("⏳ Avvia lo Scanner e attendi il primo segnale...")
         else:
              st.warning("🕵️ Nessun segnale corrisponde ai filtri selezionati.")
