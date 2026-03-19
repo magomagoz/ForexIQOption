@@ -265,10 +265,10 @@ with st.sidebar:
             use_rsi = col_t2.toggle("**RSI**", value=True)
             c_bb1, c_rsi1 = st.columns(2)
             bb_period = c_bb1.selectbox("Periodo BB", [20, 14], index = 0)
-            custom_rsi_buy = c_rsi1.selectbox("RSI Buy", [30, 28, 25], index = 2)
+            custom_rsi_buy = c_rsi1.selectbox("RSI Buy", [30, 25, 20, 15], index = 2)
             c_bb2, c_rsi2 = st.columns(2)
-            bb_std = c_bb2.selectbox("Dev BB", [1.80, 2.00, 2.20], index = 1)
-            custom_rsi_sell = c_rsi2.selectbox("RSI Sell", [70, 72, 75], index = 2)
+            bb_std = c_bb2.selectbox("Dev BB", [2.00, 2.20, 2,50, 2,70], index = 0)
+            custom_rsi_sell = c_rsi2.selectbox("RSI Sell", [70, 75, 80, 85], index = 2)
 
 
         # --- LOGICA SIDEBAR OTC ---
