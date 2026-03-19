@@ -85,18 +85,18 @@ def get_market_status():
     now_time = now_roma.time()
 
     londra = (time(9,0), time(18,0))
-    new_york = (time(14,0), time(23,0))
+    new_york = (time(14,0), time(22,59))
     
     is_londra = londra[0] <= now_time <= londra[1]
     is_ny = new_york[0] <= now_time <= new_york[1]
     is_out = (time(23,0), time(0,0))
     
     if is_londra and is_ny:
-        return "🔥 **MERCATI EU+USA**\n\nAlta Volatilità"
+        return "🔥 **OVERLAP EU+USA**\n\nAlta Volatilità"
     elif is_londra:
-        return "🇪🇺 SESSIONE LONDRA"
+        return "🇪🇺 SESSIONE DI LONDRA"
     elif is_ny:
-        return "🇺🇸 SESSIONE NEW YORK"
+        return "🇺🇸 SESSIONE DI NEW YORK"
     elif is_out:
         return "❌ **MERCATI CHIUSI** ❌"
     else:
