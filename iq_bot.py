@@ -410,9 +410,10 @@ if st.session_state.connected:
     else:
         st.plotly_chart(draw_market_map_inverted(trading_autorizzato), use_container_width=True)
 
-    # --- GESTIONE STATO SCANNER E PROTEZIONE ORARIA ---
-        #esegui_scansione = False # Di default è spento
-        
+    # Crea un contenitore vuoto prima del loop
+    placeholder_scanner = st.empty()
+    
+    # --- GESTIONE STATO SCANNER E PROTEZIONE ORARIA ---        
     if st.session_state.scanner_on:
         # Messaggio dinamico in base alla modalità
         if st.session_state.weekend_mode:
@@ -423,7 +424,9 @@ if st.session_state.connected:
                 st.warning("🛡️ PROTEZIONE ATTIVA: Mercato fuori orario. Scanner in pausa.")
                 esegui_scansione = False # IL VERO BLOCCO
             else:
-                st.success("SISTEMA IN SCANSIONE ATTIVA 🔥🔥🔥", icon="📡")
+                if st.session_state.scanner_on:
+                with placeholder_scanner.container(): # Tutto ciò che è qui dentro verrà sovrascritto pulito
+                    st.success("SISTEMA IN SCANSIONE ATTIVA 🔥🔥🔥", icon="📡")
  
                 st.divider()
                 st.subheader("🕵️ Coppie di valute osservate")
