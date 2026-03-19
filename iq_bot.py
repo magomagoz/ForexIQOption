@@ -297,33 +297,33 @@ with st.sidebar:
             st.session_state.api_token = None
             st.rerun()
 
-    st.divider()
+        st.divider()
+        
+        # --- CALCOLO SALDO DINAMICO SICURO ---
+        current_pnl = 0.0
+        if st.session_state.signal_history:
+            df_tmp = pd.DataFrame(st.session_state.signal_history)
+            if 'pnl_numeric' in df_tmp.columns:
+                current_pnl = pd.to_numeric(df_tmp['pnl_numeric'], errors='coerce').sum()
+        
+        saldo_attuale = st.session_state.local_balance + current_pnl
+        
+        st.subheader("💰 GESTIONE CAPITALE")
+        st.metric(
+            label=f"SALDO {st.session_state.account_type}", 
+            value=f"{saldo_attuale:.2f} €", 
+            delta=f"{current_pnl:.2f} €" if current_pnl != 0 else None
+        )
+        
+        st.session_state.stake = st.number_input("💶 INVESTIMENTO (€)", value=100.0)
+        timeframe = st.selectbox("⏱️ TIMEFRAME (s)", [60, 300], index=0)
     
-    # --- CALCOLO SALDO DINAMICO SICURO ---
-    current_pnl = 0.0
-    if st.session_state.signal_history:
-        df_tmp = pd.DataFrame(st.session_state.signal_history)
-        if 'pnl_numeric' in df_tmp.columns:
-            current_pnl = pd.to_numeric(df_tmp['pnl_numeric'], errors='coerce').sum()
-    
-    saldo_attuale = st.session_state.local_balance + current_pnl
-    
-    st.subheader("💰 GESTIONE CAPITALE")
-    st.metric(
-        label=f"SALDO {st.session_state.account_type}", 
-        value=f"{saldo_attuale:.2f} €", 
-        delta=f"{current_pnl:.2f} €" if current_pnl != 0 else None
-    )
-    
-    st.session_state.stake = st.number_input("💶 INVESTIMENTO (€)", value=100.0)
-    timeframe = st.selectbox("⏱️ TIMEFRAME (s)", [60, 300], index=0)
-
-    st.divider()
-    st.subheader("👁️ CONTROLLO SCANNER")
-    label = "🛑 STOP SCANNER" if st.session_state.scanner_on else "🚀 AVVIA SCANNER"
-    if st.button(label, use_container_width=True, type="primary"):
-        st.session_state.scanner_on = not st.session_state.scanner_on
-        st.rerun()
+        st.divider()
+        st.subheader("👁️ CONTROLLO SCANNER")
+        label = "🛑 STOP SCANNER" if st.session_state.scanner_on else "🚀 AVVIA SCANNER"
+        if st.button(label, use_container_width=True, type="primary"):
+            st.session_state.scanner_on = not st.session_state.scanner_on
+            st.rerun()
 
         st.divider()
 
