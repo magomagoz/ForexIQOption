@@ -235,60 +235,38 @@ if 'scanner_on' not in st.session_state: st.session_state.scanner_on = False
 if 'weekend_mode' not in st.session_state: st.session_state.weekend_mode = is_weekend_reale 
 if 'api_token' not in st.session_state: st.session_state.api_token = DERIV_TOKEN
 
-# --- 3. SIDEBAR ---
-with st.sidebar:
-    st.title("⚙️ DERIV TRADING")
-    
     # --- GESTIONE LOGIN / DISCONNESSIONE ---
     if not st.session_state.connected:
         st.info("Inserisci i token API generati su Deriv.")
-        # Ho rimosso i valori di default per costringerti a usare i tuoi token reali
-        token_demo = st.text_input("🔑 Token API DEMO", value = "Ae0VqrCzX3IpaLK", type="password")
-        token_reale = st.text_input("🔑 Token API REALE", value = "Ae0VqrCzX3IpaLK", type="password")
+        token_demo = st.text_input("🔑 Token API DEMO", value="Ae0VqrCzX3IpaLK", type="password")
+        token_reale = st.text_input("🔑 Token API REALE", value="Ae0VqrCzX3IpaLK", type="password")
         tipo_conto = st.radio("Seleziona il conto da utilizzare:", ["DEMO", "REALE"], index=0)
         
         if st.button("🔌 CONNETTI SISTEMA", use_container_width=True, type="primary"):
-            with st.spinner(f"Sincronizzazione conto {tipo_conto}..."):
+            # Determiniamo quale token usare
+            token_scelto = token_demo if tipo_conto == "DEMO" else token_reale
+            
+            with st.spinner(f"Connessione a {tipo_conto}..."):
+                # 1. Tentiamo di recuperare il saldo (che fa anche da test autorizzazione)
+                nuovo_saldo = get_deriv_balance(token_scelto)
                 
-                token_da_usare = token_demo if tipo_conto == "DEMO" else token_reale
-                
-                if not token_da_usare:
-                    st.error("⚠️ Inserisci un Token valido per continuare.")
-                else:
-                    st.session_state.api_token = token_da_usare
+                if nuovo_saldo is not None:
+                    # SALVATAGGIO STATO
+                    st.session_state.api_token = token_scelto
                     st.session_state.account_type = tipo_conto
-                    # Impostiamo a 0 per essere sicuri che se fallisce la lettura non vediamo valori fittizi
-                    st.session_state.local_balance = 99.0 
+                    st.session_state.local_balance = float(nuovo_saldo)
+                    st.session_state.connected = True
+                    
+                    # Messaggi di conferma
+                    st.toast(f"✅ Connesso a {tipo_conto}!", icon="🚀")
+                    st.success(f"Saldo aggiornato: {nuovo_saldo} €")
+                    time_module.sleep(1)
+                    st.rerun()
+                else:
+                    st.session_state.connected = False
+                    st.error("❌ Impossibile connettersi. Controlla il Token o la connessione internet.")
+                    st.toast("Errore di connessione", icon="🚨")
 
-                    st.session_state.token_demo = token_demo
-                    st.session_state.token_reale = token_reale
-
-                    # Test connessione
-                    test_data = get_deriv_candles("EURUSD", 60, 1)
-                    if test_data:
-                        st.session_state.connected = True
-                        
-                        # Leggiamo il saldo vero
-                        bal = get_deriv_balance(st.session_state.api_token)
-                        if bal is not None: 
-                            st.session_state.local_balance = float(bal)
-                            st.success(f"✅ Connesso! Saldo letto: {bal} €")
-                        else:
-                            st.warning("⚠️ Connesso, ma impossibile leggere il saldo. Verifica che il Token abbia i permessi 'Read'.")
-                        st.rerun()
-                    else:
-                        st.error("Errore connessione a Deriv API.")
-    else:
-        if st.session_state.account_type == "REALE":
-            st.error("🔴 CONTO REALE ATTIVO")
-        else:
-            st.success("🟢 CONTO DEMO ATTIVO")
-
-        if st.button("🔴 DISCONNETTI", use_container_width=True):
-            st.session_state.connected = False
-            st.session_state.scanner_on = False
-            st.session_state.api_token = None
-            st.rerun()
 
         st.divider()
         
