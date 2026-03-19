@@ -702,54 +702,52 @@ if st.session_state.connected:
     trades_pendenti = list(st.session_state.active_trades.items())
     
     for pair, trade in trades_pendenti:
-        # Calcoliamo quando deve scadere il trade (Entrata + Timeframe + 5 secondi di sicurezza)
-        scadenza = trade['entry_time'] + timeframe + 5
+        # Aspettiamo 80 secondi per avere sia il dato a 60 che a 75
+        scadenza_massima = trade['entry_time'] + 80 
         
-        if current_ts >= scadenza:
+        if current_ts >= scadenza_massima:
             try:
-                # Recuperiamo le candele recenti per verificare il prezzo di chiusura
-                res = get_deriv_candles(pair, timeframe, 2)
-                if res and len(res) > 0:
-                    exit_price = res[-1]['close']
-                    entry_price = trade['entry_price']
+                # Prendiamo candele a 15 secondi per avere precisione sui 75s
+                res = get_deriv_candles(pair, 15, 6) # Prende le ultime 6 candele da 15s
+                if res and len(res) >= 5:
+                    entry_p = trade['entry_price']
                     
-                    # Logica Win/Loss
-                    win = (exit_price > entry_price) if trade['direction'] == "BUY" else (exit_price < entry_price)
-                    res_status = "WIN" if win else "LOSS"
-                    icona = "✅" if win else "❌"
+                    # Esito a 60s (4 candele da 15s dopo l'entrata)
+                    price_60 = res[-2]['close'] 
+                    win_60 = (price_60 > entry_p) if trade['direction'] == "BUY" else (price_60 < entry_p)
                     
-                    # Calcolo Profitto (Assumiamo payout 85%)
+                    # Esito a 75s (5 candele da 15s dopo l'entrata)
+                    price_75 = res[-1]['close']
+                    win_75 = (price_75 > entry_p) if trade['direction'] == "BUY" else (price_75 < entry_p)
+                    
+                    res_60 = "✅ WIN" if win_60 else "❌ LOSS"
+                    res_75 = "✅" if win_75 else "❌"
+                    
+                    # Il P&L reale lo calcoliamo sui 60s (come da tuo standard)
                     stake_usato = trade.get('stake_num', float(st.session_state.stake))
-                    profit = (stake_usato * 0.85) if win else -stake_usato
-                    
-                    # 1. Aggiornamento Saldo Locale
+                    profit = (stake_usato * 0.85) if win_60 else -stake_usato
                     st.session_state.local_balance += profit
-                    
-                    # 2. Aggiornamento Storico (Journal)
+
+                    # Aggiorniamo il Journal con il nuovo campo
                     for s in st.session_state.signal_history:
                         if s.get('id') == trade['id']: 
-                            s['result'] = f"{icona} {res_status}"
+                            s['result'] = res_60
+                            s['check_75s'] = res_75 # Nuovo campo!
                             s['pnl_numeric'] = profit
-                    
+                                        
                     # 3. Notifiche Telegram e Suoni
                     invia_telegram(f"🏁 *ESITO* {icona} {res_status}\n🆔 ID: `{trade['id']}`\n📊 Asset: {pair}\n💵 Profit: {profit:.2f}€")
                     if win: 
                         play_trade_sound("win")
-                    
-                    # 4. Rimoziome dalla lista dei trade attivi e salvataggio
+
                     if pair in st.session_state.active_trades:
                         del st.session_state.active_trades[pair]
                     
                     save_journal(st.session_state.signal_history)
-                    
-                    # Forza il refresh per aggiornare la tabella journal e i box statistici
                     st.rerun()
-
             except Exception as e:
-                # Gestisce eventuali errori di connessione durante la verifica
-                print(f"Errore verifica per {pair}: {e}")
                 continue
-
+                    
     st.divider()
                                 
     # --- 7. TABELLA JOURNAL E FILTRI DINAMICI ---
@@ -837,13 +835,16 @@ if st.session_state.connected:
             'time': '⏰ DATA', 'pair': '💱 COPPIA', 'dir': '🚀 TIPO',
             'price': '💰 ENTRATA', 'stake': '💶 STAKE', 'params_bb': '↔️ BB',
             'params_rsi': '📉 RSI', 'mercato': '🌍 MERCATO', 
-            'result': '🔍 ESITO', 'pnl_numeric': '📈 P&L'
+            'result': '🔍 ESITO 60s', 
+            'check_75s': '⏱️ 75s', # <-- Aggiunta qui
+            'pnl_numeric': '📈 P&L'
         }
-
+        
         # Invertiamo per mostrare i più recenti in alto
         df_visual = df_filtered.iloc[::-1].copy()
         
-        cols_to_keep = ['time', 'pair', 'dir', 'price', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'pnl_numeric']
+        cols_to_keep = ['time', 'pair', 'dir', 'price', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'check_75s', 'pnl_numeric']
+
         cols_presenti = [c for c in cols_to_keep if c in df_visual.columns]
         df_display = df_visual[cols_presenti].rename(columns=rename_map)
 
