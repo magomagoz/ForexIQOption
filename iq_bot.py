@@ -238,8 +238,6 @@ if 'api_token' not in st.session_state: st.session_state.api_token = DERIV_TOKEN
 # --- 3. SIDEBAR ---
 with st.sidebar:
     st.title("⚙️ DERIV TRADING")
-    
-    st.session_state.api_token = st.text_input("🔑 Token Deriv", value=st.session_state.api_token, type="password")
 
     # --- GESTIONE LOGIN / DISCONNESSIONE (SOLO DEMO) ---
     if not st.session_state.connected:
