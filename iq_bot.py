@@ -273,165 +273,165 @@ with st.sidebar:
                     st.error("❌ Token DEMO invalido o non accessibile. Controlla la connessione.")
                     st.toast("Errore di connessione", icon="🚨")
 
-        st.divider()
-        
-        # --- CALCOLO SALDO DINAMICO SICURO ---
-        current_pnl = 0.0
-        if st.session_state.signal_history:
-            df_tmp = pd.DataFrame(st.session_state.signal_history)
-            if 'pnl_numeric' in df_tmp.columns:
-                current_pnl = pd.to_numeric(df_tmp['pnl_numeric'], errors='coerce').sum()
-        
-        saldo_attuale = st.session_state.local_balance + current_pnl
-        
-        st.subheader("💰 GESTIONE CAPITALE")
-        st.metric(
-            label=f"SALDO {st.session_state.account_type}", 
-            value=f"{saldo_attuale:.2f} €", 
-            delta=f"{current_pnl:.2f} €" if current_pnl != 0 else None
-        )
-        
-        st.session_state.stake = st.number_input("💶 INVESTIMENTO (€)", value=100.0)
-        timeframe = st.selectbox("⏱️ TIMEFRAME (s)", [60, 300], index=0)
-    
-        st.divider()
-        st.subheader("👁️ CONTROLLO SCANNER")
-        label = "🛑 STOP SCANNER" if st.session_state.scanner_on else "🚀 AVVIA SCANNER"
-        if st.button(label, use_container_width=True, type="primary"):
-            st.session_state.scanner_on = not st.session_state.scanner_on
-            st.rerun()
-
-        st.divider()
-
-        st.subheader("💸 **MERCATO LIVE/OTC**")
-        
-        if st.session_state.weekend_mode:
-            st.warning("🚨 **MERCATO OTC (Sab-Dom)**")
-            use_bb, use_rsi = True, True
-            bb_period, bb_std = 20, 2.70
-            custom_rsi_buy, custom_rsi_sell = 15, 85
-        else:
-            st.success("🟢 **MERCATO LIVE (Lun-Ven)**")
-            col_t1, col_t2 = st.columns(2)
-            use_bb = col_t1.toggle("**BB**", value=True)
-            use_rsi = col_t2.toggle("**RSI**", value=True)
-            c_bb1, c_rsi1 = st.columns(2)
-            bb_period = c_bb1.selectbox("Periodo BB", [20, 14], index = 0)
-            custom_rsi_buy = c_rsi1.selectbox("RSI Buy", [30, 25, 20, 15], index = 1)
-            c_bb2, c_rsi2 = st.columns(2)
-            bb_std = c_bb2.selectbox("Dev BB", [2.00, 2.20, 2,50, 2,70], index = 0)
-            custom_rsi_sell = c_rsi2.selectbox("RSI Sell", [70, 75, 80, 85], index = 1)
-
-
-        # --- LOGICA SIDEBAR OTC ---
-        if st.session_state.weekend_mode:
             st.divider()
-            st.subheader("🎯 PREZZO MANUALE OTC")
-                            
-            st.info("Inserisci il prezzo dal Broker:")
             
-            if 'manual_prices' not in st.session_state:
-                st.session_state.manual_prices = {"EURGBP": 0.0, "USDCHF": 0.0, "AUDUSD": 0.0, "EURUSD": 0.0}
+            # --- CALCOLO SALDO DINAMICO SICURO ---
+            current_pnl = 0.0
+            if st.session_state.signal_history:
+                df_tmp = pd.DataFrame(st.session_state.signal_history)
+                if 'pnl_numeric' in df_tmp.columns:
+                    current_pnl = pd.to_numeric(df_tmp['pnl_numeric'], errors='coerce').sum()
             
-            # Crea i 4 campi input
-            for pair in ["EURGBP", "USDCHF", "AUDUSD", "EURUSD"]:
-                st.session_state.manual_prices[pair] = st.number_input(
-                    f"Prezzo {pair}", 
-                    value=st.session_state.manual_prices.get(pair, 0.0), 
-                    format="%.5f",
-                    key=f"input_{pair}" # Aggiungiamo una key univoca per sicurezza
-                )
-
-            # Tasto di Reset Chirugico
-            if st.button("🧹 RESET PREZZI", use_container_width=True):
-                reset_manual_prices()
-        
-        st.divider()
-        st.subheader("🌍 SESSIONI DI MERCATO")
-        
-        # Sostituisci la logica dentro il ciclo for delle città con questa:
-        for city, (start, end) in {"🇬🇧 LONDRA:": (time(9,0), time(18,0)), "🇺🇸 NEW YORK:": (time(14,0), time(23,0)), "🇦🇺 SYDNEY:": (time(0,0), time(8,0)), "🇯🇵 TOKYO:": (time(0,0), time(9,0))}.items():
-            # Usiamo now_cet (che è già un .time()) invece di now_roma
-            status = "Open 🟢" if start <= now_cet <= end else "Closed 🔴"
-            st.write(f"{city} {status}")
+            saldo_attuale = st.session_state.local_balance + current_pnl
             
-        st.info(get_market_status())
-                
-        st.divider()
-        stress_test = st.toggle("🚀 **STRESS MODE**", value=False)
-        if stress_test:
-            st.warning("⚠️ **Modalità TEST:** \nno BB - RSI (45/55)")
-            # --- OVERRIDE DI SISTEMA ---
-            use_bb = False       # Spegne forzatamente le BB
-            use_rsi = True       # Accende forzatamente l'RSI
-            custom_rsi_buy = 45  # Forza soglia BUY
-            custom_rsi_sell = 55 # Forza soglia SELL
-        else:
-            st.success("🟢 **Modalità REALE:** \nvedi gli indicatori scelti sopra")
-
-        #if stress_test:
-            #use_bb, use_rsi = False, True       
-            #custom_rsi_buy, custom_rsi_sell = 45, 55 
-
-        st.divider()
-        if st.button("🔔 **TEST AUDIO & TELEGRAM**", use_container_width=True):
-            play_trade_sound("buy")
-            invia_telegram("✅ **SENTINEL AI: SYSTEM CHECK**\nBot online e sincronizzato con Deriv 🚀")
-            st.toast("Test completato!", icon="📲")
-
-        st.divider()
-        if st.button("🗑️ **PULISCI SEGNALI**", use_container_width=True):
-            st.session_state.signal_history = []
-            save_journal([]) 
-            st.rerun()
-
-        st.divider()
-
-        # --- SEZIONE GESTIONE DATI CSV ---
-        st.header("💾 GESTIONE SEGNALI")
-
-        # 1. TASTO ESPORTA CSV
-        if st.session_state.signal_history:
-            df_export = pd.DataFrame(st.session_state.signal_history)
-            csv_data = df_export.to_csv(index=False).encode('utf-8')
-            st.download_button(
-                label="📥 ESPORTA SEGNALI (CSV)",
-                data=csv_data,
-                file_name=f"sentinel_history_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
-                mime="text/csv",
-                use_container_width=True
+            st.subheader("💰 GESTIONE CAPITALE")
+            st.metric(
+                label=f"SALDO {st.session_state.account_type}", 
+                value=f"{saldo_attuale:.2f} €", 
+                delta=f"{current_pnl:.2f} €" if current_pnl != 0 else None
             )
-        else:
-            # Tasto disabilitato se non ci sono segnali da esportare
-            st.button("📥 ESPORTA SEGNALI (CSV)", disabled=True, use_container_width=True)
-
-        # 2. WIDGET IMPORTA CSV
-        st.caption("Carica un file CSV per ripristinare o unire dati passati:")
-        uploaded_file = st.file_uploader("📤 IMPORTA DATI", type=["csv"], label_visibility="collapsed")
+            
+            st.session_state.stake = st.number_input("💶 INVESTIMENTO (€)", value=100.0)
+            timeframe = st.selectbox("⏱️ TIMEFRAME (s)", [60, 300], index=0)
         
-        if uploaded_file is not None:
-            if st.button("🔄 UNISCI DATI CARICATI CON GLI ATTUALI", use_container_width=True, type="secondary"):
-                try:
-                    # Legge il file caricato
-                    df_import = pd.read_csv(uploaded_file)
-                    nuovi_dati = df_import.to_dict('records')
+            st.divider()
+            st.subheader("👁️ CONTROLLO SCANNER")
+            label = "🛑 STOP SCANNER" if st.session_state.scanner_on else "🚀 AVVIA SCANNER"
+            if st.button(label, use_container_width=True, type="primary"):
+                st.session_state.scanner_on = not st.session_state.scanner_on
+                st.rerun()
+    
+            st.divider()
+    
+            st.subheader("💸 **MERCATO LIVE/OTC**")
+            
+            if st.session_state.weekend_mode:
+                st.warning("🚨 **MERCATO OTC (Sab-Dom)**")
+                use_bb, use_rsi = True, True
+                bb_period, bb_std = 20, 2.70
+                custom_rsi_buy, custom_rsi_sell = 15, 85
+            else:
+                st.success("🟢 **MERCATO LIVE (Lun-Ven)**")
+                col_t1, col_t2 = st.columns(2)
+                use_bb = col_t1.toggle("**BB**", value=True)
+                use_rsi = col_t2.toggle("**RSI**", value=True)
+                c_bb1, c_rsi1 = st.columns(2)
+                bb_period = c_bb1.selectbox("Periodo BB", [20, 14], index = 0)
+                custom_rsi_buy = c_rsi1.selectbox("RSI Buy", [30, 25, 20, 15], index = 1)
+                c_bb2, c_rsi2 = st.columns(2)
+                bb_std = c_bb2.selectbox("Dev BB", [2.00, 2.20, 2,50, 2,70], index = 0)
+                custom_rsi_sell = c_rsi2.selectbox("RSI Sell", [70, 75, 80, 85], index = 1)
+    
+    
+            # --- LOGICA SIDEBAR OTC ---
+            if st.session_state.weekend_mode:
+                st.divider()
+                st.subheader("🎯 PREZZO MANUALE OTC")
+                                
+                st.info("Inserisci il prezzo dal Broker:")
+                
+                if 'manual_prices' not in st.session_state:
+                    st.session_state.manual_prices = {"EURGBP": 0.0, "USDCHF": 0.0, "AUDUSD": 0.0, "EURUSD": 0.0}
+                
+                # Crea i 4 campi input
+                for pair in ["EURGBP", "USDCHF", "AUDUSD", "EURUSD"]:
+                    st.session_state.manual_prices[pair] = st.number_input(
+                        f"Prezzo {pair}", 
+                        value=st.session_state.manual_prices.get(pair, 0.0), 
+                        format="%.5f",
+                        key=f"input_{pair}" # Aggiungiamo una key univoca per sicurezza
+                    )
+    
+                # Tasto di Reset Chirugico
+                if st.button("🧹 RESET PREZZI", use_container_width=True):
+                    reset_manual_prices()
+            
+            st.divider()
+            st.subheader("🌍 SESSIONI DI MERCATO")
+            
+            # Sostituisci la logica dentro il ciclo for delle città con questa:
+            for city, (start, end) in {"🇬🇧 LONDRA:": (time(9,0), time(18,0)), "🇺🇸 NEW YORK:": (time(14,0), time(23,0)), "🇦🇺 SYDNEY:": (time(0,0), time(8,0)), "🇯🇵 TOKYO:": (time(0,0), time(9,0))}.items():
+                # Usiamo now_cet (che è già un .time()) invece di now_roma
+                status = "Open 🟢" if start <= now_cet <= end else "Closed 🔴"
+                st.write(f"{city} {status}")
+                
+            st.info(get_market_status())
                     
-                    # Uniamo la cronologia attuale con quella caricata dal file
-                    st.session_state.signal_history.extend(nuovi_dati)
-                    
-                    # Protezione: rimuove i duplicati esatti (stessa ora e stessa valuta)
-                    # per evitare di falsare le statistiche se importi file sovrapposti
-                    df_pulito = pd.DataFrame(st.session_state.signal_history).drop_duplicates(subset=['time', 'pair'], keep='last')
-                    st.session_state.signal_history = df_pulito.to_dict('records')
-                    
-                    # Salva anche nel file JSON locale per persistenza
-                    save_journal(st.session_state.signal_history) 
-                    
-                    st.success("✅ Storico fuso con successo!")
-                    time_module.sleep(1.5) # Pausa breve per mostrare il messaggio
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"⚠️ Errore nel file: {e}")
+            st.divider()
+            stress_test = st.toggle("🚀 **STRESS MODE**", value=False)
+            if stress_test:
+                st.warning("⚠️ **Modalità TEST:** \nno BB - RSI (45/55)")
+                # --- OVERRIDE DI SISTEMA ---
+                use_bb = False       # Spegne forzatamente le BB
+                use_rsi = True       # Accende forzatamente l'RSI
+                custom_rsi_buy = 45  # Forza soglia BUY
+                custom_rsi_sell = 55 # Forza soglia SELL
+            else:
+                st.success("🟢 **Modalità REALE:** \nvedi gli indicatori scelti sopra")
+    
+            #if stress_test:
+                #use_bb, use_rsi = False, True       
+                #custom_rsi_buy, custom_rsi_sell = 45, 55 
+    
+            st.divider()
+            if st.button("🔔 **TEST AUDIO & TELEGRAM**", use_container_width=True):
+                play_trade_sound("buy")
+                invia_telegram("✅ **SENTINEL AI: SYSTEM CHECK**\nBot online e sincronizzato con Deriv 🚀")
+                st.toast("Test completato!", icon="📲")
+    
+            st.divider()
+            if st.button("🗑️ **PULISCI SEGNALI**", use_container_width=True):
+                st.session_state.signal_history = []
+                save_journal([]) 
+                st.rerun()
+    
+            st.divider()
+    
+            # --- SEZIONE GESTIONE DATI CSV ---
+            st.header("💾 GESTIONE SEGNALI")
+    
+            # 1. TASTO ESPORTA CSV
+            if st.session_state.signal_history:
+                df_export = pd.DataFrame(st.session_state.signal_history)
+                csv_data = df_export.to_csv(index=False).encode('utf-8')
+                st.download_button(
+                    label="📥 ESPORTA SEGNALI (CSV)",
+                    data=csv_data,
+                    file_name=f"sentinel_history_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+                    mime="text/csv",
+                    use_container_width=True
+                )
+            else:
+                # Tasto disabilitato se non ci sono segnali da esportare
+                st.button("📥 ESPORTA SEGNALI (CSV)", disabled=True, use_container_width=True)
+    
+            # 2. WIDGET IMPORTA CSV
+            st.caption("Carica un file CSV per ripristinare o unire dati passati:")
+            uploaded_file = st.file_uploader("📤 IMPORTA DATI", type=["csv"], label_visibility="collapsed")
+            
+            if uploaded_file is not None:
+                if st.button("🔄 UNISCI DATI CARICATI CON GLI ATTUALI", use_container_width=True, type="secondary"):
+                    try:
+                        # Legge il file caricato
+                        df_import = pd.read_csv(uploaded_file)
+                        nuovi_dati = df_import.to_dict('records')
+                        
+                        # Uniamo la cronologia attuale con quella caricata dal file
+                        st.session_state.signal_history.extend(nuovi_dati)
+                        
+                        # Protezione: rimuove i duplicati esatti (stessa ora e stessa valuta)
+                        # per evitare di falsare le statistiche se importi file sovrapposti
+                        df_pulito = pd.DataFrame(st.session_state.signal_history).drop_duplicates(subset=['time', 'pair'], keep='last')
+                        st.session_state.signal_history = df_pulito.to_dict('records')
+                        
+                        # Salva anche nel file JSON locale per persistenza
+                        save_journal(st.session_state.signal_history) 
+                        
+                        st.success("✅ Storico fuso con successo!")
+                        time_module.sleep(1.5) # Pausa breve per mostrare il messaggio
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"⚠️ Errore nel file: {e}")
 
 
         st.divider()
