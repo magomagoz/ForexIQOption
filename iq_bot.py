@@ -425,8 +425,8 @@ if st.session_state.connected:
                 esegui_scansione = False # IL VERO BLOCCO
             else:
                 if st.session_state.scanner_on:
-                with placeholder_scanner.container(): # Tutto ciò che è qui dentro verrà sovrascritto pulito
-                    st.success("SISTEMA IN SCANSIONE ATTIVA 🔥🔥🔥", icon="📡")
+                    with placeholder_scanner.container(): # Tutto ciò che è qui dentro verrà sovrascritto pulito
+                        st.success("SISTEMA IN SCANSIONE ATTIVA 🔥🔥🔥", icon="📡")
  
                 st.divider()
                 st.subheader("🕵️ Coppie di valute osservate")
