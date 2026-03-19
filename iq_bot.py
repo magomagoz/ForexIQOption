@@ -250,8 +250,8 @@ with st.sidebar:
     if not st.session_state.connected:
         st.info("Inserisci i token API generati su Deriv.")
         # Ho rimosso i valori di default per costringerti a usare i tuoi token reali
-        token_demo = st.text_input("🔑 Token API DEMO", type="password")
-        token_reale = st.text_input("🔑 Token API REALE", type="password")
+        token_demo = st.text_input("🔑 Token API DEMO", value = "Ae0VqrCzX3IpaLK", type="password")
+        token_reale = st.text_input("🔑 Token API REALE", value = "Ae0VqrCzX3IpaLK", type="password")
         tipo_conto = st.radio("Seleziona il conto da utilizzare:", ["DEMO", "REALE"], index=0)
         
         if st.button("🔌 CONNETTI SISTEMA", use_container_width=True, type="primary"):
