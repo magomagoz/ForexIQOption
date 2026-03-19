@@ -753,7 +753,7 @@ if st.session_state.connected:
     
     if not st.session_state.signal_history:
         #st.info("⏳ Nessun trade registrato in questa sessione. Avvia lo Scanner...")
-    else:
+    #else:
         # 1. Creiamo il DataFrame base con tutti i dati
         df_journal = pd.DataFrame(st.session_state.signal_history)
         
