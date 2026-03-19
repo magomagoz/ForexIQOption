@@ -225,52 +225,46 @@ with st.sidebar:
         # Usiamo i Token invece di Email/Password
         token_demo = st.text_input("🔑 Token API DEMO", value=st.session_state.get("token_demo", "Ae0VqrCzX3IpaLK"), type="password")
         token_reale = st.text_input("🔑 Token API REALE", value=st.session_state.get("token_reale", ""), type="password")
-        
-        # Selezione del tipo di conto
+# --- 3. SIDEBAR ---
+with st.sidebar:
+    st.title("⚙️ DERIV TRADING")
+    
+    # --- GESTIONE LOGIN / DISCONNESSIONE ---
+    if not st.session_state.connected:
+        st.info("Inserisci i token API generati su Deriv.")
+        token_demo = st.text_input("🔑 Token API DEMO", value=st.session_state.get("token_demo", "Ae0VqrCzX3IpaLK"), type="password")
+        token_reale = st.text_input("🔑 Token API REALE", value=st.session_state.get("token_reale", ""), type="password")
         tipo_conto = st.radio("Seleziona il conto da utilizzare:", ["DEMO", "REALE"], index=0)
         
         if st.button("🔌 CONNETTI SISTEMA", use_container_width=True, type="primary"):
             with st.spinner(f"Sincronizzazione conto {tipo_conto}..."):
-                
-                # Impostiamo il token e le variabili in base alla scelta
                 if tipo_conto == "DEMO":
                     st.session_state.api_token = token_demo
                     st.session_state.account_type = "DEMO"
-                    st.session_state.local_balance = 5000.0 # Saldo finto di default se il token fallisce
+                    st.session_state.local_balance = 5000.0 
                 else:
                     st.session_state.api_token = token_reale
                     st.session_state.account_type = "REALE"
                     st.session_state.local_balance = 0.0
 
-                # Salviamo i token in sessione per non doverli riscrivere se ci si disconnette
                 st.session_state.token_demo = token_demo
                 st.session_state.token_reale = token_reale
 
-                # 1. Testiamo la connessione base (candele)
                 test_data = get_deriv_candles("EURUSD", 60, 1)
-                
                 if test_data:
                     st.session_state.connected = True
-                    
-                    # 2. Se c'è un token inserito, prendiamo il saldo VERO dal broker
-                    if st.session_state.api_token:
-                        bal = get_deriv_balance(st.session_state.api_token)
-                        if bal is not None: 
-                            st.session_state.local_balance = float(bal)
-                        elif tipo_conto == "REALE":
-                            st.warning("Connesso, ma impossibile leggere il saldo reale. Controlla i permessi del Token.")
-                    
+                    bal = get_deriv_balance(st.session_state.api_token)
+                    if bal is not None: 
+                        st.session_state.local_balance = float(bal)
                     st.rerun()
                 else:
-                    st.error("Errore connessione a Deriv API. Controlla la rete.")
+                    st.error("Errore connessione a Deriv API.")
     else:
-        # Quando sei connesso, mostra un badge per ricordarti in che conto sei
         if st.session_state.account_type == "REALE":
-            st.error("🔴 CONTO REALE ATTIVO (Trading con soldi veri)")
+            st.error("🔴 CONTO REALE ATTIVO")
         else:
             st.success("🟢 CONTO DEMO ATTIVO")
 
-        # Tasto per disconnettersi
         if st.button("🔴 DISCONNETTI", use_container_width=True):
             st.session_state.connected = False
             st.session_state.scanner_on = False
@@ -278,13 +272,25 @@ with st.sidebar:
             st.rerun()
 
         st.divider()
-        st.subheader("👁️ CONTROLLO SCANNER")
-        label = "🛑 STOP SCANNER" if st.session_state.scanner_on else "🚀 AVVIA SCANNER"
-        if st.button(label, use_container_width=True, type="primary"):
-            st.session_state.scanner_on = not st.session_state.scanner_on
-            st.rerun()
-        if st.session_state.scanner_on:
-            st.caption(f"🔄 Scanner attivo...  \nUltimo check: {now_roma.time().strftime('%H:%M:%S')}")
+        
+        # --- CALCOLO SALDO DINAMICO SICURO ---
+        # Calcoliamo il PnL qui per evitare l'errore "variable not defined"
+        current_pnl = 0.0
+        if st.session_state.signal_history:
+            df_tmp = pd.DataFrame(st.session_state.signal_history)
+            if 'pnl_numeric' in df_tmp.columns:
+                current_pnl = pd.to_numeric(df_tmp['pnl_numeric'], errors='coerce').sum()
+        
+        saldo_attuale = st.session_state.local_balance + current_pnl
+        
+        st.subheader("💰 GESTIONE CAPITALE")
+        st.metric(
+            label=f"SALDO {st.session_state.account_type}", 
+            value=f"{saldo_attuale:.2f} €", 
+            delta=f"{current_pnl:.2f} €" if current_pnl != 0 else None
+        )
+        st.session_state.stake = st.number_input("💶 INVESTIMENTO (€)", value=100.0)
+        timeframe = st.selectbox("⏱️ TIMEFRAME (s)", [60, 300], index=0)
 
         st.divider()
 
@@ -341,24 +347,7 @@ with st.sidebar:
             st.write(f"{city} {status}")
             
         st.info(get_market_status())
-        
-        st.divider()
-        st.subheader("🛠️ PARAMETRI TRADING")
-        # --- Calcolo Saldo Dinamico ---
-        # Partiamo dal valore iniziale (es. 5000) e aggiungiamo il profitto calcolato nel Journal
-        saldo_attuale = st.session_state.local_balance + total_pnl
-        
-        with st.sidebar:
-            st.subheader("💰 GESTIONE CAPITALE")
-            st.metric(
-                label=f"SALDO {st.session_state.account_type}", 
-                value=f"{saldo_attuale:.2f} €", 
-                delta=f"{total_pnl:.2f} €" if total_pnl != 0 else None
-            )
-        
-        st.session_state.stake = st.number_input("💶 INVESTIMENTO (€)", value=100.0)
-        timeframe = st.selectbox("⏱️ TIMEFRAME (s)", [60, 300], index=0)
-        
+                
         st.divider()
         stress_test = st.toggle("🚀 **STRESS MODE**", value=False)
         if stress_test:
