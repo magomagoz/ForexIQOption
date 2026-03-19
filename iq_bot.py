@@ -31,19 +31,47 @@ def to_deriv_symbol(pair):
     return f"frx{pair}"
 
 def get_deriv_balance(token):
-    """Recupera il saldo live dal conto Deriv"""
+    """Recupera il saldo live dal conto Deriv in modo robusto"""
     try:
-        ws = websocket.create_connection(f"wss://ws.binaryws.com/websockets/v3?app_id={DERIV_APP_ID}", timeout=5)
+        ws = websocket.create_connection(f"wss://ws.binaryws.com/websockets/v3?app_id={DERIV_APP_ID}", timeout=10)
+        
+        # 1. Autorizzazione
         ws.send(json.dumps({"authorize": token}))
-        res = json.loads(ws.recv())
-        if "error" in res:
+        
+        auth_success = False
+        # Aspetta e verifica la risposta di autorizzazione (max 5 tentativi)
+        for _ in range(5):
+            res = json.loads(ws.recv())
+            if "error" in res:
+                print(f"Errore Auth: {res['error']['message']}")
+                ws.close()
+                return None
+            if "authorize" in res:
+                auth_success = True
+                break
+                
+        if not auth_success:
             ws.close()
             return None
+
+        # 2. Richiesta Bilancio
         ws.send(json.dumps({"balance": 1}))
-        res_bal = json.loads(ws.recv())
+        
+        # Aspetta la risposta del bilancio (max 5 tentativi per saltare eventuali messaggi extra)
+        for _ in range(5):
+            res_bal = json.loads(ws.recv())
+            if "error" in res_bal:
+                print(f"Errore Balance: {res_bal['error']['message']}")
+                ws.close()
+                return None
+            if "balance" in res_bal:
+                ws.close()
+                return res_bal['balance']['balance']
+                
         ws.close()
-        return res_bal['balance']['balance']
-    except:
+        return None
+    except Exception as e:
+        print(f"Errore di connessione WebSocket per il balance: {e}")
         return None
 
 def get_deriv_candles(pair, timeframe_sec, count):
@@ -221,33 +249,42 @@ with st.sidebar:
     # --- GESTIONE LOGIN / DISCONNESSIONE ---
     if not st.session_state.connected:
         st.info("Inserisci i token API generati su Deriv.")
-        token_demo = st.text_input("🔑 Token API DEMO", value=st.session_state.get("token_demo", "Ae0VqrCzX3IpaLK"), type="password")
-        token_reale = st.text_input("🔑 Token API REALE", value=st.session_state.get("token_reale", "Ae0VqrCzX3IpaLK"), type="password")
+        # Ho rimosso i valori di default per costringerti a usare i tuoi token reali
+        token_demo = st.text_input("🔑 Token API DEMO", type="password")
+        token_reale = st.text_input("🔑 Token API REALE", type="password")
         tipo_conto = st.radio("Seleziona il conto da utilizzare:", ["DEMO", "REALE"], index=0)
         
         if st.button("🔌 CONNETTI SISTEMA", use_container_width=True, type="primary"):
             with st.spinner(f"Sincronizzazione conto {tipo_conto}..."):
-                if tipo_conto == "DEMO":
-                    st.session_state.api_token = token_demo
-                    st.session_state.account_type = "DEMO"
-                    st.session_state.local_balance = 5000.0 
+                
+                token_da_usare = token_demo if tipo_conto == "DEMO" else token_reale
+                
+                if not token_da_usare:
+                    st.error("⚠️ Inserisci un Token valido per continuare.")
                 else:
-                    st.session_state.api_token = token_reale
-                    st.session_state.account_type = "REALE"
-                    st.session_state.local_balance = 99.0
+                    st.session_state.api_token = token_da_usare
+                    st.session_state.account_type = tipo_conto
+                    # Impostiamo a 0 per essere sicuri che se fallisce la lettura non vediamo valori fittizi
+                    st.session_state.local_balance = 99.0 
 
-                st.session_state.token_demo = token_demo
-                st.session_state.token_reale = token_reale
+                    st.session_state.token_demo = token_demo
+                    st.session_state.token_reale = token_reale
 
-                test_data = get_deriv_candles("EURUSD", 60, 1)
-                if test_data:
-                    st.session_state.connected = True
-                    bal = get_deriv_balance(st.session_state.api_token)
-                    if bal is not None: 
-                        st.session_state.local_balance = float(bal)
-                    st.rerun()
-                else:
-                    st.error("Errore connessione a Deriv API.")
+                    # Test connessione
+                    test_data = get_deriv_candles("EURUSD", 60, 1)
+                    if test_data:
+                        st.session_state.connected = True
+                        
+                        # Leggiamo il saldo vero
+                        bal = get_deriv_balance(st.session_state.api_token)
+                        if bal is not None: 
+                            st.session_state.local_balance = float(bal)
+                            st.success(f"✅ Connesso! Saldo letto: {bal} €")
+                        else:
+                            st.warning("⚠️ Connesso, ma impossibile leggere il saldo. Verifica che il Token abbia i permessi 'Read'.")
+                        st.rerun()
+                    else:
+                        st.error("Errore connessione a Deriv API.")
     else:
         if st.session_state.account_type == "REALE":
             st.error("🔴 CONTO REALE ATTIVO")
@@ -260,26 +297,33 @@ with st.sidebar:
             st.session_state.api_token = None
             st.rerun()
 
-        st.divider()
-        
-        # --- CALCOLO SALDO DINAMICO SICURO ---
-        # Calcoliamo il PnL qui per evitare l'errore "variable not defined"
-        current_pnl = 0.0
-        if st.session_state.signal_history:
-            df_tmp = pd.DataFrame(st.session_state.signal_history)
-            if 'pnl_numeric' in df_tmp.columns:
-                current_pnl = pd.to_numeric(df_tmp['pnl_numeric'], errors='coerce').sum()
-        
-        saldo_attuale = st.session_state.local_balance + current_pnl
-        
-        st.subheader("💰 GESTIONE CAPITALE")
-        st.metric(
-            label=f"SALDO {st.session_state.account_type}", 
-            value=f"{saldo_attuale:.2f} €", 
-            delta=f"{current_pnl:.2f} €" if current_pnl != 0 else None
-        )
-        st.session_state.stake = st.number_input("💶 INVESTIMENTO (€)", value=100.0)
-        timeframe = st.selectbox("⏱️ TIMEFRAME (s)", [60, 300], index=0)
+    st.divider()
+    
+    # --- CALCOLO SALDO DINAMICO SICURO ---
+    current_pnl = 0.0
+    if st.session_state.signal_history:
+        df_tmp = pd.DataFrame(st.session_state.signal_history)
+        if 'pnl_numeric' in df_tmp.columns:
+            current_pnl = pd.to_numeric(df_tmp['pnl_numeric'], errors='coerce').sum()
+    
+    saldo_attuale = st.session_state.local_balance + current_pnl
+    
+    st.subheader("💰 GESTIONE CAPITALE")
+    st.metric(
+        label=f"SALDO {st.session_state.account_type}", 
+        value=f"{saldo_attuale:.2f} €", 
+        delta=f"{current_pnl:.2f} €" if current_pnl != 0 else None
+    )
+    
+    st.session_state.stake = st.number_input("💶 INVESTIMENTO (€)", value=100.0)
+    timeframe = st.selectbox("⏱️ TIMEFRAME (s)", [60, 300], index=0)
+
+    st.divider()
+    st.subheader("👁️ CONTROLLO SCANNER")
+    label = "🛑 STOP SCANNER" if st.session_state.scanner_on else "🚀 AVVIA SCANNER"
+    if st.button(label, use_container_width=True, type="primary"):
+        st.session_state.scanner_on = not st.session_state.scanner_on
+        st.rerun()
 
         st.divider()
 
