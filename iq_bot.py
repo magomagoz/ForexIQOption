@@ -868,7 +868,7 @@ if st.session_state.connected:
             use_container_width=True, hide_index=True
         )
 
-        except Exception:
+    except Exception:
             st.dataframe(df_display, use_container_width=True, hide_index=True)
     else:
         # Mostra un bel messaggio invece di una tabella rotta se i filtri nascondono tutto o se non ci sono ancora trade
