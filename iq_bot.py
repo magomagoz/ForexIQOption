@@ -753,16 +753,21 @@ if st.session_state.connected:
     
     df_journal = pd.DataFrame(st.session_state.signal_history)
         
-    f1, f2, f3, f4 = st.columns([1, 1, 1, 1])
+    # 2. Setup dei 4 Filtri nella UI
+    f1, f2, f3, f4 = st.columns(4)
     with f1:
         filtro_mercato = st.selectbox("🌍 Filtro Mercato:", ["TUTTI", "OTC", "LIVE"], index=0)
     with f2:
-        pair = st.selectbox("💱 Coppia di valute:", ["EURGBP", "USDCHF", "USDJPY", "EURUSD", "GBPUSD", "AUDUSD", "USDCAD", "NZDUSD", "EURJPY", "GBPJPY"]
-, index=0)
+        # Aggiungo "TUTTE" come prima opzione per non bloccare la vista su una sola coppia
+        lista_valute = ["TUTTE"] + ALL_PAIRS
+        filtro_coppia = st.selectbox("💱 Coppia di valute:", lista_valute, index=0)
     with f3:
         time_start = st.time_input("🟢 Orario Inizio:", value=time(0, 0))
     with f4:
         time_end = st.time_input("🛑 Orario Fine:", value=time(23, 59))
+
+    # --- LINEA TRATTEGGIATA ---
+    st.markdown('<hr style="border: none; border-top: 2px dashed #555; margin: 15px 0; opacity: 0.4;">', unsafe_allow_html=True)
 
     #df_journal['ora_attuale'] = pd.to_datetime(df_journal['time'], errors='coerce').dt.time
     #df_filtered = df_journal[(df_journal['ora_attuale'] >= time_start) & (df_journal['ora_attuale'] <= time_end)].copy()
