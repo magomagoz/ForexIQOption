@@ -728,7 +728,7 @@ if st.session_state.connected:
                             s['pnl_numeric'] = profit
                     
                     # 3. Notifiche Telegram e Suoni
-                    invia_telegram(f"🏁 *ESITO* {icona}\n🆔 ID: `{trade['id']}`\n📊 Asset: {pair}\n💵 Profit: {profit:.2f}€")
+                    invia_telegram(f"🏁 *ESITO* {icona} {res_status}\n🆔 ID: `{trade['id']}`\n📊 Asset: {pair}\n💵 Profit: {profit:.2f}€")
                     if win: 
                         play_trade_sound("win")
                     
