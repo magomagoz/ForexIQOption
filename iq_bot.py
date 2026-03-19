@@ -786,11 +786,14 @@ if st.session_state.connected:
     win_rate = (wins / (wins + losses) * 100) if (wins + losses) > 0 else 0.0
     total_pnl = sum(float(x.get('pnl_numeric', 0)) for x in history)
 
-    # Visualizzazione Widget Statistici
-    c1, c2, c3 = st.columns(3)
-    c1.metric("💰 Profitto Sessione", f"{total_pnl:.2f} €", delta=f"{total_pnl:.2f} €")
+    # 5. Mostriamo le Metriche aggiornate in tempo reale (ORA SU 4 COLONNE)
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("💰 Profitto", f"{total_pnl:.2f} €", delta=f"{total_pnl:.2f} €")
     c2.metric("🎯 Win/Loss", f"{wins}W - {losses}L", delta=f"Tot: {total_trades}")
     c3.metric("🏁 Win Rate", f"{win_rate:.1f}%")
+    
+    # Mostra la metrica Top Asset (vuota se best_pairs_str è vuota, con un trattino o "N/A" per pulizia visiva)
+    c4.metric("🏆 Top Asset", best_pairs_str if best_pairs_str else "-")
 
     if st.session_state.signal_history:
         df_journal = pd.DataFrame(st.session_state.signal_history)
