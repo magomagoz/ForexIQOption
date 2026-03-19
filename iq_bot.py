@@ -238,8 +238,8 @@ if 'api_token' not in st.session_state: st.session_state.api_token = DERIV_TOKEN
 # --- GESTIONE LOGIN / DISCONNESSIONE ---
 if not st.session_state.connected:
     st.info("Inserisci i token API generati su Deriv.")
-    token_demo = st.text_input("🔑 Token API DEMO", value="***********JOXF", type="password")
-    token_reale = st.text_input("🔑 Token API REALE", value="***********TvcF", type="password")
+    token_demo = st.text_input("🔑 Token API DEMO", value="XOHbXvx9tNeviqI", type="password")
+    token_reale = st.text_input("🔑 Token API REALE", value="WOs2xoHrWBhypgR", type="password")
     tipo_conto = st.radio("Seleziona il conto da utilizzare:", ["DEMO", "REALE"], index=0)
         
     if st.button("🔌 CONNETTI SISTEMA", use_container_width=True, type="primary"):
