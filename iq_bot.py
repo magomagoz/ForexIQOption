@@ -148,7 +148,7 @@ def send_telegram_signal(signal_type, pair, price, rsi, trade_id, stake):
         f"🚀 *NUOVO TRADE*\n"
         f"🔔 *Segnale:* {signal_type}\n"
         f"🆔 ID: `{trade_id}`\n"
-        f"📊 Asset: {pair} (Deriv)\n"
+        f"📊 Asset: {pair}\n"
         f"💵 Stake: `{stake:.0f} €` \n" 
         f"💰 Prezzo: `{price:.5f}`\n"
         f"📊 RSI: `{rsi:.1f}`\n"
@@ -725,7 +725,7 @@ if st.session_state.connected:
                             s['pnl_numeric'] = profit
                     
                     # 3. Notifiche Telegram e Suoni
-                    invia_telegram(f"🏁 *ESITO* {icona}\n🆔 ID: `{trade['id']}`\n📊 Asset: {pair}\n💵 Profit: {profit:.2f}€")
+                    invia_telegram(f"🏁 *ESITO (1m)* {icona}\n🆔 ID: `{trade['id']}`\n📊 Asset: {pair}\n💵 Profit: {profit:.2f}€")
                     if win: 
                         play_trade_sound("win")
                     
