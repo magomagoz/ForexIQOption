@@ -817,9 +817,9 @@ if st.session_state.connected:
             'dir': '🚀 TIPO',
             'price': '💰 ENTRATA', 
             'stake': '💶 STAKE',
-            'params_bb': '↔️ BB (P/D)',
-            'params_rsi': '📉 RSI (B/S)', 
-            'mercato': '🌍 MERC.', 
+            'params_bb': '↔️ BB',
+            'params_rsi': '📉 RSI', 
+            'mercato': '🌍 MERCATO', 
             'result': '🔍 ESITO', 
             'pnl_numeric': '📈 P&L'
         }
