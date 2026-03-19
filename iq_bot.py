@@ -235,38 +235,37 @@ if 'scanner_on' not in st.session_state: st.session_state.scanner_on = False
 if 'weekend_mode' not in st.session_state: st.session_state.weekend_mode = is_weekend_reale 
 if 'api_token' not in st.session_state: st.session_state.api_token = DERIV_TOKEN
 
-    # --- GESTIONE LOGIN / DISCONNESSIONE ---
-    if not st.session_state.connected:
-        st.info("Inserisci i token API generati su Deriv.")
-        token_demo = st.text_input("🔑 Token API DEMO", value="Ae0VqrCzX3IpaLK", type="password")
-        token_reale = st.text_input("🔑 Token API REALE", value="Ae0VqrCzX3IpaLK", type="password")
-        tipo_conto = st.radio("Seleziona il conto da utilizzare:", ["DEMO", "REALE"], index=0)
+# --- GESTIONE LOGIN / DISCONNESSIONE ---
+if not st.session_state.connected:
+    st.info("Inserisci i token API generati su Deriv.")
+    token_demo = st.text_input("🔑 Token API DEMO", value="Ae0VqrCzX3IpaLK", type="password")
+    token_reale = st.text_input("🔑 Token API REALE", value="Ae0VqrCzX3IpaLK", type="password")
+    tipo_conto = st.radio("Seleziona il conto da utilizzare:", ["DEMO", "REALE"], index=0)
         
-        if st.button("🔌 CONNETTI SISTEMA", use_container_width=True, type="primary"):
-            # Determiniamo quale token usare
-            token_scelto = token_demo if tipo_conto == "DEMO" else token_reale
+    if st.button("🔌 CONNETTI SISTEMA", use_container_width=True, type="primary"):
+        # Determiniamo quale token usare
+        token_scelto = token_demo if tipo_conto == "DEMO" else token_reale
             
-            with st.spinner(f"Connessione a {tipo_conto}..."):
-                # 1. Tentiamo di recuperare il saldo (che fa anche da test autorizzazione)
-                nuovo_saldo = get_deriv_balance(token_scelto)
+        with st.spinner(f"Connessione a {tipo_conto}..."):
+            # 1. Tentiamo di recuperare il saldo (che fa anche da test autorizzazione)
+            nuovo_saldo = get_deriv_balance(token_scelto)
                 
-                if nuovo_saldo is not None:
-                    # SALVATAGGIO STATO
-                    st.session_state.api_token = token_scelto
-                    st.session_state.account_type = tipo_conto
-                    st.session_state.local_balance = float(nuovo_saldo)
-                    st.session_state.connected = True
+            if nuovo_saldo is not None:
+                # SALVATAGGIO STATO
+                st.session_state.api_token = token_scelto
+                st.session_state.account_type = tipo_conto
+                st.session_state.local_balance = float(nuovo_saldo)
+                st.session_state.connected = True
                     
-                    # Messaggi di conferma
-                    st.toast(f"✅ Connesso a {tipo_conto}!", icon="🚀")
-                    st.success(f"Saldo aggiornato: {nuovo_saldo} €")
-                    time_module.sleep(1)
-                    st.rerun()
-                else:
-                    st.session_state.connected = False
-                    st.error("❌ Impossibile connettersi. Controlla il Token o la connessione internet.")
-                    st.toast("Errore di connessione", icon="🚨")
-
+                # Messaggi di conferma
+                st.toast(f"✅ Connesso a {tipo_conto}!", icon="🚀")
+                st.success(f"Saldo aggiornato: {nuovo_saldo} €")
+                time_module.sleep(1)
+                st.rerun()
+            else:
+                st.session_state.connected = False
+                st.error("❌ Impossibile connettersi. Controlla il Token o la connessione internet.")
+                st.toast("Errore di connessione", icon="🚨")
 
         st.divider()
         
