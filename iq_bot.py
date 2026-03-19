@@ -221,19 +221,8 @@ with st.sidebar:
     # --- GESTIONE LOGIN / DISCONNESSIONE ---
     if not st.session_state.connected:
         st.info("Inserisci i token API generati su Deriv.")
-        
-        # Usiamo i Token invece di Email/Password
         token_demo = st.text_input("🔑 Token API DEMO", value=st.session_state.get("token_demo", "Ae0VqrCzX3IpaLK"), type="password")
-        token_reale = st.text_input("🔑 Token API REALE", value=st.session_state.get("token_reale", ""), type="password")
-# --- 3. SIDEBAR ---
-with st.sidebar:
-    st.title("⚙️ DERIV TRADING")
-    
-    # --- GESTIONE LOGIN / DISCONNESSIONE ---
-    if not st.session_state.connected:
-        st.info("Inserisci i token API generati su Deriv.")
-        token_demo = st.text_input("🔑 Token API DEMO", value=st.session_state.get("token_demo", "Ae0VqrCzX3IpaLK"), type="password")
-        token_reale = st.text_input("🔑 Token API REALE", value=st.session_state.get("token_reale", ""), type="password")
+        token_reale = st.text_input("🔑 Token API REALE", value=st.session_state.get("token_reale", "Ae0VqrCzX3IpaLK"), type="password")
         tipo_conto = st.radio("Seleziona il conto da utilizzare:", ["DEMO", "REALE"], index=0)
         
         if st.button("🔌 CONNETTI SISTEMA", use_container_width=True, type="primary"):
