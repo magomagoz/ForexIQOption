@@ -769,7 +769,7 @@ if st.session_state.connected:
         # 2. Setup dei 4 Filtri nella UI
         f1, f2, f3, f4 = st.columns(4)
         with f1:
-            filtro_mercato = st.selectbox("🌍 Filtro Mercato:", ["TUTTI", "OTC", "LIVE"], index=0)
+            filtro_mercato = st.selectbox("🌍 Mercato:", ["TUTTI", "OTC", "LIVE"], index=0)
         with f2:
             # Aggiungo "TUTTE" come prima opzione per non bloccare la vista su una sola coppia
             lista_valute = ["TUTTE"] + ALL_PAIRS
@@ -828,7 +828,7 @@ if st.session_state.connected:
 
         # 5. Mostriamo le Metriche aggiornate in tempo reale (ORA SU 4 COLONNE)
         c1, c2, c3, c4 = st.columns(4)
-        c1.metric("💰 Profitto Filtrato", f"{total_pnl:.2f} €", delta=f"{total_pnl:.2f} €")
+        c1.metric("💰 Profitto", f"{total_pnl:.2f} €", delta=f"{total_pnl:.2f} €")
         c2.metric("🎯 Win/Loss", f"{wins}W - {losses}L", delta=f"Tot: {total_trades}")
         c3.metric("🏁 Win Rate", f"{win_rate:.1f}%")
         
@@ -844,8 +844,8 @@ if st.session_state.connected:
             'dir': '🚀 TIPO',
             'price': '💰 ENTRATA', 
             'stake': '💶 STAKE',
-            'params_bb': '↔️ BB (P/D)',
-            'params_rsi': '📉 RSI (B/S)', 
+            'params_bb': '↔️ BB',
+            'params_rsi': '📉 RSI', 
             'mercato': '🌍 MERCATO', 
             'result': '🔍 ESITO', 
             'pnl_numeric': '📈 P&L'
