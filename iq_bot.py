@@ -89,6 +89,7 @@ def get_market_status():
     
     is_londra = londra[0] <= now_time <= londra[1]
     is_ny = new_york[0] <= now_time <= new_york[1]
+    is_out = (time(23,0), time(0,0))
     
     if is_londra and is_ny:
         return "🔥 **MERCATI EU+USA**\n\nAlta Volatilità"
@@ -96,6 +97,8 @@ def get_market_status():
         return "🇪🇺 SESSIONE LONDRA"
     elif is_ny:
         return "🇺🇸 SESSIONE NEW YORK"
+    elif is_out:
+        return "❌ MERCATI CHIUSI ❌"
     else:
         return "💤 MERCATO LENTO"
 
