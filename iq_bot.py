@@ -241,8 +241,8 @@ with st.sidebar:
             st.rerun()
 
         st.divider()
-        st.subheader("👁️ CONTROLLO SCANNER")
-        label = "🛑 **STOP SCANNER**" if st.session_state.scanner_on else "🚀 **AVVIA SCANNER**"
+        st.subheader("👁️ SCANSIONE FOREX")
+        label = "🛑 STOP SCANNER" if st.session_state.scanner_on else "🚀 **AVVIA SCANNER**"
         if st.button(label, use_container_width=True, type="primary"):
             st.session_state.scanner_on = not st.session_state.scanner_on
             st.rerun()
@@ -254,12 +254,12 @@ with st.sidebar:
         st.subheader("💸 **MERCATO LIVE/OTC**")
         
         if st.session_state.weekend_mode:
-            st.warning("🚨 **MERCATO OTC (Sab-Dom)**")
+            st.warning("🚨 MERCATO OTC (Sab-Dom)")
             use_bb, use_rsi = True, True
             bb_period, bb_std = 20, 2.65
             custom_rsi_buy, custom_rsi_sell = 15, 85
         else:
-            st.success("🟢 **MERCATO LIVE (Lun-Ven)**")
+            st.success("🟢 MERCATO LIVE (Lun-Ven)")
             col_t1, col_t2 = st.columns(2)
             use_bb = col_t1.toggle("**BB**", value=True)
             use_rsi = col_t2.toggle("**RSI**", value=True)
@@ -381,7 +381,7 @@ with st.sidebar:
                     # Salva anche nel file JSON locale per persistenza
                     save_journal(st.session_state.signal_history) 
                     
-                    st.success("✅ Storico fuso con successo!")
+                    st.success("✅ Storico caricato con successo!")
                     time_module.sleep(1.5) # Pausa breve per mostrare il messaggio
                     st.rerun()
                 except Exception as e:
