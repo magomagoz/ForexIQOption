@@ -98,7 +98,7 @@ def get_market_status():
     elif is_ny:
         return "🇺🇸 SESSIONE NEW YORK"
     elif is_out:
-        return "❌ MERCATI CHIUSI ❌"
+        return "❌ **MERCATI CHIUSI** ❌"
     else:
         return "💤 MERCATO LENTO"
 
