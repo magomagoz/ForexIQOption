@@ -233,7 +233,7 @@ if 'signal_history' not in st.session_state: st.session_state.signal_history = l
 if 'local_balance' not in st.session_state: st.session_state.local_balance = 5000.0
 if 'scanner_on' not in st.session_state: st.session_state.scanner_on = False
 if 'weekend_mode' not in st.session_state: st.session_state.weekend_mode = is_weekend_reale 
-#if 'api_token' not in st.session_state: st.session_state.api_token = DERIV_TOKEN
+if 'api_token' not in st.session_state: st.session_state.api_token = DERIV_TOKEN
 
 
 # --- 3. SIDEBAR ---
