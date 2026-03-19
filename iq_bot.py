@@ -31,48 +31,41 @@ def to_deriv_symbol(pair):
     return f"frx{pair}"
 
 def get_deriv_balance(token):
-    """Recupera il saldo live dal conto Deriv in modo robusto"""
+    """Recupera il saldo live dal conto Deriv e mostra eventuali errori"""
     try:
+        # Apriamo la connessione
         ws = websocket.create_connection(f"wss://ws.binaryws.com/websockets/v3?app_id={DERIV_APP_ID}", timeout=10)
         
-        # 1. Autorizzazione
+        # Inviamo SOLO la richiesta di autorizzazione
         ws.send(json.dumps({"authorize": token}))
         
-        auth_success = False
-        # Aspetta e verifica la risposta di autorizzazione (max 5 tentativi)
-        for _ in range(5):
-            res = json.loads(ws.recv())
-            if "error" in res:
-                print(f"Errore Auth: {res['error']['message']}")
-                ws.close()
-                return None
-            if "authorize" in res:
-                auth_success = True
-                break
-                
-        if not auth_success:
-            ws.close()
-            return None
-
-        # 2. Richiesta Bilancio
-        ws.send(json.dumps({"balance": 1}))
+        # Leggiamo la prima risposta che arriva dal server
+        risposta_grezza = ws.recv()
+        res = json.loads(risposta_grezza)
+        ws.close() # Chiudiamo subito la connessione per pulizia
         
-        # Aspetta la risposta del bilancio (max 5 tentativi per saltare eventuali messaggi extra)
-        for _ in range(5):
-            res_bal = json.loads(ws.recv())
-            if "error" in res_bal:
-                print(f"Errore Balance: {res_bal['error']['message']}")
-                ws.close()
-                return None
-            if "balance" in res_bal:
-                ws.close()
-                return res_bal['balance']['balance']
-                
-        ws.close()
+        # CASO 1: Deriv ci restituisce un errore chiaro
+        if "error" in res:
+            messaggio_errore = res['error'].get('message', 'Errore sconosciuto')
+            st.sidebar.error(f"🛑 ERRORE DERIV: {messaggio_errore}")
+            print(f"DEBUG DERIV: {res}") # Stampa anche nel terminale
+            return None
+            
+        # CASO 2: Autorizzazione riuscita!
+        if "authorize" in res:
+            # Il saldo è già contenuto nei dati di login!
+            saldo_reale = res['authorize'].get('balance', 0.0)
+            return float(saldo_reale)
+            
+        # CASO 3: Risposta anomala
+        st.sidebar.warning("⚠️ Risposta API inaspettata. Guarda il terminale.")
+        print(f"RISPOSTA ANOMALA: {res}")
         return None
+
     except Exception as e:
-        print(f"Errore di connessione WebSocket per il balance: {e}")
+        st.sidebar.error(f"🔌 Errore di Rete/WebSocket: {e}")
         return None
+
 
 def get_deriv_candles(pair, timeframe_sec, count):
     """Scarica le candele tramite WebSocket di Deriv"""
