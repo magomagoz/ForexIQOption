@@ -256,7 +256,7 @@ with st.sidebar:
         if st.session_state.weekend_mode:
             st.warning("🚨 **MERCATO OTC (Sab-Dom)**")
             use_bb, use_rsi = True, True
-            bb_period, bb_std = 20, 2.65
+            bb_period, bb_std = 20, 2.70
             custom_rsi_buy, custom_rsi_sell = 15, 85
         else:
             st.success("🟢 **MERCATO LIVE (Lun-Ven)**")
@@ -265,10 +265,10 @@ with st.sidebar:
             use_rsi = col_t2.toggle("**RSI**", value=True)
             c_bb1, c_rsi1 = st.columns(2)
             bb_period = c_bb1.selectbox("Periodo BB", [20, 14], index = 0)
-            custom_rsi_buy = c_rsi1.selectbox("RSI Buy", [30, 25, 20, 15], index = 2)
+            custom_rsi_buy = c_rsi1.selectbox("RSI Buy", [30, 25, 20, 15], index = 1)
             c_bb2, c_rsi2 = st.columns(2)
             bb_std = c_bb2.selectbox("Dev BB", [2.00, 2.20, 2,50, 2,70], index = 0)
-            custom_rsi_sell = c_rsi2.selectbox("RSI Sell", [70, 75, 80, 85], index = 2)
+            custom_rsi_sell = c_rsi2.selectbox("RSI Sell", [70, 75, 80, 85], index = 1)
 
 
         # --- LOGICA SIDEBAR OTC ---
