@@ -754,104 +754,90 @@ if st.session_state.connected:
     # --- 7. TABELLA JOURNAL E FILTRI DINAMICI ---
     st.subheader("📋 Trading Journal & Performance Hub")
     
-    if not st.session_state.signal_history:
-        #st.info("⏳ Nessun trade registrato in questa sessione. Avvia lo Scanner...")
-    #else:
-        # 1. Creiamo il DataFrame base con tutti i dati
+    # 1. Creiamo il DataFrame base: se è vuoto ne facciamo uno fittizio per non far sparire l'interfaccia
+    if st.session_state.signal_history:
         df_journal = pd.DataFrame(st.session_state.signal_history)
-        
-        # Assicuriamoci che 'pnl_numeric' esista e sia un numero (per sicurezza)
-        if 'pnl_numeric' not in df_journal.columns:
-            df_journal['pnl_numeric'] = 0.0
-        else:
-            df_journal['pnl_numeric'] = pd.to_numeric(df_journal['pnl_numeric'], errors='coerce').fillna(0.0)
+    else:
+        # Struttura vuota di base
+        df_journal = pd.DataFrame(columns=['time', 'pair', 'dir', 'price', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'pnl_numeric'])
 
-        # 2. Setup dei 4 Filtri nella UI
-        f1, f2, f3, f4 = st.columns(4)
-        with f1:
-            filtro_mercato = st.selectbox("🌍 Mercato:", ["TUTTI", "OTC", "LIVE"], index=0)
-        with f2:
-            # Aggiungo "TUTTE" come prima opzione per non bloccare la vista su una sola coppia
-            lista_valute = ["TUTTE"] + ALL_PAIRS
-            filtro_coppia = st.selectbox("💱 Coppia di valute:", lista_valute, index=0)
-        with f3:
-            time_start = st.time_input("🟢 Orario Inizio:", value=time(0, 0))
-        with f4:
-            time_end = st.time_input("🛑 Orario Fine:", value=time(23, 59))
+    # Assicuriamoci che 'pnl_numeric' esista e sia un numero
+    if 'pnl_numeric' not in df_journal.columns:
+        df_journal['pnl_numeric'] = 0.0
+    else:
+        df_journal['pnl_numeric'] = pd.to_numeric(df_journal['pnl_numeric'], errors='coerce').fillna(0.0)
 
-        # --- LINEA TRATTEGGIATA ---
-        st.markdown('<hr style="border: none; border-top: 2px dashed #555; margin: 15px 0; opacity: 0.4;">', unsafe_allow_html=True)
+    # 2. Setup dei 4 Filtri nella UI (Sempre visibili!)
+    f1, f2, f3, f4 = st.columns(4)
+    with f1:
+        filtro_mercato = st.selectbox("🌍 Mercato:", ["TUTTI", "OTC", "LIVE"], index=0)
+    with f2:
+        lista_valute = ["TUTTE"] + ALL_PAIRS
+        filtro_coppia = st.selectbox("💱 Coppia di valute:", lista_valute, index=0)
+    with f3:
+        time_start = st.time_input("🟢 Orario Inizio:", value=time(0, 0))
+    with f4:
+        time_end = st.time_input("🛑 Orario Fine:", value=time(23, 59))
 
-        #st.diveder()
-        # 3. Applichiamo le regole di filtraggio al DataFrame
-        df_filtered = df_journal.copy()
+    # --- LINEA TRATTEGGIATA ---
+    st.markdown('<hr style="border: none; border-top: 2px dashed #555; margin: 15px 0; opacity: 0.4;">', unsafe_allow_html=True)
 
+    # 3. Applichiamo le regole di filtraggio al DataFrame
+    df_filtered = df_journal.copy()
+
+    if not df_filtered.empty:
         # Filtro Mercato
         if filtro_mercato != "TUTTI":
-            df_filtered = df_filtered[df_filtered['mercato'].str.contains(filtro_mercato, na=False)]
+            df_filtered = df_filtered[df_filtered['mercato'].astype(str).str.contains(filtro_mercato, na=False)]
             
         # Filtro Coppia di Valute
         if filtro_coppia != "TUTTE":
             df_filtered = df_filtered[df_filtered['pair'] == filtro_coppia]
 
-        # Filtro Orario (estrae l'orario dalla stringa 'time' e lo confronta)
+        # Filtro Orario
         try:
             orari_df = pd.to_datetime(df_filtered['time']).dt.time
             df_filtered = df_filtered[(orari_df >= time_start) & (orari_df <= time_end)]
-        except Exception as e:
-            pass # Ignora se ci sono errori nei formati data vecchi
+        except Exception:
+            pass 
 
-        # 4. Ricalcolo Statistiche Dinamiche basate SOLO sui dati filtrati
-        total_trades = len(df_filtered)
-        best_pairs_str = "" # Stringa vuota di default
+    # 4. Ricalcolo Statistiche Dinamiche
+    total_trades = len(df_filtered)
+    best_pairs_str = "" 
+    wins, losses, total_pnl = 0, 0, 0.0
+    
+    if total_trades > 0:
+        wins = df_filtered['result'].astype(str).str.contains("WIN").sum()
+        losses = df_filtered['result'].astype(str).str.contains("LOSS").sum()
+        total_pnl = df_filtered['pnl_numeric'].sum()
         
-        if total_trades > 0:
-            # Conta quante volte compare WIN o LOSS nella colonna result
-            wins = df_filtered['result'].astype(str).str.contains("WIN").sum()
-            losses = df_filtered['result'].astype(str).str.contains("LOSS").sum()
-            total_pnl = df_filtered['pnl_numeric'].sum()
-            
-            # --- CALCOLO VALUTA PIÙ PROFITTEVOLE ---
-            # Raggruppa per valuta e somma i profitti/perdite
-            profit_by_pair = df_filtered.groupby('pair')['pnl_numeric'].sum()
-            
-            if not profit_by_pair.empty:
-                max_profit = profit_by_pair.max()
-                # Se c'è almeno un profitto positivo, troviamo le valute corrispondenti
-                if max_profit > 0:
-                    best_pairs = profit_by_pair[profit_by_pair == max_profit].index.tolist()
-                    best_pairs_str = ", ".join(best_pairs) # Unisce se ce n'è più di una
-        else:
-            wins, losses, total_pnl = 0, 0, 0.0
-            
-        win_rate = (wins / (wins + losses) * 100) if (wins + losses) > 0 else 0.0
+        profit_by_pair = df_filtered.groupby('pair')['pnl_numeric'].sum()
+        if not profit_by_pair.empty:
+            max_profit = profit_by_pair.max()
+            if max_profit > 0:
+                best_pairs = profit_by_pair[profit_by_pair == max_profit].index.tolist()
+                best_pairs_str = ", ".join(best_pairs)
+                
+    win_rate = (wins / (wins + losses) * 100) if (wins + losses) > 0 else 0.0
 
-        # 5. Mostriamo le Metriche aggiornate in tempo reale (ORA SU 4 COLONNE)
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("💰 Profitto", f"{total_pnl:.2f} €", delta=f"{total_pnl:.2f} €")
-        c2.metric("🎯 Win/Loss", f"{wins}W - {losses}L", delta=f"Tot: {total_trades}")
-        c3.metric("🏁 Win Rate", f"{win_rate:.1f}%")
-        
-        # Mostra la metrica Top Asset (vuota se best_pairs_str è vuota, con un trattino o "N/A" per pulizia visiva)
-        c4.metric("🏆 Top Asset", best_pairs_str if best_pairs_str else "-")
+    # 5. Mostriamo le Metriche aggiornate (Sempre visibili!)
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("💰 Profitto", f"{total_pnl:.2f} €", delta=f"{total_pnl:.2f} €")
+    c2.metric("🎯 Win/Loss", f"{wins}W - {losses}L", delta=f"Tot: {total_trades}")
+    c3.metric("🏁 Win Rate", f"{win_rate:.1f}%")
+    c4.metric("🏆 Top Asset", best_pairs_str if best_pairs_str else "-")
 
-    if st.session_state.signal_history:
-        df_journal = pd.DataFrame(st.session_state.signal_history)
-        
+    # 6. Costruzione della Tabella (Visualizza i dati FILTRATI)
+    if not df_filtered.empty:
         rename_map = {
-            'time': '⏰ DATA', 
-            'pair': '💱 COPPIA', 
-            'dir': '🚀 TIPO',
-            'price': '💰 ENTRATA', 
-            'stake': '💶 STAKE',
-            'params_bb': '↔️ BB',
-            'params_rsi': '📉 RSI', 
-            'mercato': '🌍 MERCATO', 
-            'result': '🔍 ESITO', 
-            'pnl_numeric': '📈 P&L'
+            'time': '⏰ DATA', 'pair': '💱 COPPIA', 'dir': '🚀 TIPO',
+            'price': '💰 ENTRATA', 'stake': '💶 STAKE', 'params_bb': '↔️ BB',
+            'params_rsi': '📉 RSI', 'mercato': '🌍 MERCATO', 
+            'result': '🔍 ESITO', 'pnl_numeric': '📈 P&L'
         }
 
-        df_visual = df_journal.iloc[::-1].copy()
+        # Invertiamo per mostrare i più recenti in alto
+        df_visual = df_filtered.iloc[::-1].copy()
         
         cols_to_keep = ['time', 'pair', 'dir', 'price', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'pnl_numeric']
         cols_presenti = [c for c in cols_to_keep if c in df_visual.columns]
@@ -868,7 +854,11 @@ if st.session_state.connected:
         except Exception:
             st.dataframe(df_display, use_container_width=True, hide_index=True)
     else:
-        st.info("⏳ Avvia lo Scanner e attendi il primo segnale...")
+        # Mostra un bel messaggio invece di una tabella rotta se i filtri nascondono tutto o se non ci sono ancora trade
+        if non st.session_state.signal_history:
+             st.info("⏳ Avvia lo Scanner e attendi il primo segnale...")
+        else:
+             st.warning("🕵️ Nessun segnale corrisponde ai filtri selezionati.")
 
     # --- 8. REFRESH LOOP ---
     if st.session_state.scanner_on:
