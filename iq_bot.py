@@ -276,9 +276,6 @@ with st.sidebar:
             st.session_state.scanner_on = False
             st.session_state.api_token = None
             st.rerun()
-            
-    st.divider()
-
 
         st.divider()
         st.subheader("👁️ CONTROLLO SCANNER")
