@@ -632,7 +632,7 @@ if st.session_state.connected:
                 st.progress(min(max(perc_su, perc_giu) / 100, 1.0))
             
             st.write("---")
-            st.subheader("📊 Analisi Performance (1m)")
+            st.subheader("📊 Analisi Segnali Pregressi (1m)")
             
             # Calcoliamo i segnali attuali basati sui parametri scelti
             n_buy = df_final['buy_sig'].notnull().sum()
