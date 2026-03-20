@@ -243,8 +243,7 @@ with st.sidebar:
                     st.rerun()
                 else:
                     st.error("Errore connessione a Deriv API.")
-            except Exception as e:
-                st.error(f"⚠️ Errore di Rete/WebSocket: {str(e)}")
+
     else:
         if st.button("🔴 DISCONNETTI", use_container_width=True):
             st.session_state.connected = False
