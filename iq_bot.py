@@ -17,7 +17,7 @@ TELEGRAM_TOKEN = st.secrets.get("TELEGRAM_TOKEN", "IL_TUO_TOKEN_QUI")
 TELEGRAM_CHAT_ID = st.secrets.get("TELEGRAM_CHAT_ID", "IL_TUO_CHAT_ID_QUI")
 DERIV_TOKEN = st.secrets.get("DERIV_TOKEN", "") # Inserisci qui il tuo token API Demo di Deriv (Read/Trade)
 
-DERIV_APP_ID = "1089" # App ID generico di Deriv
+DERIV_APP_ID = "71759" # App ID generico di Deriv
 
 fuso_roma = pytz.timezone('Europe/Rome')
 now_roma = datetime.now(fuso_roma)
