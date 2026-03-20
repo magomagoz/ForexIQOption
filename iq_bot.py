@@ -746,7 +746,7 @@ if st.session_state.connected:
                     icona_telegram = "💰" if win else "💀"
                     msg = (f"🏁 *ESITO* {icona_telegram} {res_status}\n"
                            f"🆔 ID: `{t_id}`\n"
-                           f"📊 {pair}\n"
+                           f"📊 Asset: {pair}\n"
                            f"📉 Esito 60s: {res_status}\n"
                            f"⏱️ Esito 75s: {res_75_str}\n"
                            f"💵 P&L: `{profit:.2f} €`")
