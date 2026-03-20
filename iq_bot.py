@@ -904,7 +904,7 @@ if st.session_state.connected:
     # 6. Costruzione della Tabella (Visualizza i dati FILTRATI)
     if not df_filtered.empty:
         rename_map = {
-            'time': '⏰ DATA', 'pair': '💱 VALUTE', 'dir': '🚀 TIPO',
+            'time': '⏰ DATA', 't_id': '🆔 ID', 'pair': '💱 VALUTE', 'dir': '🚀 TIPO',
             'price': '💰 PRICE', 'stake': '💶 STAKE', 'params_bb': '↔️ BB',
             'params_rsi': '📉 RSI', 'mercato': '🌍 MERCATO', 
             'result': '🔍 ESITO 60s', 'check_75s': '⏱️ 75s', 'pnl_numeric': '📈 P&L'
