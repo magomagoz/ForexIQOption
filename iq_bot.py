@@ -715,13 +715,16 @@ if st.session_state.connected:
                     entry_price = trade['entry_price']
                     price_75 = float(res[-2]['close'])
                     
+                    # --- FIX VARIABILI ---
+                    dir_trade = trade['direction']
+                    t_id = trade['id']
+                    
                     # Logica Win/Loss
-                    win = (exit_price > entry_price) if trade['direction'] == "BUY" else (exit_price < entry_price)
-                    win_75 = (price_75 > entry_price) if direction == "BUY" else (price_75 < entry_price)
+                    win = (exit_price > entry_price) if dir_trade == "BUY" else (exit_price < entry_price)
+                    win_75 = (price_75 > entry_price) if dir_trade == "BUY" else (price_75 < entry_price)
 
                     res_status = "WIN" if win else "LOSS"
-                    icona = "✅" if win else "❌"
-
+                    icona_esito = "✅" if win else "❌"
                     res_75_str = "✅" if win_75 else "❌"
  
                     # Calcolo Profitto (Assumiamo payout 85%)
@@ -732,22 +735,19 @@ if st.session_state.connected:
                     st.session_state.local_balance += profit
                     
                     # 2. Aggiornamento Storico (Journal)
-                    found = False
-
                     for s in st.session_state.signal_history:
-                        if s.get('id') == trade['id']: 
-                            s['result'] = f"{icona} {res_status}"
+                        if s.get('id') == t_id: 
+                            s['result'] = f"{icona_esito} {res_status}"
                             s['check_75s'] = res_75_str
                             s['pnl_numeric'] = float(profit)
-                            found = True
                             break
 
                     # 3. Notifica Telegram
-                    icona = "💰" if win_60 else "💀"
-                    msg = (f"🏁 *ESITO* {icona} {res_status}\n"
-                           f"🆔 ID: `{trade_id}`\n"
+                    icona_telegram = "💰" if win else "💀"
+                    msg = (f"🏁 *ESITO* {icona_telegram} {res_status}\n"
+                           f"🆔 ID: `{t_id}`\n"
                            f"📊 {pair}\n"
-                           f"📉 Esito 60s: {res_60_str}\n"
+                           f"📉 Esito 60s: {res_status}\n"
                            f"⏱️ Esito 75s: {res_75_str}\n"
                            f"💵 P&L: `{profit:.2f} €`")
                     invia_telegram(msg)
@@ -863,6 +863,41 @@ if st.session_state.connected:
     c4.metric("🏁 Win Rate 75s", f"{win_rate_75:.1f}%")
     c5.metric("🏆 Top Asset", best_pairs_str if best_pairs_str else "-")
 
+    # --- ANALISI DETTAGLIATA PER COPPIA (RITARDATARI VS VELOCI) ---
+    if total_trades >= 3:
+        with st.expander("🔍 Analisi Strategica: Quali coppie eliminare?"):
+            # Raggruppiamo i dati per coppia
+            stats_per_pair = []
+            for p in df_filtered['pair'].unique():
+                df_p = df_filtered[df_filtered['pair'] == p]
+                wins = df_p['result'].astype(str).str.contains("WIN").sum()
+                wins_75 = df_p['check_75s'].astype(str).str.contains("✅").sum()
+                tot_p = len(df_p)
+                
+                win_rate = (wins / tot_p * 100)
+                win_rate_75 = (wins_75 / tot_p * 100)
+                diff = win_rate_75 - win_rate
+                
+                stats_per_pair.append({
+                    "Coppia": p,
+                    "Trades": tot_p,
+                    "WR 60s": f"{win_rate:.1f}%",
+                    "WR 75s": f"{win_rate_75:.1f}%",
+                    "Stabilità": "🟢 Alta" if abs(diff) < 5 else ("🟡 Media" if abs(diff) < 15 else "🔴 Critica")
+                })
+            
+            st.table(pd.DataFrame(stats_per_pair))
+            st.caption("💡 Se vedi 'Stabilità Critica' e il WR 75s è molto più basso, quella coppia richiede un'esecuzione istantanea.")
+
+    # Aggiungiamo un box di analisi automatica del ritardo
+    if trades_conclusi >= 5: # Aspetta almeno 5 trade per dare un giudizio
+        if diff_win_rate <= -10:
+            st.error(f"⚡ **ALLERTA VELOCITÀ:** Se ritardi le entrate di 10-15s perdi in media il {abs(diff_win_rate):.1f}% di Win Rate. Devi essere un cecchino!")
+        elif diff_win_rate >= 10:
+            st.success(f"🐢 **NESSUNA FRETTA:** I trade a 75s vanno meglio del {diff_win_rate:.1f}%. Il trend continua dopo il segnale, hai margine per piazzare l'ordine con calma.")
+        else:
+            st.info(f"⚖️ **STABILITÀ ALTA:** La differenza tra entrare subito o con 10-15s di ritardo è irrilevante ({diff_win_rate:+.1f}%). Il segnale è solido.")
+    
     if st.session_state.scanner_on:
             st.caption(f"🔄 Scanner attivo... Ultimo check: {now_roma.time().strftime('%H:%M:%S')}")
 
