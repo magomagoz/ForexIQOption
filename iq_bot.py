@@ -694,64 +694,83 @@ if st.session_state.connected:
     except Exception as e:
             st.error(f"Errore grafico: {e}")
     
-    # --- 6. VERIFICA ESITI TRADE CON DERIV (FIX FINALE) ---
-    # Definiamo il timestamp corrente prima di iniziare il ciclo
+    # --- 6. VERIFICA ESITI TRADE (Sincronizzata 60s & 75s) ---
     current_ts = time_module.time() 
-    
-    # Creiamo una lista fissa dei trade attivi per evitare errori di mutazione del dizionario
     trades_pendenti = list(st.session_state.active_trades.items())
+    trades_da_rimuovere = []
     
     for pair, trade in trades_pendenti:
-        # Calcoliamo quando deve scadere il trade (Entrata + Timeframe + 5 secondi di sicurezza)
-        scadenza = trade['entry_time'] + timeframe + 5
+        # Aspettiamo 90 secondi (75s di trade + 15s di margine per il refresh dei dati Deriv)
+        scadenza_verifica = trade['entry_time'] + 90 
         
-        if current_ts >= scadenza:
+        if current_ts >= scadenza_verifica:
             try:
-                # Recuperiamo le candele recenti per verificare il prezzo di chiusura
-                res = get_deriv_candles(pair, timeframe, 2)
-                if res and len(res) > 0:
-                    exit_price = res[-1]['close']
-                    entry_price = trade['entry_price']
+                # Recuperiamo candele da 15s per misurare esattamente i due step (60 e 75)
+                # 15s * 4 = 60s | 15s * 5 = 75s
+                res = get_deriv_candles(pair, 15, 10) 
+                
+                if res and len(res) >= 6:
+                    entry_p = float(trade['entry_price'])
+                    direction = trade['direction']
+                    t_id = trade['id']
                     
-                    # Logica Win/Loss
-                    win = (exit_price > entry_price) if trade['direction'] == "BUY" else (exit_price < entry_price)
-                    res_status = "WIN" if win else "LOSS"
-                    icona = "✅" if win else "❌"
+                    # Identifichiamo i prezzi di chiusura corretti nel buffer
+                    # Usiamo indici negativi partendo dalla fine del buffer ricevuto
+                    price_60 = float(res[-3]['close']) 
+                    price_75 = float(res[-2]['close'])
                     
-                    # Calcolo Profitto (Assumiamo payout 85%)
-                    stake_usato = trade.get('stake_num', float(st.session_state.stake))
-                    profit = (stake_usato * 0.85) if win else -stake_usato
+                    # Logica WIN/LOSS
+                    win_60 = (price_60 > entry_p) if direction == "BUY" else (price_60 < entry_p)
+                    win_75 = (price_75 > entry_p) if direction == "BUY" else (price_75 < entry_p)
                     
-                    # 1. Aggiornamento Saldo Locale
+                    res_60_str = "✅ WIN" if win_60 else "❌ LOSS"
+                    res_75_str = "✅" if win_75 else "❌"
+                    
+                    # Calcolo P&L (Basato sulla chiusura standard a 60s)
+                    stake_usato = float(trade.get('stake_num', 100.0))
+                    profit = (stake_usato * 0.85) if win_60 else -stake_usato
+                    
+                    # 1. Aggiorna Saldo Sessione
                     st.session_state.local_balance += profit
                     
-                    # 2. Aggiornamento Storico (Journal)
+                    # 2. Aggiorna il Journal (Cerca per ID univoco)
+                    found = False
                     for s in st.session_state.signal_history:
-                        if s.get('id') == trade['id']: 
-                            s['result'] = f"{icona} {res_status}"
-                            s['pnl_numeric'] = profit
+                        if s.get('id') == t_id:
+                            s['result'] = res_60_str
+                            s['check_75s'] = res_75_str
+                            s['pnl_numeric'] = float(profit)
+                            found = True
+                            break
                     
-                    # 3. Notifiche Telegram e Suoni
-                    invia_telegram(f"🏁 *ESITO* {icona} {res_status}\n🆔 ID: `{trade['id']}`\n📊 Asset: {pair}\n💵 Profit: {profit:.2f}€")
-                    if win: 
-                        play_trade_sound("win")
+                    # 3. Notifica Telegram
+                    icona = "💰" if win_60 else "💀"
+                    msg = (f"🏁 *TRADE CONCLUSO* {icona}\n"
+                           f"🆔 ID: `{t_id}`\n"
+                           f"📊 {pair} ({direction})\n"
+                           f"📉 Esito 60s: {res_60_str}\n"
+                           f"⏱️ Esito 75s: {res_75_str}\n"
+                           f"💵 P&L: `{profit:.2f} €` balance: `{st.session_state.local_balance:.2f}€` ")
+                    invia_telegram(msg)
                     
-                    # 4. Rimoziome dalla lista dei trade attivi e salvataggio
-                    if pair in st.session_state.active_trades:
-                        del st.session_state.active_trades[pair]
+                    if win_60: play_trade_sound("win")
                     
-                    save_journal(st.session_state.signal_history)
-                    
-                    # Forza il refresh per aggiornare la tabella journal e i box statistici
-                    st.rerun()
-
+                    trades_da_rimuovere.append(pair)
+    
             except Exception as e:
-                # Gestisce eventuali errori di connessione durante la verifica
-                print(f"Errore verifica per {pair}: {e}")
-                continue
-
-    st.divider()
-                                
+                st.error(f"Errore critico verifica {pair}: {e}")
+    
+    # Pulizia dei trade processati
+    if trades_da_rimuovere:
+        for p in trades_da_rimuovere:
+            if p in st.session_state.active_trades:
+                del st.session_state.active_trades[p]
+        
+        # Salva il file JSON in modo permanente
+        save_journal(st.session_state.signal_history)
+        st.rerun()
+                    
+    st.divider()                                
     # --- 7. TABELLA JOURNAL E FILTRI DINAMICI ---
     st.subheader("📋 Trading Journal & Performance Hub")
     
@@ -834,8 +853,8 @@ if st.session_state.connected:
     # 6. Costruzione della Tabella (Visualizza i dati FILTRATI)
     if not df_filtered.empty:
         rename_map = {
-            'time': '⏰ DATA', 'pair': '💱 COPPIA', 'dir': '🚀 TIPO',
-            'price': '💰 ENTRATA', 'stake': '💶 STAKE', 'params_bb': '↔️ BB',
+            'time': '⏰ DATA', 'pair': '💱 VALUTE', 'dir': '🚀 TIPO',
+            'price': '💰 PRICE', 'stake': '💶 STAKE', 'params_bb': '↔️ BB',
             'params_rsi': '📉 RSI', 'mercato': '🌍 MERCATO', 
             'result': '🔍 ESITO', 'pnl_numeric': '📈 P&L'
         }
