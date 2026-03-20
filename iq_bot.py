@@ -783,7 +783,7 @@ if st.session_state.connected:
             df_journal['check_75s'] = "-"    
     else:
         # Struttura vuota di base
-        df_journal = pd.DataFrame(columns=['time', 'pair', 'dir', 'price', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'pnl_numeric'])
+        df_journal = pd.DataFrame(columns=['time', 't_id', 'pair', 'dir', 'price', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'pnl_numeric'])
 
     # Assicuriamoci che 'pnl_numeric' esista e sia un numero
     if 'pnl_numeric' not in df_journal.columns:
@@ -913,7 +913,7 @@ if st.session_state.connected:
         # Invertiamo per mostrare i più recenti in alto
         df_visual = df_filtered.iloc[::-1].copy()
         
-        cols_to_keep = ['time', 'pair', 'dir', 'price', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'check_75s', 'pnl_numeric']
+        cols_to_keep = ['time', 't_id', 'pair', 'dir', 'price', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'check_75s', 'pnl_numeric']
         cols_presenti = [c for c in cols_to_keep if c in df_visual.columns]
         df_display = df_visual[cols_presenti].rename(columns=rename_map)
 
