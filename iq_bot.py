@@ -819,14 +819,22 @@ if st.session_state.connected:
         except Exception:
             pass 
 
-    # 4. Ricalcolo Statistiche Dinamiche
+    # 4. Ricalcolo Statistiche Dinamiche (60s vs 75s)
     total_trades = len(df_filtered)
     best_pairs_str = "" 
-    wins, losses, total_pnl = 0, 0, 0.0
+    wins_60, losses_60 = 0, 0
+    wins_75, losses_75 = 0, 0
+    total_pnl = 0.0
     
     if total_trades > 0:
-        wins = df_filtered['result'].astype(str).str.contains("WIN").sum()
-        losses = df_filtered['result'].astype(str).str.contains("LOSS").sum()
+        # Conteggio Esiti 60s
+        wins_60 = df_filtered['result'].astype(str).str.contains("WIN").sum()
+        losses_60 = df_filtered['result'].astype(str).str.contains("LOSS").sum()
+        
+        # Conteggio Esiti 75s (cerchiamo le spunte verdi e le x rosse)
+        wins_75 = df_filtered['check_75s'].astype(str).str.contains("✅").sum()
+        losses_75 = df_filtered['check_75s'].astype(str).str.contains("❌").sum()
+        
         total_pnl = df_filtered['pnl_numeric'].sum()
         
         profit_by_pair = df_filtered.groupby('pair')['pnl_numeric'].sum()
@@ -836,14 +844,60 @@ if st.session_state.connected:
                 best_pairs = profit_by_pair[profit_by_pair == max_profit].index.tolist()
                 best_pairs_str = ", ".join(best_pairs)
                 
-    win_rate = (wins / (wins + losses) * 100) if (wins + losses) > 0 else 0.0
+    # Calcolo Win Rate indipendenti
+    trades_conclusi_60 = wins_60 + losses_60
+    trades_conclusi_75 = wins_75 + losses_75
+    
+    win_rate_60 = (wins_60 / trades_conclusi_60 * 100) if trades_conclusi_60 > 0 else 0.0
+    win_rate_75 = (wins_75 / trades_conclusi_75 * 100) if trades_conclusi_75 > 0 else 0.0
 
-    # 5. Mostriamo le Metriche aggiornate (Sempre visibili!)
+    # Differenza di Win Rate (misura la stabilità del segnale nel tempo)
+    diff_win_rate = win_rate_75 - win_rate_60
+
+    # 5. Mostriamo le Metriche aggiornate a confronto
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("💰 Profitto", f"{total_pnl:.2f} €", delta=f"{total_pnl:.2f} €")
-    c2.metric("🎯 Win/Loss", f"{wins}W - {losses}L", delta=f"Tot: {total_trades}")
-    c3.metric("🏁 Win Rate", f"{win_rate:.1f}%")
+    c1.metric("💰 Profitto", f"{total_pnl:.2f} €")
+    c2.metric("🎯 Win Rate (60s)", f"{win_rate_60:.1f}%", f"{wins_60}W - {losses_60}L", delta_color="off")
+    
+    # Mostriamo se ritardare l'ingresso migliora o peggiora le cose
+    c3.metric("⏱️ Win Rate (75s)", f"{win_rate_75:.1f}%", f"{diff_win_rate:+.1f}% vs 60s")
+    
     c4.metric("🏆 Top Asset", best_pairs_str if best_pairs_str else "-")
+
+    # --- ANALISI DETTAGLIATA PER COPPIA (RITARDATARI VS VELOCI) ---
+    if total_trades >= 3:
+        with st.expander("🔍 Analisi Strategica: Quali coppie eliminare?"):
+            # Raggruppiamo i dati per coppia
+            stats_per_pair = []
+            for p in df_filtered['pair'].unique():
+                df_p = df_filtered[df_filtered['pair'] == p]
+                w60 = df_p['result'].astype(str).str.contains("WIN").sum()
+                w75 = df_p['check_75s'].astype(str).str.contains("✅").sum()
+                tot_p = len(df_p)
+                
+                wr60 = (w60 / tot_p * 100)
+                wr75 = (w75 / tot_p * 100)
+                diff = wr75 - wr60
+                
+                stats_per_pair.append({
+                    "Coppia": p,
+                    "Trades": tot_p,
+                    "WR 60s": f"{wr60:.1f}%",
+                    "WR 75s": f"{wr75:.1f}%",
+                    "Stabilità": "🟢 Alta" if abs(diff) < 5 else ("🟡 Media" if abs(diff) < 15 else "🔴 Critica")
+                })
+            
+            st.table(pd.DataFrame(stats_per_pair))
+            st.caption("💡 Se vedi 'Stabilità Critica' e il WR 75s è molto più basso, quella coppia richiede un'esecuzione istantanea.")
+
+    # Aggiungiamo un box di analisi automatica del ritardo
+    if trades_conclusi_60 >= 5: # Aspetta almeno 5 trade per dare un giudizio
+        if diff_win_rate <= -10:
+            st.error(f"⚡ **ALLERTA VELOCITÀ:** Se ritardi le entrate di 10-15s perdi in media il {abs(diff_win_rate):.1f}% di Win Rate. Devi essere un cecchino!")
+        elif diff_win_rate >= 10:
+            st.success(f"🐢 **NESSUNA FRETTA:** I trade a 75s vanno meglio del {diff_win_rate:.1f}%. Il trend continua dopo il segnale, hai margine per piazzare l'ordine con calma.")
+        else:
+            st.info(f"⚖️ **STABILITÀ ALTA:** La differenza tra entrare subito o con 10-15s di ritardo è irrilevante ({diff_win_rate:+.1f}%). Il segnale è solido.")
 
     if st.session_state.scanner_on:
             st.caption(f"🔄 Scanner attivo... Ultimo check: {now_roma.time().strftime('%H:%M:%S')}")
