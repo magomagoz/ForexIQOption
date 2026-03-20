@@ -858,7 +858,7 @@ if st.session_state.connected:
     # 5. Mostriamo le Metriche aggiornate (Sempre visibili!)
     c1, c2, c3, c4, c5 = st.columns(5)
     c1.metric("💰 Profitto", f"{total_pnl:.2f} €", delta=f"{total_pnl:.2f} €")
-    c2.metric("🎯 Win/Loss 60s", f"{wins}W - {losses}L", delta=f"Tot: {total_trades}")
+    c2.metric("🎯 Win/Loss", f"{wins}W - {losses}L", delta=f"Tot: {total_trades}")
     c3.metric("🏁 Win Rate 60s", f"{win_rate:.1f}%")
     c4.metric("🏁 Win Rate 75s", f"{win_rate_75:.1f}%")
     c5.metric("🏆 Top Asset", best_pairs_str if best_pairs_str else "-")
