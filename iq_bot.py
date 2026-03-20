@@ -783,7 +783,7 @@ if st.session_state.connected:
             df_journal['check_75s'] = "-"    
     else:
         # Struttura vuota di base
-        df_journal = pd.DataFrame(columns=['time', 't_id', 'pair', 'dir', 'price', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'pnl_numeric'])
+        df_journal = pd.DataFrame(columns=['t_id', 'time', 'pair', 'dir', 'price', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'pnl_numeric'])
 
     # Assicuriamoci che 'pnl_numeric' esista e sia un numero
     if 'pnl_numeric' not in df_journal.columns:
@@ -904,7 +904,7 @@ if st.session_state.connected:
     # 6. Costruzione della Tabella (Visualizza i dati FILTRATI)
     if not df_filtered.empty:
         rename_map = {
-            'time': '⏰ DATA', 't_id': '🆔 ID', 'pair': '💱 VALUTE', 'dir': '🚀 TIPO',
+            't_id': '🆔 ID', 'time': '⏰ DATA', 'pair': '💱 VALUTE', 'dir': '🚀 TIPO',
             'price': '💰 PRICE', 'stake': '💶 STAKE', 'params_bb': '↔️ BB',
             'params_rsi': '📉 RSI', 'mercato': '🌍 MERCATO', 
             'result': '🔍 ESITO 60s', 'check_75s': '⏱️ 75s', 'pnl_numeric': '📈 P&L'
@@ -913,7 +913,7 @@ if st.session_state.connected:
         # Invertiamo per mostrare i più recenti in alto
         df_visual = df_filtered.iloc[::-1].copy()
         
-        cols_to_keep = ['time', 't_id', 'pair', 'dir', 'price', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'check_75s', 'pnl_numeric']
+        cols_to_keep = ['t_id', 'time', 'pair', 'dir', 'price', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'check_75s', 'pnl_numeric']
         cols_presenti = [c for c in cols_to_keep if c in df_visual.columns]
         df_display = df_visual[cols_presenti].rename(columns=rename_map)
 
