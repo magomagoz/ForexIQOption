@@ -33,7 +33,7 @@ def to_deriv_symbol(pair):
 def get_deriv_balance(token):
     """Recupera il saldo live dal conto Deriv"""
     try:
-        ws = websocket.create_connection(f"wss://ws.binaryws.com/websockets/v3?app_id={DERIV_APP_ID}", timeout=5)
+        ws = websocket.create_connection(f"wss://ws.binaryws.com/websockets/v3?app_id={DERIV_APP_ID}", timeout=10)
         ws.send(json.dumps({"authorize": token}))
         res = json.loads(ws.recv())
         if "error" in res:
@@ -49,7 +49,7 @@ def get_deriv_balance(token):
 def get_deriv_candles(pair, timeframe_sec, count):
     """Scarica le candele tramite WebSocket di Deriv"""
     try:
-        ws = websocket.create_connection(f"wss://ws.binaryws.com/websockets/v3?app_id={DERIV_APP_ID}", timeout=5)
+        ws = websocket.create_connection(f"wss://ws.binaryws.com/websockets/v3?app_id={DERIV_APP_ID}", timeout=10)
         req = {
             "ticks_history": to_deriv_symbol(pair),
             "end": "latest",
@@ -229,20 +229,33 @@ with st.sidebar:
     
     st.session_state.api_token = st.text_input("🔑 Token Deriv", value=st.session_state.api_token, type="password")
 
-    if not st.session_state.connected:
-        st.info("Connettiti per i dati live.")
-        if st.button("🔌 CONNETTI SISTEMA", use_container_width=True, type="primary"):
-            with st.spinner("Sincronizzazione WS..."):
-                test_data = get_deriv_candles("EURUSD", 60, 1)
-                if test_data:
+    if st.button("🔌 CONNETTI SISTEMA", use_container_width=True, type="primary"):
+        with st.spinner("Sincronizzazione WS..."):
+            try:
+                # Test connessione con timeout aumentato a 10s
+                ws_test = websocket.create_connection(f"wss://ws.binaryws.com/websockets/v3?app_id={DERIV_APP_ID}", timeout=10)
+                ws_test.send(json.dumps({
+                    "ticks_history": "frxEURUSD", 
+                    "end": "latest", 
+                    "count": 1, 
+                    "style": "candles", 
+                    "granularity": 60
+                }))
+                res = json.loads(ws_test.recv())
+                ws_test.close()
+
+                if "error" in res:
+                    st.error(f"❌ Deriv ha rifiutato: {res['error']['message']}")
+                elif "candles" in res:
                     st.session_state.connected = True
-                    # Tenta di prendere il saldo vero se c'è il token
                     if st.session_state.api_token:
                         bal = get_deriv_balance(st.session_state.api_token)
                         if bal: st.session_state.local_balance = bal
                     st.rerun()
                 else:
-                    st.error("Errore connessione a Deriv API.")
+                    st.error("Risposta vuota da Deriv.")
+            except Exception as e:
+                st.error(f"⚠️ Errore di Rete/WebSocket: {str(e)}")
     else:
         if st.button("🔴 DISCONNETTI", use_container_width=True):
             st.session_state.connected = False
@@ -276,7 +289,7 @@ with st.sidebar:
             bb_period = c_bb1.selectbox("Periodo BB", [14, 20], index = 1)
             custom_rsi_buy = c_rsi1.selectbox("RSI Buy", [30, 25, 20, 15], index = 2)
             c_bb2, c_rsi2 = st.columns(2)
-            bb_std = c_bb2.selectbox("Dev BB", [2.00, 2.20, 2,50, 2,70], index = 0)
+            bb_std = c_bb2.selectbox("Dev BB", [2.00, 2.20, 2.50, 2.70], index = 0)
             custom_rsi_sell = c_rsi2.selectbox("RSI Sell", [70, 75, 80, 85], index = 2)
 
 
@@ -959,15 +972,14 @@ if st.session_state.connected:
         try:
             st.dataframe(
                 df_display.style
-                .applymap(style_result, subset=['🔍 60s', '⏱️ 75s', '⏱️ 120s']) # Aggiunto 120s qui
-                #.applymap(style_result, subset=['🔍 ESITO'] if '🔍 ESITO' in df_display.columns else [])
-                .applymap(style_pnl, subset=['📈 P&L'] if '📈 P&L' in df_display.columns else [])
-                .format({'💰 ENTRATA': "{:.5f}", '📈 P&L': "{:.2f} €"}, na_rep="-"),
+                .applymap(style_result, subset=['🔍 ESITO 60s', '⏱️ 75s', '⏱️ 120s']) # <--- Nome corretto qui!
+                .applymap(style_pnl, subset=['📈 P&L']), 
                 use_container_width=True, hide_index=True
             )
-
-        except Exception:
+        except Exception as e:
+            st.error(f"Errore visualizzazione tabella: {e}") # Ora ti dirà se sbagli un nome
             st.dataframe(df_display, use_container_width=True, hide_index=True)
+
     else:
         # Mostra un bel messaggio invece di una tabella rotta se i filtri nascondono tutto o se non ci sono ancora trade
         if not st.session_state.signal_history:
