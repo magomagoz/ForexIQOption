@@ -756,6 +756,7 @@ if st.session_state.connected:
                            f"📊 Asset: {pair}\n"
                            f"📉 Esito 60s: {res_status}\n"
                            f"⏱️ Esito 75s: {res_75_str}\n"
+                           f"⏱️ Esito 120s: {res_120_str}\n"
                            f"💵 P&L: `{profit:.2f} €`")
                     invia_telegram(msg)
 
