@@ -89,16 +89,13 @@ def get_market_status():
     
     is_londra = londra[0] <= now_time <= londra[1]
     is_ny = new_york[0] <= now_time <= new_york[1]
-    is_out = (time(23,0), time(0,0))
     
     if is_londra and is_ny:
-        return "🔥 **OVERLAP EU+USA**\n\nAlta Volatilità"
+        return "🔥 **MERCATI EU+USA**\n\nAlta Volatilità"
     elif is_londra:
-        return "🇪🇺 SESSIONE DI LONDRA"
+        return "🇪🇺 SESSIONE LONDRA"
     elif is_ny:
-        return "🇺🇸 SESSIONE DI NEW YORK"
-    elif is_out:
-        return "❌ **MERCATI CHIUSI** ❌"
+        return "🇺🇸 SESSIONE NEW YORK"
     else:
         return "💤 MERCATO LENTO"
 
@@ -697,93 +694,70 @@ if st.session_state.connected:
     except Exception as e:
             st.error(f"Errore grafico: {e}")
     
-    # --- 6. VERIFICA ESITI TRADE (Sincronizzata 60s & 75s) ---
+    # --- 6. VERIFICA ESITI TRADE CON DERIV (FIX FINALE) ---
+    # Definiamo il timestamp corrente prima di iniziare il ciclo
     current_ts = time_module.time() 
+    
+    # Creiamo una lista fissa dei trade attivi per evitare errori di mutazione del dizionario
     trades_pendenti = list(st.session_state.active_trades.items())
-    trades_da_rimuovere = []
     
     for pair, trade in trades_pendenti:
-        # Aspettiamo 90 secondi (75s di trade + 15s di margine per il refresh dei dati Deriv)
-        scadenza_verifica = trade['entry_time'] + 90 
+        # Calcoliamo quando deve scadere il trade (Entrata + Timeframe + 5 secondi di sicurezza)
+        scadenza = trade['entry_time'] + timeframe + 5
         
-        if current_ts >= scadenza_verifica:
+        if current_ts >= scadenza:
             try:
-                # Recuperiamo candele da 15s per misurare esattamente i due step (60 e 75)
-                # 15s * 4 = 60s | 15s * 5 = 75s
-                res = get_deriv_candles(pair, 15, 10) 
-                
-                if res and len(res) >= 6:
-                    entry_p = float(trade['entry_price'])
-                    direction = trade['direction']
-                    t_id = trade['id']
+                # Recuperiamo le candele recenti per verificare il prezzo di chiusura
+                res = get_deriv_candles(pair, timeframe, 2)
+                if res and len(res) > 0:
+                    exit_price = res[-1]['close']
+                    entry_price = trade['entry_price']
                     
-                    # Identifichiamo i prezzi di chiusura corretti nel buffer
-                    # Usiamo indici negativi partendo dalla fine del buffer ricevuto
-                    price_60 = float(res[-3]['close']) 
-                    price_75 = float(res[-2]['close'])
+                    # Logica Win/Loss
+                    win = (exit_price > entry_price) if trade['direction'] == "BUY" else (exit_price < entry_price)
+                    res_status = "WIN" if win else "LOSS"
+                    icona = "✅" if win else "❌"
                     
-                    # Logica WIN/LOSS
-                    win_60 = (price_60 > entry_p) if direction == "BUY" else (price_60 < entry_p)
-                    win_75 = (price_75 > entry_p) if direction == "BUY" else (price_75 < entry_p)
+                    # Calcolo Profitto (Assumiamo payout 85%)
+                    stake_usato = trade.get('stake_num', float(st.session_state.stake))
+                    profit = (stake_usato * 0.85) if win else -stake_usato
                     
-                    res_60_str = "✅ WIN" if win_60 else "❌ LOSS"
-                    res_75_str = "✅" if win_75 else "❌"
-                    
-                    # Calcolo P&L (Basato sulla chiusura standard a 60s)
-                    stake_usato = float(trade.get('stake_num', 100.0))
-                    profit = (stake_usato * 0.85) if win_60 else -stake_usato
-                    
-                    # 1. Aggiorna Saldo Sessione
+                    # 1. Aggiornamento Saldo Locale
                     st.session_state.local_balance += profit
                     
-                    # 2. Aggiorna il Journal (Cerca per ID univoco)
-                    found = False
+                    # 2. Aggiornamento Storico (Journal)
                     for s in st.session_state.signal_history:
-                        if s.get('id') == t_id:
-                            s['result'] = res_60_str
-                            s['check_75s'] = res_75_str
-                            s['pnl_numeric'] = float(profit)
-                            found = True
-                            break
+                        if s.get('id') == trade['id']: 
+                            s['result'] = f"{icona} {res_status}"
+                            s['pnl_numeric'] = profit
                     
-                    # 3. Notifica Telegram
-                    icona = "💰" if win_60 else "💀"
-                    msg = (f"🏁 *TRADE CONCLUSO* {icona}\n"
-                           f"🆔 ID: `{t_id}`\n"
-                           f"📊 {pair} ({direction})\n"
-                           f"📉 Esito 60s: {res_60_str}\n"
-                           f"⏱️ Esito 75s: {res_75_str}\n"
-                           f"💵 P&L: `{profit:.2f} €` balance: `{st.session_state.local_balance:.2f}€` ")
-                    invia_telegram(msg)
+                    # 3. Notifiche Telegram e Suoni
+                    invia_telegram(f"🏁 *ESITO* {icona} {res_status}\n🆔 ID: `{trade['id']}`\n📊 Asset: {pair}\n💵 Profit: {profit:.2f}€")
+                    if win: 
+                        play_trade_sound("win")
                     
-                    if win_60: play_trade_sound("win")
+                    # 4. Rimoziome dalla lista dei trade attivi e salvataggio
+                    if pair in st.session_state.active_trades:
+                        del st.session_state.active_trades[pair]
                     
-                    trades_da_rimuovere.append(pair)
-    
-            except Exception as e:
-                st.error(f"Errore critico verifica {pair}: {e}")
-    
-    # Pulizia dei trade processati
-    if trades_da_rimuovere:
-        for p in trades_da_rimuovere:
-            if p in st.session_state.active_trades:
-                del st.session_state.active_trades[p]
-        
-        # Salva il file JSON in modo permanente
-        save_journal(st.session_state.signal_history)
-        st.rerun()
+                    save_journal(st.session_state.signal_history)
                     
-    st.divider()
+                    # Forza il refresh per aggiornare la tabella journal e i box statistici
+                    st.rerun()
 
-    # --- 7. TABELLA JOURNAL E FILTRI ---
+            except Exception as e:
+                # Gestisce eventuali errori di connessione durante la verifica
+                print(f"Errore verifica per {pair}: {e}")
+                continue
+
+    st.divider()
+                                
+    # --- 7. TABELLA JOURNAL E FILTRI DINAMICI ---
     st.subheader("📋 Trading Journal & Performance Hub")
     
+    # 1. Creiamo il DataFrame base: se è vuoto ne facciamo uno fittizio per non far sparire l'interfaccia
     if st.session_state.signal_history:
         df_journal = pd.DataFrame(st.session_state.signal_history)
-        
-        # FIX: Se stiamo caricando vecchi trade senza la colonna 75s, creiamola vuota
-        if 'check_75s' not in df_journal.columns:
-            df_journal['check_75s'] = "-"
     else:
         # Struttura vuota di base
         df_journal = pd.DataFrame(columns=['time', 'pair', 'dir', 'price', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'pnl_numeric'])
@@ -828,22 +802,14 @@ if st.session_state.connected:
         except Exception:
             pass 
 
-    # 4. Ricalcolo Statistiche Dinamiche (60s vs 75s)
+    # 4. Ricalcolo Statistiche Dinamiche
     total_trades = len(df_filtered)
     best_pairs_str = "" 
-    wins_60, losses_60 = 0, 0
-    wins_75, losses_75 = 0, 0
-    total_pnl = 0.0
+    wins, losses, total_pnl = 0, 0, 0.0
     
     if total_trades > 0:
-        # Conteggio Esiti 60s
-        wins_60 = df_filtered['result'].astype(str).str.contains("WIN").sum()
-        losses_60 = df_filtered['result'].astype(str).str.contains("LOSS").sum()
-        
-        # Conteggio Esiti 75s (cerchiamo le spunte verdi e le x rosse)
-        wins_75 = df_filtered['check_75s'].astype(str).str.contains("✅").sum()
-        losses_75 = df_filtered['check_75s'].astype(str).str.contains("❌").sum()
-        
+        wins = df_filtered['result'].astype(str).str.contains("WIN").sum()
+        losses = df_filtered['result'].astype(str).str.contains("LOSS").sum()
         total_pnl = df_filtered['pnl_numeric'].sum()
         
         profit_by_pair = df_filtered.groupby('pair')['pnl_numeric'].sum()
@@ -853,105 +819,51 @@ if st.session_state.connected:
                 best_pairs = profit_by_pair[profit_by_pair == max_profit].index.tolist()
                 best_pairs_str = ", ".join(best_pairs)
                 
-    # Calcolo Win Rate indipendenti
-    trades_conclusi_60 = wins_60 + losses_60
-    trades_conclusi_75 = wins_75 + losses_75
-    
-    win_rate_60 = (wins_60 / trades_conclusi_60 * 100) if trades_conclusi_60 > 0 else 0.0
-    win_rate_75 = (wins_75 / trades_conclusi_75 * 100) if trades_conclusi_75 > 0 else 0.0
+    win_rate = (wins / (wins + losses) * 100) if (wins + losses) > 0 else 0.0
 
-    # Differenza di Win Rate (misura la stabilità del segnale nel tempo)
-    diff_win_rate = win_rate_75 - win_rate_60
-
-    # 5. Mostriamo le Metriche aggiornate a confronto
+    # 5. Mostriamo le Metriche aggiornate (Sempre visibili!)
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("💰 Profitto", f"{total_pnl:.2f} €")
-    c2.metric("🎯 Win Rate (60s)", f"{win_rate_60:.1f}%", f"{wins_60}W - {losses_60}L", delta_color="off")
-    
-    # Mostriamo se ritardare l'ingresso migliora o peggiora le cose
-    c3.metric("⏱️ Win Rate (75s)", f"{win_rate_75:.1f}%", f"{diff_win_rate:+.1f}% vs 60s")
-    
+    c1.metric("💰 Profitto", f"{total_pnl:.2f} €", delta=f"{total_pnl:.2f} €")
+    c2.metric("🎯 Win/Loss", f"{wins}W - {losses}L", delta=f"Tot: {total_trades}")
+    c3.metric("🏁 Win Rate", f"{win_rate:.1f}%")
     c4.metric("🏆 Top Asset", best_pairs_str if best_pairs_str else "-")
-
-    # --- ANALISI DETTAGLIATA PER COPPIA (RITARDATARI VS VELOCI) ---
-    if total_trades >= 3:
-        with st.expander("🔍 Analisi Strategica: Quali coppie eliminare?"):
-            # Raggruppiamo i dati per coppia
-            stats_per_pair = []
-            for p in df_filtered['pair'].unique():
-                df_p = df_filtered[df_filtered['pair'] == p]
-                w60 = df_p['result'].astype(str).str.contains("WIN").sum()
-                w75 = df_p['check_75s'].astype(str).str.contains("✅").sum()
-                tot_p = len(df_p)
-                
-                wr60 = (w60 / tot_p * 100)
-                wr75 = (w75 / tot_p * 100)
-                diff = wr75 - wr60
-                
-                stats_per_pair.append({
-                    "Coppia": p,
-                    "Trades": tot_p,
-                    "WR 60s": f"{wr60:.1f}%",
-                    "WR 75s": f"{wr75:.1f}%",
-                    "Stabilità": "🟢 Alta" if abs(diff) < 5 else ("🟡 Media" if abs(diff) < 15 else "🔴 Critica")
-                })
-            
-            st.table(pd.DataFrame(stats_per_pair))
-            st.caption("💡 Se vedi 'Stabilità Critica' e il WR 75s è molto più basso, quella coppia richiede un'esecuzione istantanea.")
-
-    # Aggiungiamo un box di analisi automatica del ritardo
-    if trades_conclusi_60 >= 5: # Aspetta almeno 5 trade per dare un giudizio
-        if diff_win_rate <= -10:
-            st.error(f"⚡ **ALLERTA VELOCITÀ:** Se ritardi le entrate di 10-15s perdi in media il {abs(diff_win_rate):.1f}% di Win Rate. Devi essere un cecchino!")
-        elif diff_win_rate >= 10:
-            st.success(f"🐢 **NESSUNA FRETTA:** I trade a 75s vanno meglio del {diff_win_rate:.1f}%. Il trend continua dopo il segnale, hai margine per piazzare l'ordine con calma.")
-        else:
-            st.info(f"⚖️ **STABILITÀ ALTA:** La differenza tra entrare subito o con 10-15s di ritardo è irrilevante ({diff_win_rate:+.1f}%). Il segnale è solido.")
 
     if st.session_state.scanner_on:
             st.caption(f"🔄 Scanner attivo... Ultimo check: {now_roma.time().strftime('%H:%M:%S')}")
 
     # 6. Costruzione della Tabella (Visualizza i dati FILTRATI)
     if not df_filtered.empty:
-        # --- LOGICA VISUALIZZAZIONE TABELLA ---
         rename_map = {
             'time': '⏰ DATA', 'pair': '💱 COPPIA', 'dir': '🚀 TIPO',
-            'price': '💰 PRICE', 'stake': '💶 STAKE', 'params_bb': '↔️ BB',
+            'price': '💰 ENTRATA', 'stake': '💶 STAKE', 'params_bb': '↔️ BB',
             'params_rsi': '📉 RSI', 'mercato': '🌍 MERCATO', 
-            'result': '🔍 60s', 
-            'check_75s': '⏱️ 75s',  # Assicurati che il nome qui sia IDENTICO a quello usato sopra
-            'pnl_numeric': '📈 P&L'
+            'result': '🔍 ESITO', 'pnl_numeric': '📈 P&L'
         }
 
+        # Invertiamo per mostrare i più recenti in alto
         df_visual = df_filtered.iloc[::-1].copy()
         
-        # Lista colonne da mostrare (L'ORDINE CONTA!)
-        cols_to_keep = [
-            'time', 'pair', 'dir', 'price', 'stake', 
-            'params_bb', 'params_rsi', 'mercato', 
-            'result', 'check_75s', 'pnl_numeric'
-        ]
-        
+        cols_to_keep = ['time', 'pair', 'dir', 'price', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'pnl_numeric']
         cols_presenti = [c for c in cols_to_keep if c in df_visual.columns]
         df_display = df_visual[cols_presenti].rename(columns=rename_map)
 
-        st.dataframe(
-            df_display.style
-            .applymap(style_result, subset=['🔍 60s'] if '🔍 60s' in df_display.columns else [])
-            .applymap(style_pnl, subset=['📈 P&L'] if '📈 P&L' in df_display.columns else [])
-            .format({'💰 ENTRATA': "{:.5f}", '📈 P&L': "{:.2f} €"}, na_rep="-"),
-            use_container_width=True, hide_index=True
-        )
-
-        #except Exception:
-            #st.dataframe(df_display, use_container_width=True, hide_index=True)
+        try:
+            st.dataframe(
+                df_display.style
+                .applymap(style_result, subset=['🔍 ESITO'] if '🔍 ESITO' in df_display.columns else [])
+                .applymap(style_pnl, subset=['📈 P&L'] if '📈 P&L' in df_display.columns else [])
+                .format({'💰 ENTRATA': "{:.5f}", '📈 P&L': "{:.2f} €"}, na_rep="-"),
+                use_container_width=True, hide_index=True
+            )
+        except Exception:
+            st.dataframe(df_display, use_container_width=True, hide_index=True)
     else:
         # Mostra un bel messaggio invece di una tabella rotta se i filtri nascondono tutto o se non ci sono ancora trade
         if not st.session_state.signal_history:
              st.info("⏳ Avvia lo Scanner e attendi il primo segnale...")
         else:
              st.warning("🕵️ Nessun segnale corrisponde ai filtri selezionati.")
-    
+
     # --- 8. REFRESH LOOP ---
     if st.session_state.scanner_on:
         time_module.sleep(5) 
