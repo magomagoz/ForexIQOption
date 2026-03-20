@@ -252,8 +252,8 @@ with st.sidebar:
                         bal = get_deriv_balance(st.session_state.api_token)
                         if bal: st.session_state.local_balance = bal
                     st.rerun()
-                else:
-                    st.error("Risposta vuota da Deriv.")
+            else:
+                st.error("Risposta vuota da Deriv.")
     else:
         if st.button("🔴 DISCONNETTI", use_container_width=True):
             st.session_state.connected = False
