@@ -229,26 +229,34 @@ with st.sidebar:
     
     st.session_state.api_token = st.text_input("🔑 Token Deriv", value=st.session_state.api_token, type="password")
 
-    if not st.session_state.connected:
-        st.info("Connettiti per i dati live.")
-        if st.button("🔌 CONNETTI SISTEMA", use_container_width=True, type="primary"):
-            with st.spinner("Sincronizzazione WS..."):
-                test_data = get_deriv_candles("EURUSD", 60, 1)
-                if test_data:
+    if st.button("🔌 CONNETTI SISTEMA", use_container_width=True, type="primary"):
+        with st.spinner("Sincronizzazione WS..."):
+            try:
+                # Test connessione con timeout aumentato a 10s
+                ws_test = websocket.create_connection(f"wss://ws.binaryws.com/websockets/v3?app_id={DERIV_APP_ID}", timeout=10)
+                ws_test.send(json.dumps({
+                    "ticks_history": "frxEURUSD", 
+                    "end": "latest", 
+                    "count": 1, 
+                    "style": "candles", 
+                    "granularity": 60
+                }))
+                res = json.loads(ws_test.recv())
+                ws_test.close()
+
+                if "error" in res:
+                    st.error(f"❌ Deriv ha rifiutato: {res['error']['message']}")
+                elif "candles" in res:
                     st.session_state.connected = True
-                    # Tenta di prendere il saldo vero se c'è il token
                     if st.session_state.api_token:
                         bal = get_deriv_balance(st.session_state.api_token)
                         if bal: st.session_state.local_balance = bal
                     st.rerun()
                 else:
-                    st.error("Errore connessione a Deriv API.")
+                    st.error("Risposta vuota da Deriv.")
+            except Exception as e:
+                st.error(f"⚠️ Errore di Rete/WebSocket: {str(e)}")
 
-    else:
-        if st.button("🔴 DISCONNETTI", use_container_width=True):
-            st.session_state.connected = False
-            st.session_state.scanner_on = False
-            st.rerun()
 
         st.divider()
         st.subheader("👁️ SCANSIONE FOREX")
