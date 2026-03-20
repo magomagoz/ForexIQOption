@@ -507,6 +507,8 @@ if st.session_state.connected:
                         'params_rsi': params_rsi, # Usa la variabile corretta
                         'mercato': tipo_mercato,
                         'result': "⏳ In corso...",
+                        'check_75s': "-",      # <--- AGGIUNGI QUESTA RIGA
+                        'check_120s': "-",     # <--- AGGIUNGI QUESTA RIGA
                         'pnl_numeric': 0.0
                     })
                     
@@ -810,7 +812,7 @@ if st.session_state.connected:
 
     else:
         # Struttura vuota di base
-        df_journal = pd.DataFrame(columns=['id', 'time', 'pair', 'dir', 'price', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'pnl_numeric'])
+        df_journal = pd.DataFrame(columns=['id', 'time', 'pair', 'dir', 'price', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'check_75s', 'check_120s', 'pnl_numeric'])
 
     # Assicuriamoci che 'pnl_numeric' esista e sia un numero
     if 'pnl_numeric' not in df_journal.columns:
@@ -956,18 +958,21 @@ if st.session_state.connected:
         # Trasformiamo pnl_numeric in una stringa pulita "X€" o "-X€"
         # Usiamo una colonna temporanea per lo stile così non perdiamo il segno
         df_display['📈 P&L'] = df_display['📈 P&L'].apply(lambda x: f"{x:.1f}€" if x % 1 != 0 else f"{x:.0f}€")
-        
+
         try:
+            # Lista dinamica: formatta solo le colonne che esistono davvero in quel momento
+            colonne_esito = [c for c in ['🔍 ESITO 60s', '⏱️ 75s', '⏱️ 120s'] if c in df_display.columns]
+            
             st.dataframe(
                 df_display.style
-                .applymap(style_result, subset=['🔍 ESITO 60s', '⏱️ 75s', '⏱️ 120s']) # <--- Nome corretto qui!
+                .applymap(style_result, subset=colonne_esito) 
                 .applymap(style_pnl, subset=['📈 P&L']), 
                 use_container_width=True, hide_index=True
             )
         except Exception as e:
-            st.error(f"Errore visualizzazione tabella: {e}") # Ora ti dirà se sbagli un nome
+            st.error(f"Errore visualizzazione tabella: {e}") 
             st.dataframe(df_display, use_container_width=True, hide_index=True)
-
+        
     else:
         # Mostra un bel messaggio invece di una tabella rotta se i filtri nascondono tutto o se non ci sono ancora trade
         if not st.session_state.signal_history:
