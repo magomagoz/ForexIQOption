@@ -700,6 +700,7 @@ if st.session_state.connected:
     # --- 6. VERIFICA ESITI TRADE (60s vs 75s) ---
     current_ts = time_module.time() 
     trades_pendenti = list(st.session_state.active_trades.items())
+    trades_da_rimuovere = []
     
     for pair, trade in trades_pendenti:
         # Aspettiamo 80 secondi per avere margine sui 75s
@@ -739,23 +740,31 @@ if st.session_state.connected:
                             s['check_75s'] = res_75_str # Scriviamo il dato nel dizionario
                             s['pnl_numeric'] = profit
 
-                                                            
-                    # 3. Notifiche Telegram e Suoni
-                    invia_telegram(f"🏁 *ESITO* {icona} {res_status}\n🆔 ID: `{trade['id']}`\n📊 Asset: {pair}\n💵 Profit: {profit:.2f}€")
-                    if win: 
+                    # 3. Notifiche Telegram e Suoni (CORRETTO!)
+                    icona_telegram = "✅" if win_60 else "❌"
+                    status_telegram = "WIN" if win_60 else "LOSS"
+                    
+                    invia_telegram(f"🏁 *ESITO* {icona_telegram} {status_telegram}\n🆔 ID: `{trade['id']}`\n📊 Asset: {pair}\n💵 Profit: {profit:.2f}€")
+                    if win_60: 
                         play_trade_sound("win")
 
-                    if pair in st.session_state.active_trades:
-                        del st.session_state.active_trades[pair]
-                    
-                    save_journal(st.session_state.signal_history)
-                    st.rerun()
+                    # Segniamo il trade come completato
+                    trades_da_rimuovere.append(pair)
+
             except Exception as e:
                 print(f"Errore verifica {pair}: {e}")
                 continue
+
+    # Pulizia e salvataggio DOPO aver controllato tutti i trade
+    if trades_da_rimuovere:
+        for p in trades_da_rimuovere:
+            if p in st.session_state.active_trades:
+                del st.session_state.active_trades[p]
+        
+        save_journal(st.session_state.signal_history)
+        st.rerun() # Forza l'aggiornamento dell'interfaccia solo quando necessario
                     
     st.divider()
-
 
     # --- 7. TABELLA JOURNAL E FILTRI ---
     st.subheader("📋 Trading Journal & Performance Hub")
