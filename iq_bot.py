@@ -969,7 +969,7 @@ if st.session_state.connected:
                 df_display.style
                 .applymap(style_result, subset=['🔍 60s', '⏱️ 75s', '⏱️ 120s']) # Aggiunto 120s qui
                 .applymap(style_pnl, subset=['📈 P&L']), # Qui viene applicato il Bold e il Colore
-                .format({'💰 ENTRATA': "{:.5f}", '📈 P&L': "{:.2f} €"}, na_rep="-"),
+                #.format({'💰 ENTRATA': "{:.5f}", '📈 P&L': "{:.2f} €"}, na_rep="-"),
                 use_container_width=True, hide_index=True
             )
 
