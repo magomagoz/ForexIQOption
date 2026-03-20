@@ -76,6 +76,15 @@ def get_deriv_candles(pair, timeframe_sec, count):
         print(f"Errore Deriv WebSocket per {pair}: {e}")
         return None
 
+def check_consecutive_candles(df, count=3):
+    """Ritorna True se le ultime 'count' candele sono dello stesso segno"""
+    if len(df) < count: return False
+    last_candles = df.tail(count)
+    # Calcoliamo se sono tutte verdi o tutte rosse
+    all_green = all(last_candles['close'] > last_candles['open'])
+    all_red = all(last_candles['close'] < last_candles['open'])
+    return all_green or all_red
+
 def genera_trade_id():
     return f"TRD-{int(datetime.now().timestamp()) % 1000000}"
 
@@ -463,9 +472,13 @@ if st.session_state.connected:
                 cond_rsi_sell = (curr_rsi > r_sell) if use_rsi else True
                 cond_bb_sell = (price >= curr_bb_up) if use_bb else True
 
-                is_buy = (cond_rsi_buy and cond_bb_buy) and (use_rsi or use_bb)
-                is_sell = (cond_rsi_sell and cond_bb_sell) and (use_rsi or use_bb)
-
+                
+                # --- DENTRO IL LOOP 'for pair in ALL_PAIRS:' ---
+                is_consecutive = check_consecutive_candles(df, count=3)
+                
+                is_buy = (cond_rsi_buy and cond_bb_buy) and (use_rsi or use_bb) and not is_consecutive
+                is_sell = (cond_rsi_sell and cond_bb_sell) and (use_rsi or use_bb) and not is_consecutive
+                
                 if (is_buy or is_sell) and pair not in st.session_state.active_trades:
                     direction = "BUY" if is_buy else "SELL"
                     t_id = genera_trade_id()
@@ -908,7 +921,7 @@ if st.session_state.connected:
                     "Stabilità": "🟢 Alta" if abs(diff) < 5 else ("🟡 Media" if abs(diff) < 15 else "🔴 Critica")
                 })
             
-            st.table(pd.DataFrame(stats_per_pair))
+            st.dataframe(pd.DataFrame(stats_per_pair), hide_index=True, use_container_width=True)
             st.caption("💡 Se vedi 'Stabilità Critica' e il WR 75s è molto più basso, quella coppia richiede un'esecuzione istantanea.")
 
     # Aggiungiamo un box di analisi automatica del ritardo
@@ -922,6 +935,14 @@ if st.session_state.connected:
     
     if st.session_state.scanner_on:
             st.caption(f"🔄 Scanner attivo... Ultimo check: {now_roma.time().strftime('%H:%M:%S')}")
+
+    st.dataframe(
+        df_display.style
+        .applymap(style_result, subset=['🔍 60s', '⏱️ 75s', '⏱️ 120s'])
+        .applymap(style_pnl, subset=['📈 P&L']), # Qui viene applicato il Bold e il Colore
+        use_container_width=True, 
+        hide_index=True
+    )    
 
     # 6. Costruzione della Tabella (Visualizza i dati FILTRATI)
     if not df_filtered.empty:
@@ -938,13 +959,18 @@ if st.session_state.connected:
         cols_to_keep = ['id', 'time', 'pair', 'dir', 'price', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'check_75s', 'check_120s', 'pnl_numeric']
         cols_presenti = [c for c in cols_to_keep if c in df_visual.columns]
         df_display = df_visual[cols_presenti].rename(columns=rename_map)
+
+        # Trasformiamo pnl_numeric in una stringa pulita "X€" o "-X€"
+        # Usiamo una colonna temporanea per lo stile così non perdiamo il segno
+        df_display['📈 P&L'] = df_display['📈 P&L'].apply(lambda x: f"{x:.1f}€" if x % 1 != 0 else f"{x:.0f}€")
         
         try:
             st.dataframe(
                 df_display.style
                 .applymap(style_result, subset=['🔍 60s', '⏱️ 75s', '⏱️ 120s']) # Aggiunto 120s qui
                 #.applymap(style_result, subset=['🔍 ESITO'] if '🔍 ESITO' in df_display.columns else [])
-                .applymap(style_pnl, subset=['📈 P&L'] if '📈 P&L' in df_display.columns else [])
+                .applymap(style_pnl, subset=['📈 P&L']), # Qui viene applicato il Bold e il Colore
+                #.applymap(style_pnl, subset=['📈 P&L'] if '📈 P&L' in df_display.columns else [])
                 .format({'💰 ENTRATA': "{:.5f}", '📈 P&L': "{:.2f} €"}, na_rep="-"),
                 use_container_width=True, hide_index=True
             )
