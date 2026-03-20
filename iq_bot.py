@@ -363,7 +363,7 @@ with st.sidebar:
             st.download_button(
                 label="📥 ESPORTA STORICO (CSV)",
                 data=csv_data,
-                file_name=f"sentinel_history_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+                file_name=f"sentinel_history_{now_roma.time().strftime('%d%m%Y_%H%M')}.csv",
                 mime="text/csv",
                 use_container_width=True
             )
