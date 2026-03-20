@@ -253,11 +253,11 @@ with st.sidebar:
                         if bal: st.session_state.local_balance = bal
                     st.rerun()
 
-    else:
-        if st.button("🔴 DISCONNETTI", use_container_width=True):
-            st.session_state.connected = False
-            st.session_state.scanner_on = False
-            st.rerun()
+        else:
+            if st.button("🔴 DISCONNETTI", use_container_width=True):
+                st.session_state.connected = False
+                st.session_state.scanner_on = False
+                st.rerun()
 
 
         st.divider()
