@@ -841,15 +841,17 @@ if st.session_state.connected:
     total_trades = len(df_filtered)
     best_pairs_str = "" 
     wins, losses, total_pnl = 0, 0, 0.0
-    wins_75, losses_75 =0, 0
+    wins_75, losses_75 = 0, 0
+    wins_120, losses_120 = 0, 0
     
     if total_trades > 0:
         wins = df_filtered['result'].astype(str).str.contains("WIN").sum()
         losses = df_filtered['result'].astype(str).str.contains("LOSS").sum()
         wins_75 = df_filtered['check_75s'].astype(str).str.contains("✅").sum()
         losses_75 = df_filtered['check_75s'].astype(str).str.contains("❌").sum()
-        
-        
+        wins_120 = df_filtered['check_120s'].astype(str).str.contains("✅").sum()
+        losses_120 = df_filtered['check_120s'].astype(str).str.contains("❌").sum()
+                
         total_pnl = df_filtered['pnl_numeric'].sum()
         
         profit_by_pair = df_filtered.groupby('pair')['pnl_numeric'].sum()
@@ -861,19 +863,23 @@ if st.session_state.connected:
 
     trades_conclusi = wins + losses
     trades_conclusi_75 = wins_75 + losses_75
+    trades_conclusi_120 = wins_120 + losses_120
 
     win_rate = (wins / (wins + losses) * 100) if (wins + losses) > 0 else 0.0
     win_rate_75 = (wins_75 / (wins_75 + losses_75) * 100) if (wins_75 + losses_75) > 0 else 0.0
+    win_rate_120 = (wins_120 / (wins_120 + losses_120) * 100) if (wins_120 + losses_120) > 0 else 0.0
 
     diff_win_rate = win_rate_75 - win_rate
+    diff_win_rate_120 = win_rate_120 - win_rate
     
     # 5. Mostriamo le Metriche aggiornate (Sempre visibili!)
-    c1, c2, c3, c4, c5 = st.columns(5)
+    c1, c2, c3, c4, c5, c6 = st.columns(6)
     c1.metric("💰 Profitto", f"{total_pnl:.2f} €", delta=f"{total_pnl:.2f} €")
     c2.metric("🎯 Win/Loss", f"{wins}W - {losses}L", delta=f"Totali: {total_trades}")
     c3.metric("🏁 Win Rate 60s", f"{win_rate:.1f}%")
     c4.metric("🏁 Win Rate 75s", f"{win_rate_75:.1f}%")
-    c5.metric("🏆 Top Asset", best_pairs_str if best_pairs_str else "-")
+    c5.metric("🏁 Win Rate 120s", f"{win_rate_120:.1f}%")
+    c6.metric("🏆 Top Asset", best_pairs_str if best_pairs_str else "-")
 
     # --- ANALISI DETTAGLIATA PER COPPIA (RITARDATARI VS VELOCI) ---
     if total_trades >= 3:
@@ -889,12 +895,15 @@ if st.session_state.connected:
                 win_rate = (wins / tot_p * 100)
                 win_rate_75 = (wins_75 / tot_p * 100)
                 diff = win_rate_75 - win_rate
+                win_rate_120 = (wins_120 / tot_p * 100)
+                diff_120 = win_rate_120 - win_rate
                 
                 stats_per_pair.append({
                     "Coppia": p,
                     "Trades": tot_p,
                     "WR 60s": f"{win_rate:.1f}%",
                     "WR 75s": f"{win_rate_75:.1f}%",
+                    "WR 120s": f"{win_rate_120:.1f}%",
                     "Stabilità": "🟢 Alta" if abs(diff) < 5 else ("🟡 Media" if abs(diff) < 15 else "🔴 Critica")
                 })
             
