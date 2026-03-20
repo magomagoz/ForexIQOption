@@ -310,7 +310,10 @@ with st.sidebar:
         #st.metric(label=f"💰 SALDO DEMO", value=f"{st.session_state.local_balance:.2f} €")
         st.session_state.stake = st.number_input("💶 INVESTIMENTO (€)", value=10.0)
         timeframe = st.selectbox("⏱️ TIMEFRAME (s)", [60, 75, 120], index=0)
-                
+
+        if timeframe == 120:
+            st.caption("🚀 **Analisi 2 Minuti:** Ideale per confermare l'inversione su BB 2.2")
+
         st.divider()
         stress_test = st.toggle("🚀 **STRESS MODE**", value=False)
         if stress_test:
@@ -704,14 +707,15 @@ if st.session_state.connected:
 
     for pair, trade in trades_pendenti:
         # Calcoliamo quando deve scadere il trade (Entrata + Timeframe + 5 secondi di sicurezza)
-        scadenza = trade['entry_time'] + timeframe + 5
+        scadenza = trade['entry_time'] + timeframe + 125
         
         if current_ts >= scadenza:
             try:
                 # Recuperiamo le candele recenti per verificare il prezzo di chiusura
-                res = get_deriv_candles(pair, timeframe, 2)
-                if res and len(res) > 0:
-                    exit_price = res[-1]['close']
+                res = get_deriv_candles(pair, timeframe, 3)
+                if res and len(res) > 3:
+                    exit_price = res[-2]['close']
+                    exit_price_120 = res[-1]['close']
                     entry_price = trade['entry_price']
                     price_75 = float(res[-2]['close'])
                     
@@ -722,10 +726,12 @@ if st.session_state.connected:
                     # Logica Win/Loss
                     win = (exit_price > entry_price) if dir_trade == "BUY" else (exit_price < entry_price)
                     win_75 = (price_75 > entry_price) if dir_trade == "BUY" else (price_75 < entry_price)
+                    win_120 = (exit_price_120 > entry_price) if dir_trade == "BUY" else (exit_price_120 < entry_price)
 
                     res_status = "WIN" if win else "LOSS"
                     icona_esito = "✅" if win else "❌"
                     res_75_str = "✅" if win_75 else "❌"
+                    res_120_str = "✅" if win_120 else "❌"
  
                     # Calcolo Profitto (Assumiamo payout 85%)
                     stake_usato = trade.get('stake_num', float(st.session_state.stake))
@@ -739,6 +745,7 @@ if st.session_state.connected:
                         if s.get('id') == t_id: 
                             s['result'] = f"{icona_esito} {res_status}"
                             s['check_75s'] = res_75_str
+                            s['check_120s'] = res_120_str
                             s['pnl_numeric'] = float(profit)
                             break
 
@@ -781,6 +788,11 @@ if st.session_state.connected:
         # FIX: Se stiamo caricando vecchi trade senza la colonna 75s, creiamola vuota
         if 'check_75s' not in df_journal.columns:
             df_journal['check_75s'] = "-"    
+
+        # FIX: Se stiamo caricando vecchi trade senza la colonna 120s, creiamola vuota
+        if 'check_120s' not in df_journal.columns:
+            df_journal['check_120s'] = "-"    
+
     else:
         # Struttura vuota di base
         df_journal = pd.DataFrame(columns=['id', 'time', 'pair', 'dir', 'price', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'pnl_numeric'])
@@ -907,20 +919,21 @@ if st.session_state.connected:
             'id': '🆔 ID', 'time': '⏰ DATA', 'pair': '💱 VALUTE', 'dir': '🚀 TIPO',
             'price': '💰 PRICE', 'stake': '💶 STAKE', 'params_bb': '↔️ BB',
             'params_rsi': '📉 RSI', 'mercato': '🌍 MERCATO', 
-            'result': '🔍 ESITO 60s', 'check_75s': '⏱️ 75s', 'pnl_numeric': '📈 P&L'
+            'result': '🔍 ESITO 60s', 'check_75s': '⏱️ 75s', 'check_120s': '⏱️ 120s', 'pnl_numeric': '📈 P&L'
         }
 
         # Invertiamo per mostrare i più recenti in alto
         df_visual = df_filtered.iloc[::-1].copy()
         
-        cols_to_keep = ['id', 'time', 'pair', 'dir', 'price', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'check_75s', 'pnl_numeric']
+        cols_to_keep = ['id', 'time', 'pair', 'dir', 'price', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'check_75s', 'check_120s', 'pnl_numeric']
         cols_presenti = [c for c in cols_to_keep if c in df_visual.columns]
         df_display = df_visual[cols_presenti].rename(columns=rename_map)
-
+        
         try:
             st.dataframe(
                 df_display.style
-                .applymap(style_result, subset=['🔍 ESITO'] if '🔍 ESITO' in df_display.columns else [])
+                .applymap(style_result, subset=['🔍 60s', '⏱️ 75s', '⏱️ 120s']) # Aggiunto 120s qui
+                #.applymap(style_result, subset=['🔍 ESITO'] if '🔍 ESITO' in df_display.columns else [])
                 .applymap(style_pnl, subset=['📈 P&L'] if '📈 P&L' in df_display.columns else [])
                 .format({'💰 ENTRATA': "{:.5f}", '📈 P&L': "{:.2f} €"}, na_rep="-"),
                 use_container_width=True, hide_index=True
