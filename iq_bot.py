@@ -907,9 +907,9 @@ if st.session_state.connected:
         # --- LOGICA VISUALIZZAZIONE TABELLA ---
         rename_map = {
             'time': '⏰ DATA', 'pair': '💱 COPPIA', 'dir': '🚀 TIPO',
-            'price': '💰 ENTRATA', 'stake': '💶 STAKE', 'params_bb': '↔️ BB',
+            'price': '💰 PRICE', 'stake': '💶 STAKE', 'params_bb': '↔️ BB',
             'params_rsi': '📉 RSI', 'mercato': '🌍 MERCATO', 
-            'result': '🔍 ESITO 60s', 
+            'result': '🔍 60s', 
             'check_75s': '⏱️ 75s',  # Assicurati che il nome qui sia IDENTICO a quello usato sopra
             'pnl_numeric': '📈 P&L'
         }
@@ -928,7 +928,7 @@ if st.session_state.connected:
 
         st.dataframe(
             df_display.style
-            .applymap(style_result, subset=['🔍 ESITO 60s'] if '🔍 ESITO 60s' in df_display.columns else [])
+            .applymap(style_result, subset=['🔍 60s'] if '🔍 60s' in df_display.columns else [])
             .applymap(style_pnl, subset=['📈 P&L'] if '📈 P&L' in df_display.columns else [])
             .format({'💰 ENTRATA': "{:.5f}", '📈 P&L': "{:.2f} €"}, na_rep="-"),
             use_container_width=True, hide_index=True
