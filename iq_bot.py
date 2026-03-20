@@ -309,7 +309,7 @@ with st.sidebar:
         st.subheader("🛠️ PARAMETRI TRADING")
         #st.metric(label=f"💰 SALDO DEMO", value=f"{st.session_state.local_balance:.2f} €")
         st.session_state.stake = st.number_input("💶 INVESTIMENTO (€)", value=10.0)
-        timeframe = st.selectbox("⏱️ TIMEFRAME (s)", [60, 75, 120], index=0)
+        timeframe = st.selectbox("⏱️ TIMEFRAME (s)", [60, 120], index=0)
 
         if timeframe == 120:
             st.caption("🚀 **Analisi 2 Minuti:** Ideale per confermare l'inversione su BB 2.2")
