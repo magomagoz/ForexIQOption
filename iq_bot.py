@@ -712,8 +712,8 @@ if st.session_state.connected:
         if current_ts >= scadenza:
             try:
                 # Recuperiamo le candele recenti per verificare il prezzo di chiusura
-                res = get_deriv_candles(pair, timeframe, 3)
-                if res and len(res) > 3:
+                res = get_deriv_candles(pair, timeframe, 2)
+                if res and len(res) > 0:
                     exit_price = res[-2]['close']
                     exit_price_120 = res[-1]['close']
                     entry_price = trade['entry_price']
