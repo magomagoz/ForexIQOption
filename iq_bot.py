@@ -936,14 +936,6 @@ if st.session_state.connected:
     if st.session_state.scanner_on:
             st.caption(f"🔄 Scanner attivo... Ultimo check: {now_roma.time().strftime('%H:%M:%S')}")
 
-    st.dataframe(
-        df_display.style
-        .applymap(style_result, subset=['🔍 60s', '⏱️ 75s', '⏱️ 120s'])
-        .applymap(style_pnl, subset=['📈 P&L']), # Qui viene applicato il Bold e il Colore
-        use_container_width=True, 
-        hide_index=True
-    )    
-
     # 6. Costruzione della Tabella (Visualizza i dati FILTRATI)
     if not df_filtered.empty:
         rename_map = {
@@ -968,13 +960,11 @@ if st.session_state.connected:
             st.dataframe(
                 df_display.style
                 .applymap(style_result, subset=['🔍 60s', '⏱️ 75s', '⏱️ 120s']) # Aggiunto 120s qui
-                .applymap(style_pnl, subset=['📈 P&L']), # Qui viene applicato il Bold e il Colore
-                #.format({'💰 ENTRATA': "{:.5f}", '📈 P&L': "{:.2f} €"}, na_rep="-"),
+                #.applymap(style_result, subset=['🔍 ESITO'] if '🔍 ESITO' in df_display.columns else [])
+                .applymap(style_pnl, subset=['📈 P&L'] if '📈 P&L' in df_display.columns else [])
+                .format({'💰 ENTRATA': "{:.5f}", '📈 P&L': "{:.2f} €"}, na_rep="-"),
                 use_container_width=True, hide_index=True
             )
-
-                #.applymap(style_result, subset=['🔍 ESITO'] if '🔍 ESITO' in df_display.columns else [])
-                #.applymap(style_pnl, subset=['📈 P&L'] if '📈 P&L' in df_display.columns else [])
 
         except Exception:
             st.dataframe(df_display, use_container_width=True, hide_index=True)
