@@ -27,37 +27,13 @@ now_cet = now_roma.time()
 ora_attuale = now_roma.hour
 
 def to_deriv_symbol(pair):
-    # Mapping per il weekend o mercati chiusi
-    # Questi simboli Deriv funzionano SEMPRE (24/7)
-    otc_mapping = {
-        "EURUSD": "R_10",    # Volatility 10 Index
-        "USDJPY": "R_25",    # Volatility 25 Index
-        "GBPUSD": "R_50",    # Volatility 50 Index
-        "AUDUSD": "R_75",    # Volatility 75 Index
-        "EURJPY": "R_100",   # Volatility 100 Index
-        "USDCAD": "1HZ10V",  # Volatility 10 (1s) Index
-        "USDCHF": "1HZ25V",  # Volatility 25 (1s) Index
-    }
-    
-    # Se è sabato o domenica, forziamo l'uso dei sintetici
+    # Mapping ristretto a R_10 e R_25 per massima stabilità
     if is_weekend_reale:
-        return otc_mapping.get(pair, "R_10")
+        # Recupera la scelta dalla session_state (impostata nella sidebar)
+        vol_level = st.session_state.get('otc_config', {}).get(pair, "10")
+        return f"R_{vol_level}"
     
-    # In settimana usa il Forex reale
-    return f"frx{pair}"
-
-
-def to_deriv_symbol(pair):
-    # Se è weekend, Deriv non accetta frxEURUSD. 
-    # Usiamo i Volatility Indices che sono i veri OTC di Deriv sempre attivi.
-    otc_mapping = {
-        "EURUSD": "1HZ10V", # Esempio: Volatility 10
-        "USDJPY": "1HZ25V", # Esempio: Volatility 25
-        "GBPUSD": "1HZ50V",
-        "EURGBP": "
-    }
-    if is_weekend_reale:
-        return otc_mapping.get(pair, "1HZ10V") 
+    # Durante la settimana usa il Forex reale
     return f"frx{pair}"
 
 # --- NUOVA FUNZIONE IBRIDA (DERIV + YAHOO) ---
@@ -303,24 +279,41 @@ with st.sidebar:
 
         if st.session_state.weekend_mode:
             st.divider()
-            st.subheader("🎯 CONFIGURAZIONE OTC")
-            st.info("Assegna un Indice di Volatilità a ogni coppia:")
+            st.subheader("🎯 SETTAGGIO STRATEGIA OTC")
             
-            # Inizializza il dizionario delle preferenze se non esiste
+            # Selezione rapida della configurazione
+            scelta_config = st.radio(
+                "Seleziona Setup Operativo:",
+                ["Configurazione 1 (BB 2.0)", "Configurazione 2 (BB 2.2)"],
+                index=1, # Default sulla più sicura (2.2)
+                help="C1: Più aggressiva | C2: Più conservativa (Sniper)"
+            )
+        
+            # Definiamo le variabili globali per la sessione di scansione
+            if scelta_config == "Configurazione 1 (BB 2.0)":
+                bb_std_otc = 2.0
+            else:
+                bb_std_otc = 2.2
+            
+            # RSI fisso a 20/80 come da tua richiesta
+            rsi_buy_otc, rsi_sell_otc = 20, 80
+        
+            st.divider()
+            st.subheader("💱 ASSET & VOLATILITÀ")
+            
             if 'otc_config' not in st.session_state:
                 st.session_state.otc_config = {pair: "10" for pair in ALL_PAIRS}
         
-            # Crea la lista con i menu a tendina
+            # Griglia per selezionare la velocità dell'indice per ogni coppia
             for pair in ALL_PAIRS:
                 col_p, col_v = st.columns([2, 1])
                 with col_p:
                     st.markdown(f"**{pair}**")
                 with col_v:
-                    # Menu a tendina per scegliere la volatilità
                     vol_choice = st.selectbox(
-                        f"Vol", ["10", "25", "50", "75", "100"], 
+                        "Vol", ["10", "25"], 
                         key=f"vol_{pair}", 
-                        index=["10", "25", "50", "75", "100"].index(st.session_state.otc_config.get(pair, "10")),
+                        index=0 if st.session_state.otc_config.get(pair) == "10" else 1,
                         label_visibility="collapsed"
                     )
                     st.session_state.otc_config[pair] = vol_choice
@@ -429,6 +422,7 @@ if st.session_state.connected:
                 esegui_scansione = True
 
         for pair in ALL_PAIRS:
+
             try:
                 # Estrai in modo sicuro le variabili dalla funzione ibrida
                 candles, source = get_candles(pair, timeframe, 100) 
@@ -436,14 +430,26 @@ if st.session_state.connected:
                 
                 df = pd.DataFrame(candles)
                 
-                # Sostituzione dinamica in base alla modalità
-                r_buy, r_sell = (20, 80) if st.session_state.weekend_mode and not stress_test else (custom_rsi_buy, custom_rsi_sell)
-                b_per, b_std = (20, 2.20) if st.session_state.weekend_mode and not stress_test else (bb_period, bb_std)
+                # --- LOGICA OTTIMIZZATA PUNTO 3 ---
+                if st.session_state.weekend_mode and not stress_test:
+                    # Parametri basati sulla scelta nella Sidebar (Config 1 o Config 2)
+                    r_buy, r_sell = 20, 80
+                    b_per = 20
+                    b_std = bb_std_otc  # Questa variabile arriva dalla selezione radio nella sidebar
+                elif stress_test:
+                    r_buy, r_sell = 45, 55
+                    b_per, b_std = 20, 2.20
+                else:
+                    # Parametri Mercato LIVE (Lun-Ven)
+                    r_buy, r_sell = custom_rsi_buy, custom_rsi_sell
+                    b_per, b_std = bb_period, bb_std
 
+                # Calcolo effettivo degli indicatori
                 df['RSI'] = ta.rsi(df['close'], length=7)
                 bb = ta.bbands(df['close'], length=b_per, std=b_std)
-                if bb is None or bb.empty: continue
+                # ----------------------------------
 
+                if bb is None or bb.empty: continue
                 price, curr_rsi = df['close'].iloc[-1], df['RSI'].iloc[-1]
                 curr_bb_low = float(bb.filter(like='BBL').iloc[-1].iloc[0])
                 curr_bb_up = float(bb.filter(like='BBU').iloc[-1].iloc[0])
