@@ -311,7 +311,7 @@ with st.sidebar:
             for pair in ALL_PAIRS:
                 col_p, col_v = st.columns([1, 1])
                 with col_p:
-                    st.markdown(f"**{icon} {pair}**")
+                    st.markdown(f"💱 **{pair}**")
                 with col_v:
                     vol_choice = st.selectbox(
                         "Vol", ["10", "25"], 
