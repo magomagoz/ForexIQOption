@@ -62,32 +62,6 @@ def get_candles(pair, timeframe_sec, count):
             return candles, "DERIV 🟢"
     except:
         pass # Se fallisce Deriv, proseguiamo verso Yahoo
-
-    # 2. TENTATIVO YAHOO FINANCE (FALLBACK)
-    try:
-        # Mappatura simboli e intervalli
-        yahoo_symbol = f"{pair}=X"
-        # Yahoo accetta 1m, 2m, 5m, 15m...
-        interval = "1m" if timeframe_sec <= 60 else "2m"
-        
-        data = yf.download(tickers=yahoo_symbol, period="1d", interval=interval, progress=False)
-        
-        if not data.empty:
-            data = data.tail(count)
-            candles = []
-            for index, row in data.iterrows():
-                # Convertiamo l'indice (Datetime) nel fuso di Roma
-                dt = index.astimezone(fuso_roma)
-                candles.append({
-                    'time': dt.strftime("%H:%M:%S"),
-                    'open': float(row['Open']),
-                    'max': float(row['High']),
-                    'min': float(row['Low']),
-                    'close': float(row['Close'])
-                })
-            return candles, "YAHOO FINANCE 🔵 (Fallback)"
-    except Exception as e:
-        print(f"Errore critico: {e}")
     
     return None, "DISCONNESSO 🔴"
 
@@ -260,7 +234,7 @@ if 'api_token' not in st.session_state: st.session_state.api_token = DERIV_TOKEN
 
 # --- 3. SIDEBAR ---
 with st.sidebar:
-    st.title("⚙️ MULTI-BRIDGE SYSTEM")
+    st.title("⚙️ AI TRADING")
     
     if not st.session_state.connected:
         if st.button("🔌 CONNETTI SISTEMA", use_container_width=True, type="primary"):
