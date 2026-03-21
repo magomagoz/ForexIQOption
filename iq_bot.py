@@ -488,6 +488,7 @@ if st.session_state.connected:
                 if not candles: continue
                 
                 df = pd.DataFrame(candles)
+                
                 df['RSI'] = ta.rsi(df['close'], length=7)
                 price, curr_rsi = df['close'].iloc[-1], df['RSI'].iloc[-1]
 
@@ -550,26 +551,22 @@ if st.session_state.connected:
 
             except Exception as e:
                 continue
-    
+
     # --- 5. ANALISI TECNICA GRAFICA (CORRETTA) ---
     st.divider()
     st.subheader("📈 Analisi Tecnica")
     pair_display = st.selectbox("Seleziona asset per grafico", ALL_PAIRS)
 
-    
-            # [Codice Plotly per le candele...]
-    
     try:
         # LOGICA COERENTE CON L'OVERRIDE (Niente 'token' passato alla funzione)
         if st.session_state.weekend_mode and pair_display in st.session_state.get('manual_prices', {}) and st.session_state.manual_prices[pair_display] > 0:
             candles_ta, src_ta = get_candles(pair_display, timeframe, 160)
 
-            #candles_ta = get_deriv_candles(pair_display, timeframe, 160)
-            
             if candles_ta:
                 candles_ta[-1]['close'] = st.session_state.manual_prices[pair_display]
         else:
-            candles_ta = get_candles(pair_display, timeframe, 160)
+            # Metti questo:
+            candles_ta, src_ta = get_candles(pair_display, timeframe, 160)
 
         if candles_ta:
             st.caption(f"Dati forniti da: {src_ta}")
