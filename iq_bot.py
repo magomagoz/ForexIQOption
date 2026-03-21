@@ -30,11 +30,11 @@ now_cet = now_roma.time()
 ora_attuale = now_roma.hour
 
 def to_deriv_symbol(pair):
-    # Mapping ristretto a R_10 e R_25 per massima stabilità
+    # Mapping Fisso per il Weekend OTC
     if is_weekend_reale:
-        # Recupera la scelta dalla session_state (impostata nella sidebar)
-        vol_level = st.session_state.get('otc_config', {}).get(pair, "10")
-        return f"R_{vol_level}"
+        if pair == "EURUSD": return "R_10"
+        if pair == "USDJPY": return "R_25"
+        return "R_10" # Sicurezza
     
     # Durante la settimana usa il Forex reale
     return f"frx{pair}"
@@ -157,13 +157,13 @@ def invia_telegram(messaggio):
     except Exception:
         pass
 
-def send_telegram_signal(signal_type, pair, price, rsi, trade_id, stake): 
+def send_telegram_signal(signal_type, pair, price, rsi, trade_id, stake, tipo_mercato="OTC"): 
     timestamp = datetime.now(fuso_roma).strftime("%H:%M:%S")
     message = (
         f"🚀 *NUOVO TRADE*\n"
         f"🔔 *Segnale:* {signal_type}\n"
         f"🆔 ID: `{trade_id}`\n"
-        f"🌍 Market: {mercato}\n"
+        f"🌍 Market: {tipo_mercato}\n"
         f"📊 Asset: {pair}\n"
         f"💵 Stake: `{stake:.0f} €` \n" 
         f"💰 Prezzo: `{price:.5f}`\n"
@@ -171,6 +171,7 @@ def send_telegram_signal(signal_type, pair, price, rsi, trade_id, stake):
         f"⏰ Ora: {timestamp}"
     )
     invia_telegram(message)
+
 
 JOURNAL_FILE = "trading_journal.json"
 
@@ -264,62 +265,10 @@ with st.sidebar:
         st.subheader("💸 **MERCATO LIVE/OTC**")
         
         if st.session_state.weekend_mode:
-            st.warning("🚨 **MERCATO OTC (Sab-Dom)**")
-            use_bb, use_rsi = True, True
-            bb_period, bb_std = 20, 2.20
-            custom_rsi_buy, custom_rsi_sell = 20, 80
-        else:
-            st.success("🟢 **MERCATO LIVE (Lun-Ven)**")
-            col_t1, col_t2 = st.columns(2)
-            use_bb = col_t1.toggle("**BB**", value=True)
-            use_rsi = col_t2.toggle("**RSI**", value=True)
-            c_bb1, c_rsi1 = st.columns(2)
-            bb_period = c_bb1.selectbox("Periodo BB", [14, 20], index = 1)
-            custom_rsi_buy = c_rsi1.selectbox("RSI Buy", [30, 25, 20, 15], index = 2)
-            c_bb2, c_rsi2 = st.columns(2)
-            bb_std = c_bb2.selectbox("Dev BB", [2.00, 2.20, 2.50, 2.70], index = 0)
-            custom_rsi_sell = c_rsi2.selectbox("RSI Sell", [70, 75, 80, 85], index = 2)
-
-        if st.session_state.weekend_mode:
             st.divider()
-            st.subheader("🎯 SETTAGGIO STRATEGIA OTC")
-            
-            # Selezione rapida della configurazione
-            scelta_config = st.radio(
-                "Seleziona Setup Operativo:",
-                ["Configurazione 1 (BB 2.0)", "Configurazione 2 (BB 2.2)"],
-                index=1, # Default sulla più sicura (2.2)
-                help="C1: Più aggressiva | C2: Più conservativa (Sniper)"
-            )
-        
-            # Definiamo le variabili globali per la sessione di scansione
-            if scelta_config == "Configurazione 1 (BB 2.0)":
-                bb_std_otc = 2.0
-            else:
-                bb_std_otc = 2.2
-            
-            # RSI fisso a 20/80 come da tua richiesta
-            rsi_buy_otc, rsi_sell_otc = 20, 80
-        
-            st.divider()
-            st.subheader("💱 ASSET & VOLATILITÀ")
-            
-            if 'otc_config' not in st.session_state:
-                st.session_state.otc_config = {pair: "10" for pair in ALL_PAIRS}
-        
-            # Griglia per selezionare la velocità dell'indice per ogni coppia
-            for pair in ALL_PAIRS:
-                col_p, col_v = st.columns([1, 1])
-                with col_p:
-                    st.markdown(f"💱 **{pair}**")
-                with col_v:
-                    vol_choice = st.selectbox(
-                        "Vol", ["10", "25"], 
-                        key=f"vol_{pair}", 
-                        index=0 if st.session_state.otc_config.get(pair) == "10" else 1,
-                        label_visibility="collapsed"
-                    )
-                    st.session_state.otc_config[pair] = vol_choice
+            st.subheader("🎯 SETTAGGIO SNIPER OTC")
+            st.success("✅ **Setup Ottimizzato Attivo**\n\nAsset: **EURUSD** (R_10) e **USDJPY** (R_25)\nStrategia fissa: **BB 20/2.20** + **RSI 20/80**")
+            # Niente più menu a tendina o scelte multiple: l'algoritmo sa già cosa fare.
         
         st.divider()
         st.subheader("🌍 SESSIONI DI MERCATO")
@@ -382,8 +331,10 @@ with st.sidebar:
                 except Exception as e:
                     st.error(f"⚠️ Errore nel file: {e}")
 
-    # --- 4. MAIN DASHBOARD ---
+# --- 4. MAIN DASHBOARD ---
 if st.session_state.connected:
+    # FILTRO DINAMICO DELLE COPPIE
+    CURRENT_PAIRS = ["EURUSD", "USDJPY"] if st.session_state.weekend_mode else ALL_PAIRS
     
     window_1 = (time(0, 0), time(12, 0))
     window_2 = (time(12, 0), time(23, 0))
@@ -418,11 +369,13 @@ if st.session_state.connected:
                 st.divider()
                 st.subheader("🕵️ Coppie di valute osservate")
                 cols = st.columns(5)
-                for i, pair in enumerate(ALL_PAIRS):
+                                
+                for i, pair in enumerate(CURRENT_PAIRS):
                     with cols[i % 5]: st.code(f"{icons.get(pair, '🔍')} {pair}")
+                
                 esegui_scansione = True
 
-    for pair in ALL_PAIRS:
+    for pair in CURRENT_PAIRS:
 
         try:
             # Estrai in modo sicuro le variabili dalla funzione ibrida
@@ -431,12 +384,11 @@ if st.session_state.connected:
             
             df = pd.DataFrame(candles)
             
-            # --- LOGICA OTTIMIZZATA PUNTO 3 ---
+            # --- LOGICA OTC SEMPLIFICATA ---
             if st.session_state.weekend_mode and not stress_test:
-                # Parametri basati sulla scelta nella Sidebar (Config 1 o Config 2)
                 r_buy, r_sell = 20, 80
                 b_per = 20
-                b_std = bb_std_otc  # Questa variabile arriva dalla selezione radio nella sidebar
+                b_std = 2.20  # Valore fisso da cecchino
             elif stress_test:
                 r_buy, r_sell = 45, 55
                 b_per, b_std = 20, 2.20
@@ -485,9 +437,9 @@ if st.session_state.connected:
                     'mercato': tipo_mercato, 'result': "⏳ In corso...",
                     'check_75s': "-", 'check_120s': "-", 'pnl_numeric': 0.0
                 })
-                
+
                 save_journal(st.session_state.signal_history)
-                send_telegram_signal(direction, pair, price, curr_rsi, t_id, st.session_state.stake)
+                send_telegram_signal(direction, pair, price, curr_rsi, t_id, st.session_state.stake, tipo_mercato)
                 play_trade_sound("buy")
         except Exception as e:
             continue
@@ -495,7 +447,7 @@ if st.session_state.connected:
     # --- 5. ANALISI TECNICA GRAFICA ---
     st.divider()
     st.subheader("📈 Analisi Tecnica")
-    pair_display = st.selectbox("Seleziona asset per grafico", ALL_PAIRS)
+    pair_display = st.selectbox("Seleziona asset per grafico", CURRENT_PAIRS)
     
     try:
         if st.session_state.weekend_mode and pair_display in st.session_state.get('manual_prices', {}) and st.session_state.manual_prices[pair_display] > 0:
