@@ -9,15 +9,15 @@ from PIL import Image
 import requests
 import json
 import os
-import websocket  # Richiede: pip install websocket-client
+import websocket
 from datetime import datetime, time, timedelta
+import yfinance as yf  # <--- AGGIUNTO YAHOO FINANCE
 
 # --- 1. CONFIGURAZIONI, TELEGRAM E DERIV ---
 TELEGRAM_TOKEN = st.secrets.get("TELEGRAM_TOKEN", "IL_TUO_TOKEN_QUI")
 TELEGRAM_CHAT_ID = st.secrets.get("TELEGRAM_CHAT_ID", "IL_TUO_CHAT_ID_QUI")
-DERIV_TOKEN = st.secrets.get("DERIV_TOKEN", "") # Inserisci qui il tuo token API Demo di Deriv (Read/Trade)
-
-DERIV_APP_ID = "71759" # App ID generico di Deriv
+DERIV_TOKEN = st.secrets.get("DERIV_TOKEN", "") 
+DERIV_APP_ID = "71759" 
 
 fuso_roma = pytz.timezone('Europe/Rome')
 now_roma = datetime.now(fuso_roma)
@@ -27,29 +27,14 @@ now_cet = now_roma.time()
 ora_attuale = now_roma.hour
 
 def to_deriv_symbol(pair):
-    """Converte EURUSD in frxEURUSD per l'API di Deriv"""
     return f"frx{pair}"
 
-def get_deriv_balance(token):
-    """Recupera il saldo live dal conto Deriv"""
+# --- NUOVA FUNZIONE IBRIDA (DERIV + YAHOO) ---
+def get_candles(pair, timeframe_sec, count):
+    """Prova Deriv, se fallisce usa Yahoo Finance"""
+    # 1. Tentativo Deriv
     try:
-        ws = websocket.create_connection(f"wss://ws.binaryws.com/websockets/v3?app_id={DERIV_APP_ID}", timeout=10)
-        ws.send(json.dumps({"authorize": token}))
-        res = json.loads(ws.recv())
-        if "error" in res:
-            ws.close()
-            return None
-        ws.send(json.dumps({"balance": 1}))
-        res_bal = json.loads(ws.recv())
-        ws.close()
-        return res_bal['balance']['balance']
-    except:
-        return None
-
-def get_deriv_candles(pair, timeframe_sec, count):
-    """Scarica le candele tramite WebSocket di Deriv"""
-    try:
-        ws = websocket.create_connection(f"wss://ws.binaryws.com/websockets/v3?app_id={DERIV_APP_ID}", timeout=10)
+        ws = websocket.create_connection(f"wss://ws.binaryws.com/websockets/v3?app_id={DERIV_APP_ID}", timeout=5)
         req = {
             "ticks_history": to_deriv_symbol(pair),
             "end": "latest",
@@ -70,17 +55,53 @@ def get_deriv_candles(pair, timeframe_sec, count):
                     'open': c['open'], 'max': c['high'],
                     'min': c['low'], 'close': c['close']
                 })
-            return candles
-        return None
+            return candles, "DERIV 🟢"
+    except:
+        pass # Passa a Yahoo
+
+    # 2. Tentativo Yahoo Finance
+    try:
+        yahoo_symbol = f"{pair}=X"
+        interval = "1m" if timeframe_sec <= 60 else "2m"
+        data = yf.download(tickers=yahoo_symbol, period="1d", interval=interval, progress=False)
+        
+        if not data.empty:
+            data = data.tail(count)
+            candles = []
+            for index, row in data.iterrows():
+                dt = index.astimezone(fuso_roma)
+                # Estrazione sicura dei valori (evita FutureWarning di Pandas)
+                candles.append({
+                    'time': dt.strftime("%H:%M:%S"),
+                    'open': float(row['Open'].iloc[0]) if isinstance(row['Open'], pd.Series) else float(row['Open']),
+                    'max': float(row['High'].iloc[0]) if isinstance(row['High'], pd.Series) else float(row['High']),
+                    'min': float(row['Low'].iloc[0]) if isinstance(row['Low'], pd.Series) else float(row['Low']),
+                    'close': float(row['Close'].iloc[0]) if isinstance(row['Close'], pd.Series) else float(row['Close'])
+                })
+            return candles, "YAHOO FINANCE 🔵"
     except Exception as e:
-        print(f"Errore Deriv WebSocket per {pair}: {e}")
+        print(f"Errore Yahoo Finance: {e}")
+    
+    return None, "ERRORE SORGENTI 🔴"
+
+def get_deriv_balance(token):
+    try:
+        ws = websocket.create_connection(f"wss://ws.binaryws.com/websockets/v3?app_id={DERIV_APP_ID}", timeout=10)
+        ws.send(json.dumps({"authorize": token}))
+        res = json.loads(ws.recv())
+        if "error" in res:
+            ws.close()
+            return None
+        ws.send(json.dumps({"balance": 1}))
+        res_bal = json.loads(ws.recv())
+        ws.close()
+        return res_bal['balance']['balance']
+    except:
         return None
 
 def check_consecutive_candles(df, count=3):
-    """Ritorna True se le ultime 'count' candele sono dello stesso segno"""
     if len(df) < count: return False
     last_candles = df.tail(count)
-    # Calcoliamo se sono tutte verdi o tutte rosse
     all_green = all(last_candles['close'] > last_candles['open'])
     all_red = all(last_candles['close'] < last_candles['open'])
     return all_green or all_red
@@ -90,26 +111,17 @@ def genera_trade_id():
 
 def get_market_status():
     fuso_roma = pytz.timezone('Europe/Rome')
-    now_roma = datetime.now(fuso_roma)
-    now_time = now_roma.time()
-
+    now_time = datetime.now(fuso_roma).time()
     londra = (time(9,0), time(18,0))
     new_york = (time(14,0), time(23,0))
     we = is_weekend_reale
     
-    is_londra = londra[0] <= now_time <= londra[1]
-    is_ny = new_york[0] <= now_time <= new_york[1]
-    
-    if is_londra and is_ny:
+    if we: return "⚠️ **WEEKEND OTC**"
+    if londra[0] <= now_time <= londra[1] and new_york[0] <= now_time <= new_york[1]:
         return "🔥 **OVERLAP EU+USA**\n\nAlta Volatilità"
-    elif is_londra:
-        return "🇪🇺 **SESSIONE LONDRA**"
-    elif is_ny:
-        return "🇺🇸 **SESSIONE NEW YORK**"
-    elif we:
-        return "⚠️ **WEEKEND OTC**"
-    else:
-        return "💤 **MERCATO LENTO**"
+    if londra[0] <= now_time <= londra[1]: return "🇪🇺 **SESSIONE LONDRA**"
+    if new_york[0] <= now_time <= new_york[1]: return "🇺🇸 **SESSIONE NEW YORK**"
+    return "💤 **MERCATO LENTO**"
 
 def reset_manual_prices():
     st.session_state.manual_prices = {"EURGBP": 0.0, "USDCHF": 0.0, "AUDUSD": 0.0, "EURUSD": 0.0}
@@ -117,7 +129,6 @@ def reset_manual_prices():
 
 def draw_market_map_inverted(trading_autorizzato):
     fig = go.Figure()
-    # Calcolo ora decimale di Roma interno per massima precisione
     tz_roma = pytz.timezone('Europe/Rome')
     now_roma = datetime.now(tz_roma)
     x_pos = float(now_roma.hour + (now_roma.minute / 60.0))
@@ -132,12 +143,8 @@ def draw_market_map_inverted(trading_autorizzato):
         sizex=24, sizey=4.5, sizing="stretch", opacity=1.0, layer="below"
     ))
 
-    # Oro se attivo, Blu se protetto
     color_laser = "#FFD700" if trading_autorizzato else "#0F3ADA"
-
-    # Linea Laser + Glow (CORRETTO L'OPACITY QUI)
     fig.add_shape(type="line", x0=x_pos, x1=x_pos, y0=0, y1=4.5, line=dict(color=color_laser, width=3))
-    #fig.add_shape(type="line", x0=x_pos, x1=x_pos, y0=0, y1=4.5, line=dict(color=color_laser, width=15), opacity=0.15)
 
     fig.update_layout(
         xaxis=dict(range=[24, 0], showgrid=False, visible=False, fixedrange=True),
@@ -151,7 +158,7 @@ def invia_telegram(messaggio):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     try:
         requests.post(url, data={"chat_id": TELEGRAM_CHAT_ID, "text": messaggio, "parse_mode": "Markdown"}, timeout=5)
-    except Exception as e:
+    except Exception:
         pass
 
 def send_telegram_signal(signal_type, pair, price, rsi, trade_id, stake): 
@@ -207,18 +214,17 @@ def play_trade_sound(sound_type="buy"):
     placeholder.empty()
 
 # --- 2. SETUP STREAMLIT E SESSIONE ---
-st.set_page_config(page_title="Sentinel AI - Deriv", page_icon="🚀", layout="wide")
-
+st.set_page_config(page_title="Sentinel AI", page_icon="🚀", layout="wide")
 st.markdown("""<style>[data-testid="stAppViewContainer"] * { transition: none !important; } div[data-testid="stVerticalBlock"] { opacity: 1 !important; }</style>""", unsafe_allow_html=True)
 
 try:
     logo = Image.open("banner.png")
     st.image(logo, use_column_width=True)
 except:
-    st.image("https://via.placeholder.com/800x100/ff4b4b/white?text=SENTINEL+AI+DERIV", use_column_width=True)
+    st.image("https://via.placeholder.com/800x100/ff4b4b/white?text=SENTINEL+AI", use_column_width=True)
 
 if 'connected' not in st.session_state: st.session_state.connected = False
-if 'account_type' not in st.session_state: st.session_state.account_type = "DEMO (DERIV)"
+if 'connection_source' not in st.session_state: st.session_state.connection_source = "Nessuna"
 if 'active_trades' not in st.session_state: st.session_state.active_trades = {}
 if 'signal_history' not in st.session_state: st.session_state.signal_history = load_journal()
 if 'local_balance' not in st.session_state: st.session_state.local_balance = 10000.0
@@ -228,25 +234,21 @@ if 'api_token' not in st.session_state: st.session_state.api_token = DERIV_TOKEN
 
 # --- 3. SIDEBAR ---
 with st.sidebar:
-    st.title("⚙️ DERIV TRADING")
+    st.title("⚙️ AI TRADING")
     
-    st.session_state.api_token = st.text_input("🔑 Token Deriv", value=st.session_state.api_token, type="password")
-
     if not st.session_state.connected:
-        st.info("Connettiti per i dati live.")
         if st.button("🔌 CONNETTI SISTEMA", use_container_width=True, type="primary"):
-            with st.spinner("Sincronizzazione WS..."):
-                test_data = get_deriv_candles("EURUSD", 60, 1)
+            with st.spinner("Ricerca connessione disponibile..."):
+                # Prova la connessione e mostra la sorgente trovata
+                test_data, source = get_candles("EURUSD", 60, 1)
                 if test_data:
                     st.session_state.connected = True
-                    # Tenta di prendere il saldo vero se c'è il token
-                    if st.session_state.api_token:
-                        bal = get_deriv_balance(st.session_state.api_token)
-                        if bal: st.session_state.local_balance = bal
+                    st.session_state.connection_source = source
                     st.rerun()
                 else:
-                    st.error("Errore connessione a Deriv API.")
+                    st.error("Nessuna sorgente dati disponibile.")
     else:
+        st.success(f"Connesso via: **{st.session_state.connection_source}**")
         if st.button("🔴 DISCONNETTI", use_container_width=True):
             st.session_state.connected = False
             st.session_state.scanner_on = False
@@ -262,7 +264,6 @@ with st.sidebar:
             st.caption(f"🔄 Scanner attivo...  \nUltimo check: {now_roma.time().strftime('%H:%M:%S')}")
 
         st.divider()
-
         st.subheader("💸 **MERCATO LIVE/OTC**")
         
         if st.session_state.weekend_mode:
@@ -282,37 +283,21 @@ with st.sidebar:
             bb_std = c_bb2.selectbox("Dev BB", [2.00, 2.20, 2.50, 2.70], index = 0)
             custom_rsi_sell = c_rsi2.selectbox("RSI Sell", [70, 75, 80, 85], index = 2)
 
-
-        # --- LOGICA SIDEBAR OTC ---
         if st.session_state.weekend_mode:
             st.divider()
             st.subheader("🎯 PREZZO MANUALE OTC")
-                            
-            st.info("Inserisci il prezzo dal Broker:")
-            
+            st.info("Inserisci il prezzo dal Broker se Yahoo è fermo:")
             if 'manual_prices' not in st.session_state:
                 st.session_state.manual_prices = {"EURGBP": 0.0, "USDCHF": 0.0, "AUDUSD": 0.0, "EURUSD": 0.0}
-            
-            # Crea i 4 campi input
             for pair in ["EURGBP", "USDCHF", "AUDUSD", "EURUSD"]:
                 st.session_state.manual_prices[pair] = st.number_input(
-                    f"Prezzo {pair}", 
-                    value=st.session_state.manual_prices.get(pair, 0.0), 
-                    format="%.5f",
-                    key=f"input_{pair}" # Aggiungiamo una key univoca per sicurezza
-                )
-
-            # Tasto di Reset Chirugico
+                    f"Prezzo {pair}", value=st.session_state.manual_prices.get(pair, 0.0), format="%.5f", key=f"input_{pair}")
             if st.button("🧹 RESET PREZZI", use_container_width=True):
                 reset_manual_prices()
         
         st.divider()
         st.subheader("🌍 SESSIONI DI MERCATO")
-        
-        # Sostituisci la logica dentro il ciclo for delle città con questa:
         for city, (start, end) in {"🇬🇧 LONDRA:": (time(9,0), time(18,0)), "🇺🇸 NEW YORK:": (time(14,0), time(23,0)), "🇦🇺 SYDNEY:": (time(0,0), time(8,0)), "🇯🇵 TOKYO:": (time(0,0), time(9,0))}.items():
-            # Usiamo now_cet (che è già un .time()) invece di now_roma
-            
             status = "Open 🟢" if not is_weekend_reale and start <= now_cet <= end else "Closed 🔴"
             st.write(f"{city} {status}")
             
@@ -320,36 +305,25 @@ with st.sidebar:
         
         st.divider()
         st.subheader("🛠️ PARAMETRI TRADING")
-        #st.metric(label=f"💰 SALDO DEMO", value=f"{st.session_state.local_balance:.2f} €")
         st.session_state.stake = st.number_input("💶 INVESTIMENTO (€)", value=10.0)
         timeframe = st.selectbox("⏱️ TIMEFRAME (s)", [60, 120], index=0)
-
-        if timeframe == 120:
-            st.caption("🚀 **Analisi 2 Minuti:** Ideale per confermare l'inversione su BB 2.2")
 
         st.divider()
         stress_test = st.toggle("🚀 **STRESS MODE**", value=False)
         if stress_test:
             st.warning("⚠️ **Modalità TEST:**\n\nno BB - RSI (45/55)")
-            # --- OVERRIDE DI SISTEMA ---
-            use_bb = False       # Spegne forzatamente le BB
-            use_rsi = True       # Accende forzatamente l'RSI
-            custom_rsi_buy = 45  # Forza soglia BUY
-            custom_rsi_sell = 55 # Forza soglia SELL
+            use_bb, use_rsi = False, True
+            custom_rsi_buy, custom_rsi_sell = 45, 55
         else:
             if is_weekend_reale:
                 st.info("⚠️ **Modalità WEEKEND OTC**\n\nBB (20/2.20) - RSI (20/80)")
             else:
                 st.success("🟢 **Modalità REALE:**\n\nvedi gli indicatori scelti sopra")
 
-        #if stress_test:
-            #use_bb, use_rsi = False, True       
-            #custom_rsi_buy, custom_rsi_sell = 45, 55 
-
         st.divider()
         if st.button("🔔 **TEST AUDIO & TELEGRAM**", use_container_width=True):
             play_trade_sound("buy")
-            invia_telegram("✅ **SENTINEL AI: SYSTEM CHECK**\nBot online e sincronizzato con Deriv 🚀")
+            invia_telegram("✅ **SENTINEL AI: SYSTEM CHECK**\nBot online e pronto 🚀")
             st.toast("Test completato!", icon="📲")
 
         st.divider()
@@ -359,54 +333,29 @@ with st.sidebar:
             st.rerun()
 
         st.divider()
-
-        # --- SEZIONE GESTIONE DATI CSV ---
         st.header("💾 GESTIONE SEGNALI")
-
-        # 1. TASTO ESPORTA CSV
         if st.session_state.signal_history:
             df_export = pd.DataFrame(st.session_state.signal_history)
             csv_data = df_export.to_csv(index=False).encode('utf-8')
-            st.download_button(
-                label="📥 ESPORTA STORICO (CSV)",
-                data=csv_data,
-                file_name=f"sentinel_history_{now_roma.time().strftime('%d%m%Y_%H%M')}.csv",
-                mime="text/csv",
-                use_container_width=True
-            )
+            st.download_button(label="📥 ESPORTA STORICO (CSV)", data=csv_data, file_name=f"sentinel_history_{now_roma.time().strftime('%d%m%Y_%H%M')}.csv", mime="text/csv", use_container_width=True)
         else:
-            # Tasto disabilitato se non ci sono segnali da esportare
             st.button("📥 ESPORTA STORICO (CSV)", disabled=True, use_container_width=True)
 
-        # 2. WIDGET IMPORTA CSV
-        st.caption("Carica un file CSV per ripristinare o unire dati passati:")
         uploaded_file = st.file_uploader("📤 IMPORTA DATI", type=["csv"], label_visibility="collapsed")
-        
         if uploaded_file is not None:
             if st.button("🔄 UNISCI DATI CARICATI", use_container_width=True, type="secondary"):
                 try:
-                    # Legge il file caricato
                     df_import = pd.read_csv(uploaded_file)
-                    nuovi_dati = df_import.to_dict('records')
-                    
-                    # Uniamo la cronologia attuale con quella caricata dal file
-                    st.session_state.signal_history.extend(nuovi_dati)
-                    
-                    # Protezione: rimuove i duplicati esatti (stessa ora e stessa valuta)
-                    # per evitare di falsare le statistiche se importi file sovrapposti
+                    st.session_state.signal_history.extend(df_import.to_dict('records'))
                     df_pulito = pd.DataFrame(st.session_state.signal_history).drop_duplicates(subset=['time', 'pair'], keep='last')
                     st.session_state.signal_history = df_pulito.to_dict('records')
-                    
-                    # Salva anche nel file JSON locale per persistenza
                     save_journal(st.session_state.signal_history) 
-                    
                     st.success("✅ Storico caricato con successo!")
-                    time_module.sleep(1.5) # Pausa breve per mostrare il messaggio
+                    time_module.sleep(1.5)
                     st.rerun()
                 except Exception as e:
                     st.error(f"⚠️ Errore nel file: {e}")
 
-        st.divider()
 # --- 4. MAIN DASHBOARD ---
 if st.session_state.connected:
     ALL_PAIRS = ["EURGBP", "USDCHF", "USDJPY", "EURUSD", "GBPUSD", "AUDUSD", "USDCAD", "NZDUSD", "EURJPY", "GBPJPY"]
@@ -419,7 +368,6 @@ if st.session_state.connected:
 
     st.subheader("🌍 Live Market Flow 24h")
     
-    # Rimosso il commento (#) per riattivare la visualizzazione
     if st.session_state.weekend_mode or is_weekend_reale:
         try:
             img_weekend = Image.open("banner2.png")
@@ -429,48 +377,44 @@ if st.session_state.connected:
     else:
         st.plotly_chart(draw_market_map_inverted(trading_autorizzato), use_container_width=True)
 
-    # Crea un contenitore vuoto prima del loop
     placeholder_scanner = st.empty()
     
-    # --- GESTIONE STATO SCANNER E PROTEZIONE ORARIA ---        
     if st.session_state.scanner_on:
-        # Messaggio dinamico in base alla modalità
         if st.session_state.weekend_mode:
             st.success("SCANNER OTC ATTIVO su 🇪🇺🇬🇧-🇺🇸🇨🇭-🇦🇺🇺🇸-🇪🇺🇺🇸 ", icon="🎯")
             esegui_scansione = True
         else:
             if not trading_autorizzato:
                 st.warning("🛡️ PROTEZIONE ATTIVA: Mercato fuori orario. Scanner in pausa.")
-                esegui_scansione = False # IL VERO BLOCCO
+                esegui_scansione = False
             else:
                 if st.session_state.scanner_on:
-                    with placeholder_scanner.container(): # Tutto ciò che è qui dentro verrà sovrascritto pulito
+                    with placeholder_scanner.container(): 
                         st.success("SISTEMA IN SCANSIONE ATTIVA 🔥🔥🔥", icon="📡")
- 
                 st.divider()
                 st.subheader("🕵️ Coppie di valute osservate")
                 cols = st.columns(5)
                 for i, pair in enumerate(ALL_PAIRS):
-                    with cols[i % 5]: 
-                        st.code(f"{icons.get(pair, '🔍')} {pair}")
+                    with cols[i % 5]: st.code(f"{icons.get(pair, '🔍')} {pair}")
                 esegui_scansione = True
 
         for pair in ALL_PAIRS:
             try:
-                # Utilizziamo la nuova funzione Deriv
-                candles = get_deriv_candles(pair, timeframe, 100)
+                # Estrai in modo sicuro le variabili dalla funzione ibrida
+                candles, source = get_candles(pair, timeframe, 100) 
                 if not candles or len(candles) < 20: continue
                 
                 df = pd.DataFrame(candles)
-                df['RSI'] = ta.rsi(df['close'], length=7)
-                price, curr_rsi = df['close'].iloc[-1], df['RSI'].iloc[-1]
-
+                
+                # Sostituzione dinamica in base alla modalità
                 r_buy, r_sell = (20, 80) if st.session_state.weekend_mode and not stress_test else (custom_rsi_buy, custom_rsi_sell)
-                b_per, b_std = (20, 2.5) if st.session_state.weekend_mode and not stress_test else (bb_period, bb_std)
-   
+                b_per, b_std = (20, 2.20) if st.session_state.weekend_mode and not stress_test else (bb_period, bb_std)
+
+                df['RSI'] = ta.rsi(df['close'], length=7)
                 bb = ta.bbands(df['close'], length=b_per, std=b_std)
                 if bb is None or bb.empty: continue
 
+                price, curr_rsi = df['close'].iloc[-1], df['RSI'].iloc[-1]
                 curr_bb_low = float(bb.filter(like='BBL').iloc[-1].iloc[0])
                 curr_bb_up = float(bb.filter(like='BBU').iloc[-1].iloc[0])
                 
@@ -478,9 +422,7 @@ if st.session_state.connected:
                 cond_bb_buy = (price <= curr_bb_low) if use_bb else True
                 cond_rsi_sell = (curr_rsi > r_sell) if use_rsi else True
                 cond_bb_sell = (price >= curr_bb_up) if use_bb else True
-
                 
-                # --- DENTRO IL LOOP 'for pair in ALL_PAIRS:' ---
                 is_consecutive = check_consecutive_candles(df, count=3)
                 
                 is_buy = (cond_rsi_buy and cond_bb_buy) and (use_rsi or use_bb) and not is_consecutive
@@ -490,220 +432,121 @@ if st.session_state.connected:
                     direction = "BUY" if is_buy else "SELL"
                     t_id = genera_trade_id()
                     tipo_mercato = "OTC" if st.session_state.weekend_mode else "LIVE"
-                    # Se use_bb è falso, scriviamo "OFF" nel Journal
                     params_bb = f"{b_per}/{b_std}" if use_bb else "OFF"
                     params_rsi = f"{r_buy}/{r_sell}"
                 
                     st.session_state.active_trades[pair] = {
-                        'id': t_id, 
-                        'entry_price': float(price), 
-                        'entry_time': time_module.time(), 
-                        'direction': direction, 
-                        'stake_num': float(st.session_state.stake)
+                        'id': t_id, 'entry_price': float(price), 'entry_time': time_module.time(), 
+                        'direction': direction, 'stake_num': float(st.session_state.stake)
                     }
                     
                     st.session_state.signal_history.append({
-                        'id': t_id,
-                        'time': datetime.now(fuso_roma).strftime("%Y-%m-%d %H:%M:%S"),
-                        'pair': pair, 
-                        'dir': direction, 
-                        'price': float(price), 
+                        'id': t_id, 'time': datetime.now(fuso_roma).strftime("%Y-%m-%d %H:%M:%S"),
+                        'pair': pair, 'dir': direction, 'price': float(price), 
                         'stake': f"{st.session_state.stake:.0f}€",                         
-                        'params_bb': params_bb, # Usa la variabile corretta
-                        'params_rsi': params_rsi, # Usa la variabile corretta
-                        'mercato': tipo_mercato,
-                        'result': "⏳ In corso...",
-                        'check_75s': "-",      # <--- AGGIUNGI QUESTA RIGA
-                        'check_120s': "-",     # <--- AGGIUNGI QUESTA RIGA
-                        'pnl_numeric': 0.0
+                        'params_bb': params_bb, 'params_rsi': params_rsi, 
+                        'mercato': tipo_mercato, 'result': "⏳ In corso...",
+                        'check_75s': "-", 'check_120s': "-", 'pnl_numeric': 0.0
                     })
                     
                     save_journal(st.session_state.signal_history)
                     send_telegram_signal(direction, pair, price, curr_rsi, t_id, st.session_state.stake)
                     play_trade_sound("buy")
-
             except Exception as e:
                 continue
     
-    # --- 5. ANALISI TECNICA GRAFICA (CORRETTA) ---
+    # --- 5. ANALISI TECNICA GRAFICA ---
     st.divider()
     st.subheader("📈 Analisi Tecnica")
     pair_display = st.selectbox("Seleziona asset per grafico", ALL_PAIRS)
     
     try:
-        # LOGICA COERENTE CON L'OVERRIDE (Niente 'token' passato alla funzione)
         if st.session_state.weekend_mode and pair_display in st.session_state.get('manual_prices', {}) and st.session_state.manual_prices[pair_display] > 0:
-            candles_ta = get_deriv_candles(pair_display, timeframe, 160)
+            candles_ta, src_ta = get_candles(pair_display, timeframe, 160)
             if candles_ta:
                 candles_ta[-1]['close'] = st.session_state.manual_prices[pair_display]
         else:
-            candles_ta = get_deriv_candles(pair_display, timeframe, 160)
+            candles_ta, src_ta = get_candles(pair_display, timeframe, 160)
             
         if candles_ta:
+            st.caption(f"Sorgente dati attuale: **{src_ta}**")
             df_raw = pd.DataFrame(candles_ta)
             
-            # Calcolo indicatori
             df_raw['RSI'] = ta.rsi(df_raw['close'], length=7)
-            bb_ta = ta.bbands(df_raw['close'], length=bb_period, std=bb_std)
             
-            # --- AGGIUNGI QUESTO CONTROLLO SICUREZZA ---
-            if bb_ta is None or bb_ta.empty:
-                st.error(f"⚠️ Impossibile calcolare le Bande di Bollinger per {pair_display}. Prova a cambiare periodo o asset.")
-                st.stop() # Ferma l'esecuzione di questo blocco senza crashare l'app
+            # Parametri dinamici anche per il grafico
+            b_per_graf, b_std_graf = (20, 2.20) if st.session_state.weekend_mode and not stress_test else (bb_period, bb_std)
+            r_buy_graf, r_sell_graf = (20, 80) if st.session_state.weekend_mode and not stress_test else (custom_rsi_buy, custom_rsi_sell)
             
-            # Rinominiano le colonne per sicurezza (gestisce nomi diversi della libreria)
+            bb_ta = ta.bbands(df_raw['close'], length=b_per_graf, std=b_std_graf)
+            if bb_ta is None or bb_ta.empty: st.stop()
+            
             bb_ta.columns = ['BBL', 'BBM', 'BBU', 'BBB', 'BBP'] 
-                        
             df_final = pd.concat([df_raw, bb_ta[['BBL', 'BBM', 'BBU']]], axis=1).tail(100)
 
             df_final['buy_sig'] = df_final.apply(lambda x: x['close'] if (
-                ((x['RSI'] < custom_rsi_buy) if use_rsi else True) and 
+                ((x['RSI'] < r_buy_graf) if use_rsi else True) and 
                 ((x['close'] <= x['BBL']) if use_bb else True) 
             ) else None, axis=1)
             
             df_final['sell_sig'] = df_final.apply(lambda x: x['close'] if (
-                ((x['RSI'] > custom_rsi_sell) if use_rsi else True) and 
+                ((x['RSI'] > r_sell_graf) if use_rsi else True) and 
                 ((x['close'] >= x['BBU']) if use_bb else True)
             ) else None, axis=1)
          
             asse_x = df_final['time']
-            
-            fig = make_subplots(rows=2, cols=1, shared_xaxes=True, 
-                                row_heights=[0.5, 0.25], 
-                                vertical_spacing=0.07, 
-                                subplot_titles=("📊 Prezzo & Volatilità", "📉 Oscillatore RSI"))
-            
-            # --- PANNELLO 1: Candele + Bollinger ---
-            fig.add_trace(go.Candlestick(x=asse_x, open=df_final['open'], high=df_final['max'], 
-                                         low=df_final['min'], close=df_final['close'], name="Prezzo"), row=1, col=1)
-            
+            fig = make_subplots(rows=2, cols=1, shared_xaxes=True, row_heights=[0.5, 0.25], vertical_spacing=0.07, subplot_titles=("📊 Prezzo & Volatilità", "📉 Oscillatore RSI"))
+            fig.add_trace(go.Candlestick(x=asse_x, open=df_final['open'], high=df_final['max'], low=df_final['min'], close=df_final['close'], name="Prezzo"), row=1, col=1)
             fig.add_trace(go.Scatter(x=asse_x, y=df_final['BBU'], line=dict(color='rgba(0,71,171,0.4)', width=1), name="BBU"), row=1, col=1)
             fig.add_trace(go.Scatter(x=asse_x, y=df_final['BBM'], line=dict(color='rgba(170,170,170,0.3)', width=1), name="BBM"), row=1, col=1)
-            fig.add_trace(go.Scatter(x=asse_x, y=df_final['BBL'], line=dict(color='rgba(0,71,171,0.4)', width=1), 
-                                     fill='tonexty', fillcolor='rgba(100, 100, 255, 0.05)', name="BBL"), row=1, col=1)
-
-            # Subplot 2: RSI con soglie dinamiche
+            fig.add_trace(go.Scatter(x=asse_x, y=df_final['BBL'], line=dict(color='rgba(0,71,171,0.4)', width=1), fill='tonexty', fillcolor='rgba(100, 100, 255, 0.05)', name="BBL"), row=1, col=1)
             fig.add_trace(go.Scatter(x=asse_x, y=df_final['RSI'], line=dict(color='#AB63FA'), name="RSI"), row=2, col=1)
-            fig.add_hline(y=custom_rsi_buy, line_color="green", row=2, col=1, line_dash="dash")
-            fig.add_hline(y=custom_rsi_sell, line_color="red", row=2, col=1, line_dash="dash")
-
-            fig.update_layout(
-                xaxis_rangeslider_visible=False,
-                hovermode="x unified",
-                template="plotly_dark",
-                height=800
-            )
-
-            # --- AGGIUNGI QUESTO PER LE RIGHE VERTICALI E IL MIRINO ---
-            
-            fig.update_xaxes(
-                type='category', 
-                tickangle=45, 
-                nticks=20, 
-                
-                showgrid=True, 
-                gridcolor='rgba(130,130,130,0.08)', # Righe verticali fisse leggere
-                
-                showspikes=True, 
-                spikemode='across', 
-                spikecolor="black", 
-                spikethickness=1, 
-                spikedash="solid"
-            )
-          
-            # Freccia BUY (posizionata leggermente sotto il minimo della candela)
-            fig.add_trace(go.Scatter(
-                x=asse_x, y=df_final['buy_sig'] * 0.9998, # Offset per non coprire la candela
-                mode='markers', 
-                marker=dict(symbol='triangle-up', size=15, color='#00ff88', line=dict(width=1, color='white')), 
-                name="Entry BUY"
-            ), row=1, col=1)
-            
-            # Freccia SELL (posizionata leggermente sopra il massimo della candela)
-            fig.add_trace(go.Scatter(
-                x=asse_x, y=df_final['sell_sig'] * 1.0002, # Offset per non coprire la candela
-                mode='markers', 
-                marker=dict(symbol='triangle-down', size=15, color='#ff3333', line=dict(width=1, color='white')), 
-                name="Entry SELL"
-            ), row=1, col=1)
-
+            fig.add_hline(y=r_buy_graf, line_color="green", row=2, col=1, line_dash="dash")
+            fig.add_hline(y=r_sell_graf, line_color="red", row=2, col=1, line_dash="dash")
+            fig.update_layout(xaxis_rangeslider_visible=False, hovermode="x unified", template="plotly_dark", height=800)
+            fig.update_xaxes(type='category', tickangle=45, nticks=20, showgrid=True, gridcolor='rgba(130,130,130,0.08)', showspikes=True, spikemode='across', spikecolor="black", spikethickness=1, spikedash="solid")
+            fig.add_trace(go.Scatter(x=asse_x, y=df_final['buy_sig'] * 0.9998, mode='markers', marker=dict(symbol='triangle-up', size=15, color='#00ff88', line=dict(width=1, color='white')), name="Entry BUY"), row=1, col=1)
+            fig.add_trace(go.Scatter(x=asse_x, y=df_final['sell_sig'] * 1.0002, mode='markers', marker=dict(symbol='triangle-down', size=15, color='#ff3333', line=dict(width=1, color='white')), name="Entry SELL"), row=1, col=1)
             st.plotly_chart(fig, use_container_width=True)
 
-            # --- DASHBOARD DISTANZA TARGET (SNIPER MODE) ---
             if st.session_state.weekend_mode:
                 st.divider()
                 st.subheader("🎯 **Monitoraggio Sniper OTC**")
-                
-                ultimo_prezzo = df_final['close'].iloc[-1]
-                bbu_25 = df_final['BBU'].iloc[-1]
-                bbl_25 = df_final['BBL'].iloc[-1]
-                
-                # Calcolo distanze
-                distanza_su = bbu_25 - ultimo_prezzo
-                distanza_giu = ultimo_prezzo - bbl_25
-                
-                # Percentuale di avvicinamento (100% = segnale imminente)
-                # Calcoliamo quanto manca rispetto alla larghezza totale del canale
+                ultimo_prezzo, bbu_25, bbl_25 = df_final['close'].iloc[-1], df_final['BBU'].iloc[-1], df_final['BBL'].iloc[-1]
+                distanza_su, distanza_giu = bbu_25 - ultimo_prezzo, ultimo_prezzo - bbl_25
                 canale_totale = bbu_25 - bbl_25
-                perc_su = max(0, (1 - (distanza_su / (canale_totale/2))) * 100)
-                perc_giu = max(0, (1 - (distanza_giu / (canale_totale/2))) * 100)
+                perc_su = max(0, (1 - (distanza_su / (canale_totale/2))) * 100) if canale_totale > 0 else 0
+                perc_giu = max(0, (1 - (distanza_giu / (canale_totale/2))) * 100) if canale_totale > 0 else 0
 
                 m1, m2 = st.columns(2)
-                
                 with m1:
-                    color_su = "red" if distanza_su < 0 else "white"
-                    st.metric("DISTANZA BANDA SUPERIORE (SELL)", f"{distanza_su:.5f}", 
-                              delta=f"{perc_su:.1f}% al Target", delta_color="inverse")
-                if distanza_su <= 0: st.error("🔥 ZONA SELL RAGGIUNTA!")
-                
+                    st.metric("DISTANZA BANDA SUPERIORE (SELL)", f"{distanza_su:.5f}", delta=f"{perc_su:.1f}% al Target", delta_color="inverse")
+                    if distanza_su <= 0: st.error("🔥 ZONA SELL RAGGIUNTA!")
                 with m2:
-                    st.metric("DISTANZA BANDA INFERIORE (BUY)", f"{distanza_giu:.5f}", 
-                              delta=f"{perc_giu:.1f}% al Target", delta_color="normal")
-                if distanza_giu <= 0: st.success("🔥 ZONA BUY RAGGIUNTA!")
-
+                    st.metric("DISTANZA BANDA INFERIORE (BUY)", f"{distanza_giu:.5f}", delta=f"{perc_giu:.1f}% al Target", delta_color="normal")
+                    if distanza_giu <= 0: st.success("🔥 ZONA BUY RAGGIUNTA!")
                 st.progress(min(max(perc_su, perc_giu) / 100, 1.0))
             
             st.write("---")
             st.subheader("📊 Analisi Performance (1m)")
-            
-            # Calcoliamo i segnali attuali basati sui parametri scelti
-            n_buy = df_final['buy_sig'].notnull().sum()
-            n_sell = df_final['sell_sig'].notnull().sum()
+            n_buy, n_sell = df_final['buy_sig'].notnull().sum(), df_final['sell_sig'].notnull().sum()
             totale_segnali = n_buy + n_sell
 
             if st.button("🔍 **VERIFICA ESITO (60s)**", use_container_width=True, type="primary"):
                 wins_buy, wins_sell = 0, 0
-                
-                # Analizziamo le candele (escludiamo l'ultima perché non ha ancora l'esito a 60s)
                 for i in range(len(df_final) - 1):
-                    # Controllo BUY: se il prezzo della candela successiva è superiore
-                    if pd.notnull(df_final['buy_sig'].iloc[i]):
-                        if df_final['close'].iloc[i+1] > df_final['close'].iloc[i]:
-                            wins_buy += 1
-                    
-                    # Controllo SELL: se il prezzo della candela successiva è inferiore
-                    if pd.notnull(df_final['sell_sig'].iloc[i]):
-                        if df_final['close'].iloc[i+1] < df_final['close'].iloc[i]:
-                            wins_sell += 1
+                    if pd.notnull(df_final['buy_sig'].iloc[i]) and df_final['close'].iloc[i+1] > df_final['close'].iloc[i]: wins_buy += 1
+                    if pd.notnull(df_final['sell_sig'].iloc[i]) and df_final['close'].iloc[i+1] < df_final['close'].iloc[i]: wins_sell += 1
 
-                # Calcoli finali
                 tot_vinti = wins_buy + wins_sell
                 tot_persi = totale_segnali - tot_vinti
                 accuracy = (tot_vinti / totale_segnali * 100) if totale_segnali > 0 else 0
-                
-                # Simulazione economica (Payout medio 85%)
-                investimento_totale = totale_segnali * st.session_state.stake
-                profitto_lordo = (wins_buy + wins_sell) * (st.session_state.stake * 0.85)
-                perdita_totale = tot_persi * st.session_state.stake
-                bilancio_netto = profitto_lordo - perdita_totale
+                bilancio_netto = (tot_vinti * (st.session_state.stake * 0.85)) - (tot_persi * st.session_state.stake)
 
-                # Visualizzazione risultati
                 c1, c2, c3 = st.columns(3)
                 c1.metric("🟢 BUY VINCENTI", f"{wins_buy} / {n_buy}")
                 c2.metric("🔴 SELL VINCENTI", f"{wins_sell} / {n_sell}")
                 c3.metric("🎯 ACCURACY", f"{accuracy:.1f}%")
-
-                # Box riassuntivo con colore dinamico
                 colore_box = "green" if bilancio_netto > 0 else "red"
                 st.markdown(f"""
                 <div style="padding:20px; border-radius:10px; border: 2px solid {colore_box}; background-color: rgba(0,0,0,0.1);">
@@ -715,187 +558,95 @@ if st.session_state.connected:
                 """, unsafe_allow_html=True)
             else:
                 st.info("Regola i parametri e verifica il profitto")
-        
     except Exception as e:
-            st.error(f"Errore grafico: {e}")
+        st.error(f"Errore grafico: {e}")
     
     # --- 6. VERIFICA ESITI TRADE CON DERIV (FIX FINALE) ---
-    # Definiamo il timestamp corrente prima di iniziare il ciclo
     current_ts = time_module.time() 
-    
-    # Creiamo una lista fissa dei trade attivi per evitare errori di mutazione del dizionario
     trades_pendenti = list(st.session_state.active_trades.items())
-    trades_da_rimuovere = []
 
     for pair, trade in trades_pendenti:
-        # Calcoliamo quando deve scadere il trade (Entrata + Timeframe + 5 secondi di sicurezza)
         scadenza = trade['entry_time'] + timeframe + 125
-        
         if current_ts >= scadenza:
             try:
-                # Recuperiamo le candele recenti per verificare il prezzo di chiusura
-                res = get_deriv_candles(pair, timeframe, 2)
+                res, _ = get_candles(pair, timeframe, 2)
                 if res and len(res) > 0:
-                    exit_price = res[-2]['close']
-                    exit_price_120 = res[-1]['close']
-                    entry_price = trade['entry_price']
-                    price_75 = float(res[-2]['close'])
+                    exit_price, exit_price_120 = res[-2]['close'], res[-1]['close']
+                    entry_price, price_75 = trade['entry_price'], float(res[-2]['close'])
+                    dir_trade, t_id = trade['direction'], trade['id']
                     
-                    # --- FIX VARIABILI ---
-                    dir_trade = trade['direction']
-                    t_id = trade['id']
-                    
-                    # Logica Win/Loss
                     win = (exit_price > entry_price) if dir_trade == "BUY" else (exit_price < entry_price)
                     win_75 = (price_75 > entry_price) if dir_trade == "BUY" else (price_75 < entry_price)
                     win_120 = (exit_price_120 > entry_price) if dir_trade == "BUY" else (exit_price_120 < entry_price)
 
                     res_status = "WIN" if win else "LOSS"
                     icona_esito = "✅" if win else "❌"
-                    res_75_str = "✅" if win_75 else "❌"
-                    res_120_str = "✅" if win_120 else "❌"
- 
-                    # Calcolo Profitto (Assumiamo payout 85%)
                     stake_usato = trade.get('stake_num', float(st.session_state.stake))
                     profit = (stake_usato * 0.85) if win else -stake_usato
                     
-                    # 1. Aggiornamento Saldo Locale
                     st.session_state.local_balance += profit
-                    
-                    # 2. Aggiornamento Storico (Journal)
                     for s in st.session_state.signal_history:
                         if s.get('id') == t_id: 
-                            s['result'] = f"{icona_esito} {res_status}"
-                            s['check_75s'] = res_75_str
-                            s['check_120s'] = res_120_str
-                            s['pnl_numeric'] = float(profit)
+                            s.update({'result': f"{icona_esito} {res_status}", 'check_75s': "✅" if win_75 else "❌", 'check_120s': "✅" if win_120 else "❌", 'pnl_numeric': float(profit)})
                             break
 
-                    # 3. Notifica Telegram
-                    icona_telegram = "💰" if win else "💀"
-                    msg = (f"🏁 *ESITO* {icona_telegram} {res_status}\n"
-                           f"🆔 ID: `{t_id}`\n"
-                           f"📊 Asset: {pair}\n"
-                           f"📉 Esito 60s: {res_status}\n"
-                           f"⏱️ Esito 75s: {res_75_str}\n"
-                           f"⏱️ Esito 120s: {res_120_str}\n"
-                           f"💵 P&L: `{profit:.2f} €`")
+                    msg = (f"🏁 *ESITO* {'💰' if win else '💀'} {res_status}\n"
+                           f"🆔 ID: `{t_id}`\n📊 Asset: {pair}\n"
+                           f"📉 Esito 60s: {res_status}\n⏱️ Esito 75s: {'✅' if win_75 else '❌'}\n"
+                           f"⏱️ Esito 120s: {'✅' if win_120 else '❌'}\n💵 P&L: `{profit:.2f} €`")
                     invia_telegram(msg)
-
-                    if win: 
-                        play_trade_sound("win")
+                    if win: play_trade_sound("win")
                         
-                    # 4. Rimoziome dalla lista dei trade attivi e salvataggio
-                    if pair in st.session_state.active_trades:
-                        del st.session_state.active_trades[pair]
-                    
+                    del st.session_state.active_trades[pair]
                     save_journal(st.session_state.signal_history)
-                    
-                    # Forza il refresh per aggiornare la tabella journal e i box statistici
                     st.rerun()
-
             except Exception as e:
-                # Gestisce eventuali errori di connessione durante la verifica
                 st.error(f"Errore critico verifica {pair}: {e}")
                 continue
 
     st.divider()
-    
     # --- 7. TABELLA JOURNAL E FILTRI DINAMICI ---
     st.subheader("📋 Trading Journal & Performance Hub")
-    
-    # 1. Creiamo il DataFrame base: se è vuoto ne facciamo uno fittizio per non far sparire l'interfaccia
     if st.session_state.signal_history:
         df_journal = pd.DataFrame(st.session_state.signal_history)
-
-        # FIX: Se stiamo caricando vecchi trade senza la colonna 75s, creiamola vuota
-        if 'check_75s' not in df_journal.columns:
-            df_journal['check_75s'] = "-"    
-
-        # FIX: Se stiamo caricando vecchi trade senza la colonna 120s, creiamola vuota
-        if 'check_120s' not in df_journal.columns:
-            df_journal['check_120s'] = "-"    
-
+        if 'check_75s' not in df_journal.columns: df_journal['check_75s'] = "-"    
+        if 'check_120s' not in df_journal.columns: df_journal['check_120s'] = "-"    
     else:
-        # Struttura vuota di base
         df_journal = pd.DataFrame(columns=['id', 'time', 'pair', 'dir', 'price', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'check_75s', 'check_120s', 'pnl_numeric'])
 
-    # Assicuriamoci che 'pnl_numeric' esista e sia un numero
-    if 'pnl_numeric' not in df_journal.columns:
-        df_journal['pnl_numeric'] = 0.0
-    else:
-        df_journal['pnl_numeric'] = pd.to_numeric(df_journal['pnl_numeric'], errors='coerce').fillna(0.0)
+    df_journal['pnl_numeric'] = pd.to_numeric(df_journal.get('pnl_numeric', 0.0), errors='coerce').fillna(0.0)
 
-    # 2. Setup dei 4 Filtri nella UI (Sempre visibili!)
     f1, f2, f3, f4 = st.columns(4)
-    with f1:
-        filtro_mercato = st.selectbox("🌍 Mercato:", ["TUTTI", "OTC", "LIVE"], index=0)
-    with f2:
-        lista_valute = ["TUTTE"] + ALL_PAIRS
-        filtro_coppia = st.selectbox("💱 Coppia di valute:", lista_valute, index=0)
-    with f3:
-        time_start = st.time_input("🟢 Orario Inizio:", value=time(0, 0))
-    with f4:
-        time_end = st.time_input("🛑 Orario Fine:", value=time(23, 59))
-
-    # --- LINEA TRATTEGGIATA ---
+    with f1: filtro_mercato = st.selectbox("🌍 Mercato:", ["TUTTI", "OTC", "LIVE"], index=0)
+    with f2: filtro_coppia = st.selectbox("💱 Coppia di valute:", ["TUTTE"] + ALL_PAIRS, index=0)
+    with f3: time_start = st.time_input("🟢 Orario Inizio:", value=time(0, 0))
+    with f4: time_end = st.time_input("🛑 Orario Fine:", value=time(23, 59))
     st.markdown('<hr style="border: none; border-top: 2px dashed #555; margin: 15px 0; opacity: 0.4;">', unsafe_allow_html=True)
 
-    # 3. Applichiamo le regole di filtraggio al DataFrame
     df_filtered = df_journal.copy()
-
     if not df_filtered.empty:
-        # Filtro Mercato
-        if filtro_mercato != "TUTTI":
-            df_filtered = df_filtered[df_filtered['mercato'].astype(str).str.contains(filtro_mercato, na=False)]
-            
-        # Filtro Coppia di Valute
-        if filtro_coppia != "TUTTE":
-            df_filtered = df_filtered[df_filtered['pair'] == filtro_coppia]
-
-        # Filtro Orario
+        if filtro_mercato != "TUTTI": df_filtered = df_filtered[df_filtered['mercato'].astype(str).str.contains(filtro_mercato, na=False)]
+        if filtro_coppia != "TUTTE": df_filtered = df_filtered[df_filtered['pair'] == filtro_coppia]
         try:
             orari_df = pd.to_datetime(df_filtered['time']).dt.time
             df_filtered = df_filtered[(orari_df >= time_start) & (orari_df <= time_end)]
-        except Exception:
-            pass 
+        except Exception: pass 
 
-    # 4. Ricalcolo Statistiche Dinamiche
     total_trades = len(df_filtered)
-    best_pairs_str = "" 
-    wins, losses, total_pnl = 0, 0, 0.0
-    wins_75, losses_75 = 0, 0
-    wins_120, losses_120 = 0, 0
-    
+    best_pairs_str, wins, losses, total_pnl, wins_75, losses_75, wins_120, losses_120 = "", 0, 0, 0.0, 0, 0, 0, 0
     if total_trades > 0:
-        wins = df_filtered['result'].astype(str).str.contains("WIN").sum()
-        losses = df_filtered['result'].astype(str).str.contains("LOSS").sum()
-        wins_75 = df_filtered['check_75s'].astype(str).str.contains("✅").sum()
-        losses_75 = df_filtered['check_75s'].astype(str).str.contains("❌").sum()
-        wins_120 = df_filtered['check_120s'].astype(str).str.contains("✅").sum()
-        losses_120 = df_filtered['check_120s'].astype(str).str.contains("❌").sum()
-                
+        wins, losses = df_filtered['result'].astype(str).str.contains("WIN").sum(), df_filtered['result'].astype(str).str.contains("LOSS").sum()
+        wins_75, losses_75 = df_filtered['check_75s'].astype(str).str.contains("✅").sum(), df_filtered['check_75s'].astype(str).str.contains("❌").sum()
+        wins_120, losses_120 = df_filtered['check_120s'].astype(str).str.contains("✅").sum(), df_filtered['check_120s'].astype(str).str.contains("❌").sum()
         total_pnl = df_filtered['pnl_numeric'].sum()
-        
         profit_by_pair = df_filtered.groupby('pair')['pnl_numeric'].sum()
-        if not profit_by_pair.empty:
-            max_profit = profit_by_pair.max()
-            if max_profit > 0:
-                best_pairs = profit_by_pair[profit_by_pair == max_profit].index.tolist()
-                best_pairs_str = ", ".join(best_pairs)
-
-    trades_conclusi = wins + losses
-    trades_conclusi_75 = wins_75 + losses_75
-    trades_conclusi_120 = wins_120 + losses_120
+        if not profit_by_pair.empty and profit_by_pair.max() > 0: best_pairs_str = ", ".join(profit_by_pair[profit_by_pair == profit_by_pair.max()].index.tolist())
 
     win_rate = (wins / (wins + losses) * 100) if (wins + losses) > 0 else 0.0
     win_rate_75 = (wins_75 / (wins_75 + losses_75) * 100) if (wins_75 + losses_75) > 0 else 0.0
     win_rate_120 = (wins_120 / (wins_120 + losses_120) * 100) if (wins_120 + losses_120) > 0 else 0.0
-
     diff_win_rate = win_rate_75 - win_rate
-    diff_win_rate_120 = win_rate_120 - win_rate
     
-    # 5. Mostriamo le Metriche aggiornate (Sempre visibili!)
     c1, c2, c3, c4, c5, c6 = st.columns(6)
     c1.metric("💰 Profitto", f"{total_pnl:.2f} €", delta=f"{total_pnl:.2f} €")
     c2.metric("🎯 Win/Loss", f"{wins}W - {losses}L", delta=f"Totali: {total_trades}")
@@ -904,89 +655,39 @@ if st.session_state.connected:
     c5.metric("🏁 Win Rate 120s", f"{win_rate_120:.1f}%")
     c6.metric("🏆 Top Asset", best_pairs_str if best_pairs_str else "-")
 
-    # --- ANALISI DETTAGLIATA PER COPPIA (RITARDATARI VS VELOCI) ---
     if total_trades >= 3:
         with st.expander("🔍 Analisi Strategica: Quali coppie eliminare?"):
-            # Raggruppiamo i dati per coppia
             stats_per_pair = []
             for p in df_filtered['pair'].unique():
                 df_p = df_filtered[df_filtered['pair'] == p]
-                wins = df_p['result'].astype(str).str.contains("WIN").sum()
-                wins_75 = df_p['check_75s'].astype(str).str.contains("✅").sum()
+                w, w_75 = df_p['result'].astype(str).str.contains("WIN").sum(), df_p['check_75s'].astype(str).str.contains("✅").sum()
+                w_120 = df_p['check_120s'].astype(str).str.contains("✅").sum()
                 tot_p = len(df_p)
-                
-                win_rate = (wins / tot_p * 100)
-                win_rate_75 = (wins_75 / tot_p * 100)
-                diff = win_rate_75 - win_rate
-                win_rate_120 = (wins_120 / tot_p * 100)
-                diff_120 = win_rate_120 - win_rate
-                
-                stats_per_pair.append({
-                    "Coppia": p,
-                    "Trades": tot_p,
-                    "WR 60s": f"{win_rate:.1f}%",
-                    "WR 75s": f"{win_rate_75:.1f}%",
-                    "WR 120s": f"{win_rate_120:.1f}%",
-                    "Stabilità": "🟢 Alta" if abs(diff) < 5 else ("🟡 Media" if abs(diff) < 15 else "🔴 Critica")
-                })
-            
+                wr, wr_75, wr_120 = (w / tot_p * 100), (w_75 / tot_p * 100), (w_120 / tot_p * 100)
+                diff = wr_75 - wr
+                stats_per_pair.append({"Coppia": p, "Trades": tot_p, "WR 60s": f"{wr:.1f}%", "WR 75s": f"{wr_75:.1f}%", "WR 120s": f"{wr_120:.1f}%", "Stabilità": "🟢 Alta" if abs(diff) < 5 else ("🟡 Media" if abs(diff) < 15 else "🔴 Critica")})
             st.dataframe(pd.DataFrame(stats_per_pair), hide_index=True, use_container_width=True)
-            st.caption("💡 Se vedi 'Stabilità Critica' e il WR 75s è molto più basso, quella coppia richiede un'esecuzione istantanea.")
 
-    # Aggiungiamo un box di analisi automatica del ritardo
-    if trades_conclusi >= 5: # Aspetta almeno 5 trade per dare un giudizio
-        if diff_win_rate <= -10:
-            st.error(f"⚡ **ALLERTA VELOCITÀ:** Se ritardi le entrate di 10-15s perdi in media il {abs(diff_win_rate):.1f}% di Win Rate. Devi essere un cecchino!")
-        elif diff_win_rate >= 10:
-            st.success(f"🐢 **NESSUNA FRETTA:** I trade a 75s vanno meglio del {diff_win_rate:.1f}%. Il trend continua dopo il segnale, hai margine per piazzare l'ordine con calma.")
-        else:
-            st.info(f"⚖️ **STABILITÀ ALTA:** La differenza tra entrare subito o con 10-15s di ritardo è irrilevante ({diff_win_rate:+.1f}%). Il segnale è solido.")
+    if (wins + losses) >= 5:
+        if diff_win_rate <= -10: st.error(f"⚡ **ALLERTA VELOCITÀ:** Se ritardi le entrate perdi il {abs(diff_win_rate):.1f}% di Win Rate.")
+        elif diff_win_rate >= 10: st.success(f"🐢 **NESSUNA FRETTA:** I trade a 75s vanno meglio del {diff_win_rate:.1f}%.")
+        else: st.info(f"⚖️ **STABILITÀ ALTA:** La differenza di timing è irrilevante ({diff_win_rate:+.1f}%).")
     
-    if st.session_state.scanner_on:
-            st.caption(f"🔄 Scanner attivo... Ultimo check: {now_roma.time().strftime('%H:%M:%S')}")
+    if st.session_state.scanner_on: st.caption(f"🔄 Scanner attivo... Ultimo check: {now_roma.time().strftime('%H:%M:%S')}")
 
-    # 6. Costruzione della Tabella (Visualizza i dati FILTRATI)
     if not df_filtered.empty:
-        rename_map = {
-            'id': '🆔 ID', 'time': '⏰ DATA', 'pair': '💱 VALUTE', 'dir': '🚀 TIPO',
-            'price': '💰 PRICE', 'stake': '💶 STAKE', 'params_bb': '↔️ BB',
-            'params_rsi': '📉 RSI', 'mercato': '🌍 MERCATO', 
-            'result': '🔍 ESITO 60s', 'check_75s': '⏱️ 75s', 'check_120s': '⏱️ 120s', 'pnl_numeric': '📈 P&L'
-        }
-
-        # Invertiamo per mostrare i più recenti in alto
-        df_visual = df_filtered.iloc[::-1].copy()
-        
-        cols_to_keep = ['id', 'time', 'pair', 'dir', 'price', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'check_75s', 'check_120s', 'pnl_numeric']
-        cols_presenti = [c for c in cols_to_keep if c in df_visual.columns]
-        df_display = df_visual[cols_presenti].rename(columns=rename_map)
-
-        # Trasformiamo pnl_numeric in una stringa pulita "X€" o "-X€"
-        # Usiamo una colonna temporanea per lo stile così non perdiamo il segno
+        rename_map = {'id': '🆔 ID', 'time': '⏰ DATA', 'pair': '💱 VALUTE', 'dir': '🚀 TIPO', 'price': '💰 PRICE', 'stake': '💶 STAKE', 'params_bb': '↔️ BB', 'params_rsi': '📉 RSI', 'mercato': '🌍 MERCATO', 'result': '🔍 ESITO 60s', 'check_75s': '⏱️ 75s', 'check_120s': '⏱️ 120s', 'pnl_numeric': '📈 P&L'}
+        df_display = df_filtered.iloc[::-1].copy()[[c for c in ['id', 'time', 'pair', 'dir', 'price', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'check_75s', 'check_120s', 'pnl_numeric'] if c in df_filtered.columns]].rename(columns=rename_map)
         df_display['📈 P&L'] = df_display['📈 P&L'].apply(lambda x: f"{x:.1f}€" if x % 1 != 0 else f"{x:.0f}€")
-
         try:
-            # Lista dinamica: formatta solo le colonne che esistono davvero in quel momento
             colonne_esito = [c for c in ['🔍 ESITO 60s', '⏱️ 75s', '⏱️ 120s'] if c in df_display.columns]
-            
-            st.dataframe(
-                df_display.style
-                .applymap(style_result, subset=colonne_esito) 
-                .applymap(style_pnl, subset=['📈 P&L']), 
-                use_container_width=True, hide_index=True
-            )
+            st.dataframe(df_display.style.applymap(style_result, subset=colonne_esito).applymap(style_pnl, subset=['📈 P&L']), use_container_width=True, hide_index=True)
         except Exception as e:
-            st.error(f"Errore visualizzazione tabella: {e}") 
             st.dataframe(df_display, use_container_width=True, hide_index=True)
-        
     else:
-        # Mostra un bel messaggio invece di una tabella rotta se i filtri nascondono tutto o se non ci sono ancora trade
-        if not st.session_state.signal_history:
-             st.info("⏳ Avvia lo Scanner e attendi il primo segnale...")
-        else:
-             st.warning("❌ Nessun segnale corrisponde ai filtri selezionati.")
+        if not st.session_state.signal_history: st.info("⏳ Avvia lo Scanner e attendi il primo segnale...")
+        else: st.warning("❌ Nessun segnale corrisponde ai filtri selezionati.")
 
-    # --- 8. REFRESH LOOP ---
     if st.session_state.scanner_on:
         time_module.sleep(5) 
         st.rerun()
