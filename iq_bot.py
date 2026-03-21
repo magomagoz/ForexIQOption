@@ -312,7 +312,7 @@ with st.sidebar:
         # Sostituisci la logica dentro il ciclo for delle città con questa:
         for city, (start, end) in {"🇬🇧 LONDRA:": (time(9,0), time(18,0)), "🇺🇸 NEW YORK:": (time(14,0), time(23,0)), "🇦🇺 SYDNEY:": (time(0,0), time(8,0)), "🇯🇵 TOKYO:": (time(0,0), time(9,0))}.items():
             # Usiamo now_cet (che è già un .time()) invece di now_roma
-            status = "Open 🟢" if start <= now_cet <= end else "Closed 🔴"
+            status = "Open 🟢" if not we and start <= now_cet <= end else "Closed 🔴"
             st.write(f"{city} {status}")
             
         st.info(get_market_status())
