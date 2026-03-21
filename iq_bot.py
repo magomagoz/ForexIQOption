@@ -494,23 +494,22 @@ if st.session_state.connected:
             fig.add_trace(go.Scatter(x=asse_x, y=df_final['sell_sig'] * 1.0002, mode='markers', marker=dict(symbol='triangle-down', size=15, color='#ff3333', line=dict(width=1, color='white')), name="Entry SELL"), row=1, col=1)
             st.plotly_chart(fig, use_container_width=True)
 
-            if st.session_state.weekend_mode:
-                st.divider()
-                st.subheader("🎯 **Monitoraggio Sniper OTC**")
-                ultimo_prezzo, bbu_25, bbl_25 = df_final['close'].iloc[-1], df_final['BBU'].iloc[-1], df_final['BBL'].iloc[-1]
-                distanza_su, distanza_giu = bbu_25 - ultimo_prezzo, ultimo_prezzo - bbl_25
-                canale_totale = bbu_25 - bbl_25
-                perc_su = max(0, (1 - (distanza_su / (canale_totale/2))) * 100) if canale_totale > 0 else 0
-                perc_giu = max(0, (1 - (distanza_giu / (canale_totale/2))) * 100) if canale_totale > 0 else 0
-
-                m1, m2 = st.columns(2)
-                with m1:
-                    st.metric("DISTANZA BANDA SUPERIORE (SELL)", f"{distanza_su:.5f}", delta=f"{perc_su:.1f}% al Target", delta_color="inverse")
-                    if distanza_su <= 0: st.error("🔥 ZONA SELL RAGGIUNTA!")
-                with m2:
-                    st.metric("DISTANZA BANDA INFERIORE (BUY)", f"{distanza_giu:.5f}", delta=f"{perc_giu:.1f}% al Target", delta_color="normal")
-                    if distanza_giu <= 0: st.success("🔥 ZONA BUY RAGGIUNTA!")
-                st.progress(min(max(perc_su, perc_giu) / 100, 1.0))
+            # --- MONITORAGGIO GRAFICO (DUAL CHART) ---
+            #if st.session_state.weekend_mode:
+            st.divider()
+            # --- MONITORAGGIO GRAFICO (DUAL CHART) ---
+            st.subheader("📈 Real-Time Sniper Monitor")
+            if is_weekend_reale:
+                c1, c2 = st.columns(2)
+                assets_to_draw = [("EURUSD", "R_10", c1), ("USDJPY", "R_25", c2)]
+                
+                for pair, deriv_id, col in assets_to_draw:
+                    data = get_candles(pair, tf, 50)
+                    if data:
+                        df_g = pd.DataFrame(data)
+                        fig = go.Figure(data=[go.Candlestick(x=df_g['time'], open=df_g['open'], high=df_g['max'], low=df_g['min'], close=df_g['close'])])
+                        fig.update_layout(title=f"{pair} ({deriv_id})", xaxis_rangeslider_visible=False, height=300, template="plotly_dark", margin=dict(l=10, r=10, t=40, b=10))
+                        col.plotly_chart(fig, use_container_width=True)
             
             st.write("---")
             st.subheader("📊 Analisi Performance (1m)")
