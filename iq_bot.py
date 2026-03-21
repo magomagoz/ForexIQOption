@@ -229,7 +229,7 @@ with st.sidebar:
                 else:
                     st.error("Nessuna sorgente dati disponibile.")
     else:
-        st.success(f"Connesso a: **{st.session_state.connection_source}**")
+        st.success(f"Connesso a: **DERIV.COM 🟢🔵**")
         if st.button("🔴 DISCONNETTI", use_container_width=True):
             st.session_state.connected = False
             st.session_state.scanner_on = False
