@@ -529,7 +529,7 @@ if st.session_state.connected:
                 assets_to_draw = [("EURUSD", "R_10", c1), ("USDJPY", "R_25", c2)]
                 
                 for pair, deriv_id, col in assets_to_draw:
-                    data = get_candles(pair, tf, 50)
+                    data = get_candles(pair, timeframe, 50)
                     if data:
                         df_g = pd.DataFrame(data)
                         fig = go.Figure(data=[go.Candlestick(x=df_g['time'], open=df_g['open'], high=df_g['max'], low=df_g['min'], close=df_g['close'])])
@@ -696,41 +696,46 @@ if st.session_state.connected:
     else:
         if not st.session_state.signal_history: st.info("⏳ Avvia lo Scanner e attendi il primo segnale...")
         else: st.warning("❌ Nessun segnale corrisponde ai filtri selezionati.")
-
+    
     # --- 6. DUAL CHART MONITOR (R_10 & R_25) ---
     st.markdown("---")
     st.subheader("🖥️ Monitor Asset Globali (OTC)")
     
     col_m1, col_m2 = st.columns(2)
     
+    # Definiamo i simboli esatti (controlla se nel tuo MT5 si chiamano così o solo R_10 / R_25)
+    symbol_1 = "Volatility 10 Index"
+    symbol_2 = "Volatility 25 Index"
+    
     with col_m1:
-        st.caption("🇪🇺🇺🇸 Volatility 10 Index (R_10)")
-        df_r10 = get_mini_chart_data("Volatility 10 Index", mt5.TIMEFRAME_M1)
-        if df_r10 is not None:
+        st.caption(f"🇪🇺🇺🇸 {symbol_1}")
+        # Usiamo direttamente mt5.TIMEFRAME_M1 (tutto maiuscolo)
+        df_r10 = get_mini_chart_data(symbol_1, mt5.TIMEFRAME_M1)
+        if df_r10 is not None and not df_r10.empty:
             fig_r10 = go.Figure(data=[go.Candlestick(
                 x=df_r10['time'], open=df_r10['open'], high=df_r10['high'],
                 low=df_r10['low'], close=df_r10['close'],
                 increasing_line_color='#00ff88', decreasing_line_color='#ff3333'
             )])
-            fig_r10.update_layout(height=250, margin=dict(l=10, r=10, t=10, b=10), showlegend=False, xaxis_rangeslider_visible=False)
-            st.plotly_chart(fig_r10, use_container_width=True)
+            fig_r10.update_layout(height=250, margin=dict(l=5, r=5, t=5, b=5), showlegend=False, xaxis_rangeslider_visible=False)
+            st.plotly_chart(fig_r10, use_container_width=True, key="chart_r10")
         else:
-            st.info("In attesa di dati R_10...")
+            st.warning(f"Simbolo {symbol_1} non trovato")
     
     with col_m2:
-        st.caption("🇺🇸🇯🇵 Volatility 25 Index (R_25)")
-        df_r25 = get_mini_chart_data("Volatility 25 Index", mt5.TIMEFRAME_M1)
-        if df_r25 is not None:
+        st.caption(f"🇺🇸🇯🇵 {symbol_2}")
+        df_r25 = get_mini_chart_data(symbol_2, mt5.TIMEFRAME_M1)
+        if df_r25 is not None and not df_r25.empty:
             fig_r25 = go.Figure(data=[go.Candlestick(
                 x=df_r25['time'], open=df_r25['open'], high=df_r25['high'],
                 low=df_r25['low'], close=df_r25['close'],
                 increasing_line_color='#00ff88', decreasing_line_color='#ff3333'
             )])
-            fig_r25.update_layout(height=250, margin=dict(l=10, r=10, t=10, b=10), showlegend=False, xaxis_rangeslider_visible=False)
-            st.plotly_chart(fig_r25, use_container_width=True)
+            fig_r25.update_layout(height=250, margin=dict(l=5, r=5, t=5, b=5), showlegend=False, xaxis_rangeslider_visible=False)
+            st.plotly_chart(fig_r25, use_container_width=True, key="chart_r25")
         else:
-            st.info("In attesa di dati R_25...")
-        
+            st.warning(f"Simbolo {symbol_2} non trovato")
+
     
     if st.session_state.scanner_on:
         time_module.sleep(5) 
