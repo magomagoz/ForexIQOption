@@ -19,6 +19,9 @@ TELEGRAM_CHAT_ID = st.secrets.get("TELEGRAM_CHAT_ID", "IL_TUO_CHAT_ID_QUI")
 DERIV_TOKEN = st.secrets.get("DERIV_TOKEN", "") 
 DERIV_APP_ID = "71759" 
 
+ALL_PAIRS = ["EURGBP", "USDCHF", "USDJPY", "EURUSD", "GBPUSD", "AUDUSD", "USDCAD", "NZDUSD", "EURJPY", "GBPJPY"]
+icons = {"EURGBP": "🇪🇺🇬🇧", "USDCHF": "🇺🇸🇨🇭", "USDJPY": "🇺🇸🇯🇵","EURUSD": "🇪🇺🇺🇸", "GBPUSD": "🇬🇧🇺🇸", "AUDUSD": "🇦🇺🇺🇸", "USDCAD": "🇺🇸🇨🇦", "NZDUSD": "🇳🇿🇺🇸", "EURJPY": "🇪🇺🇯🇵", "GBPJPY": "🇬🇧🇯🇵"}
+
 fuso_roma = pytz.timezone('Europe/Rome')
 now_roma = datetime.now(fuso_roma)
 giorno_settimana = now_roma.weekday() 
@@ -63,9 +66,9 @@ def get_candles(pair, timeframe_sec, count):
                     'min': c['low'], 'close': c['close']
                 })
             return candles, "DERIV 🟢"
-    except:
+    except Exception as e: # Aggiungi 'Exception as e'
         print(f"Errore Deriv: {e}")
-        pass # Passa a Yahoo
+        pass 
 
     # 2. Tentativo Yahoo Finance (SOLO SE NON È WEEKEND)
     if not is_weekend_reale:
@@ -380,9 +383,6 @@ with st.sidebar:
                     st.error(f"⚠️ Errore nel file: {e}")
 
 # --- 4. MAIN DASHBOARD ---
-if st.session_state.connected:
-    ALL_PAIRS = ["EURGBP", "USDCHF", "USDJPY", "EURUSD", "GBPUSD", "AUDUSD", "USDCAD", "NZDUSD", "EURJPY", "GBPJPY"]
-    icons = {"EURGBP": "🇪🇺🇬🇧", "USDCHF": "🇺🇸🇨🇭", "USDJPY": "🇺🇸🇯🇵","EURUSD": "🇪🇺🇺🇸", "GBPUSD": "🇬🇧🇺🇸", "AUDUSD": "🇦🇺🇺🇸", "USDCAD": "🇺🇸🇨🇦", "NZDUSD": "🇳🇿🇺🇸", "EURJPY": "🇪🇺🇯🇵", "GBPJPY": "🇬🇧🇯🇵"}
 
     window_1 = (time(0, 0), time(12, 0))
     window_2 = (time(12, 0), time(23, 0))
