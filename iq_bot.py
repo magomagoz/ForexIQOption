@@ -710,7 +710,7 @@ if st.session_state.connected:
     with col_m1:
         st.caption(f"🇪🇺🇺🇸 {symbol_1}")
         # Usiamo direttamente mt5.TIMEFRAME_M1 (tutto maiuscolo)
-        df_r10 = get_mini_chart_data(symbol_1, mt5.TIMEFRAME_M1)
+        df_r10 = get_mini_chart_data(symbol_1, MT5.TIMEFRAME_M1)
         if df_r10 is not None and not df_r10.empty:
             fig_r10 = go.Figure(data=[go.Candlestick(
                 x=df_r10['time'], open=df_r10['open'], high=df_r10['high'],
@@ -724,7 +724,7 @@ if st.session_state.connected:
     
     with col_m2:
         st.caption(f"🇺🇸🇯🇵 {symbol_2}")
-        df_r25 = get_mini_chart_data(symbol_2, mt5.TIMEFRAME_M1)
+        df_r25 = get_mini_chart_data(symbol_2, MT5.TIMEFRAME_M1)
         if df_r25 is not None and not df_r25.empty:
             fig_r25 = go.Figure(data=[go.Candlestick(
                 x=df_r25['time'], open=df_r25['open'], high=df_r25['high'],
