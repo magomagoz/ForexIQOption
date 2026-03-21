@@ -268,7 +268,7 @@ with st.sidebar:
         if st.session_state.weekend_mode:
             st.warning("🚨 MERCATO OTC (Sab-Dom)")
             use_bb, use_rsi = True, True
-            bb_period, bb_std = 20, 2.50
+            bb_period, bb_std = 20, 2.20
             custom_rsi_buy, custom_rsi_sell = 20, 80
         else:
             st.success("🟢 MERCATO LIVE (Lun-Ven)")
@@ -338,7 +338,7 @@ with st.sidebar:
             custom_rsi_sell = 55 # Forza soglia SELL
         else:
             if is_weekend_reale:
-                st.info("⚠️ **Modalità WEEKEND OTC**\n\nBB (20/2.50) - RSI (20/80)")
+                st.info("⚠️ **Modalità WEEKEND OTC**\n\nBB (20/2.20) - RSI (20/80)")
             else:
                 st.success("🟢 **Modalità REALE:**\n\nvedi gli indicatori scelti sopra")
 
