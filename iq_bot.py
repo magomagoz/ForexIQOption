@@ -11,7 +11,13 @@ import json
 import os
 import websocket
 from datetime import datetime, time, timedelta
-import MetaTrader5 as mt5
+
+# Importazione MT5 sicura
+try:
+    import MetaTrader5 as mt5
+    MT5_AVAILABLE = True
+except ImportError:
+    MT5_AVAILABLE = False
 
 # --- 1. CONFIGURAZIONI, TELEGRAM E DERIV ---
 TELEGRAM_TOKEN = st.secrets.get("TELEGRAM_TOKEN", "IL_TUO_TOKEN_QUI")
@@ -30,16 +36,13 @@ now_cet = now_roma.time()
 ora_attuale = now_roma.hour
 
 def to_deriv_symbol(pair):
-    # Mapping Fisso per il Weekend OTC
     if is_weekend_reale:
         if pair == "EURUSD": return "R_10"
         if pair == "USDJPY": return "R_25"
-        return "R_10" # Sicurezza
-    
-    # Durante la settimana usa il Forex reale
+        return "R_10" 
     return f"frx{pair}"
 
-# --- NUOVA FUNZIONE IBRIDA (DERIV + YAHOO) ---
+# Funzione resa 100% sicura: restituisce SEMPRE due valori (dati, sorgente)
 def get_candles(pair, timeframe_sec, count):
     try:
         ws = websocket.create_connection(f"wss://ws.binaryws.com/websockets/v3?app_id={DERIV_APP_ID}", timeout=5)
@@ -64,9 +67,9 @@ def get_candles(pair, timeframe_sec, count):
                     'min': c['low'], 'close': c['close']
                 })
             return candles, "DERIV.COM 🔵"
-    except Exception as e: # Aggiungi 'Exception as e'
-        print(f"Errore Deriv: {e}")
-        pass 
+        return None, "Dati non disponibili"
+    except Exception as e: 
+        return None, f"Errore: {str(e)}"
 
 def get_deriv_balance(token):
     try:
@@ -98,9 +101,7 @@ def get_market_status():
     now_time = datetime.now(fuso_roma).time()
     londra = (time(9,0), time(18,0))
     new_york = (time(14,0), time(23,0))
-    we = is_weekend_reale
-    
-    if we: return "⚠️ **WEEKEND OTC**"
+    if is_weekend_reale: return "⚠️ **WEEKEND OTC**"
     if londra[0] <= now_time <= londra[1] and new_york[0] <= now_time <= new_york[1]:
         return "🔥 **OVERLAP EU+USA**\n\nAlta Volatilità"
     if londra[0] <= now_time <= londra[1]: return "🇪🇺 **SESSIONE LONDRA**"
@@ -113,49 +114,32 @@ def draw_market_map_inverted(trading_autorizzato):
     now_roma = datetime.now(tz_roma)
     x_pos = float(now_roma.hour + (now_roma.minute / 60.0))
 
-    try:
-        bg_image = Image.open("mondo.png")
-    except:
-        bg_image = Image.open("banner2.png")
+    try: bg_image = Image.open("mondo.png")
+    except: 
+        try: bg_image = Image.open("banner2.png")
+        except: bg_image = None
 
-    fig.add_layout_image(dict(
-        source=bg_image, xref="x", yref="y", x=24, y=4.5,
-        sizex=24, sizey=4.5, sizing="stretch", opacity=1.0, layer="below"
-    ))
+    if bg_image:
+        fig.add_layout_image(dict(source=bg_image, xref="x", yref="y", x=24, y=4.5, sizex=24, sizey=4.5, sizing="stretch", opacity=1.0, layer="below"))
 
     color_laser = "#FFD700" if trading_autorizzato else "#0F3ADA"
     fig.add_shape(type="line", x0=x_pos, x1=x_pos, y0=0, y1=4.5, line=dict(color=color_laser, width=3))
-
-    fig.update_layout(
-        xaxis=dict(range=[24, 0], showgrid=False, visible=False, fixedrange=True),
-        yaxis=dict(range=[0, 4.5], showgrid=False, visible=False, fixedrange=True),
-        template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)", margin=dict(l=0, r=0, t=0, b=0), height=350
-    )
+    fig.update_layout(xaxis=dict(range=[24, 0], showgrid=False, visible=False, fixedrange=True), yaxis=dict(range=[0, 4.5], showgrid=False, visible=False, fixedrange=True), template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", margin=dict(l=0, r=0, t=0, b=0), height=350)
     return fig
 
 def invia_telegram(messaggio):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    try:
-        requests.post(url, data={"chat_id": TELEGRAM_CHAT_ID, "text": messaggio, "parse_mode": "Markdown"}, timeout=5)
-    except Exception:
-        pass
+    try: requests.post(url, data={"chat_id": TELEGRAM_CHAT_ID, "text": messaggio, "parse_mode": "Markdown"}, timeout=5)
+    except: pass
 
 def send_telegram_signal(signal_type, pair, price, rsi, trade_id, stake, tipo_mercato="OTC"): 
     timestamp = datetime.now(fuso_roma).strftime("%H:%M:%S")
     message = (
-        f"🚀 *NUOVO TRADE*\n"
-        f"🔔 *Segnale:* {signal_type}\n"
-        f"🆔 ID: `{trade_id}`\n"
-        f"🌍 Market: {tipo_mercato}\n"
-        f"📊 Asset: {pair}\n"
-        f"💵 Stake: `{stake:.0f} €` \n" 
-        f"💰 Prezzo: `{price:.5f}`\n"
-        f"📈 RSI: `{rsi:.1f}`\n"
-        f"⏰ Ora: {timestamp}"
+        f"🚀 *NUOVO TRADE*\n🔔 *Segnale:* {signal_type}\n🆔 ID: `{trade_id}`\n"
+        f"🌍 Market: {tipo_mercato}\n📊 Asset: {pair}\n💵 Stake: `{stake:.0f} €` \n" 
+        f"💰 Prezzo: `{price:.5f}`\n📈 RSI: `{rsi:.1f}`\n⏰ Ora: {timestamp}"
     )
     invia_telegram(message)
-
 
 JOURNAL_FILE = "trading_journal.json"
 
@@ -167,17 +151,15 @@ def load_journal():
     return []
 
 def save_journal(history):
-    with open(JOURNAL_FILE, "w") as f:
-        json.dump(history, f)
+    with open(JOURNAL_FILE, "w") as f: json.dump(history, f)
 
 def style_pnl(val):
     try:
-        clean_val = str(val).replace('€', '').replace(' ', '').strip()
-        num_val = float(clean_val)
+        num_val = float(str(val).replace('€', '').replace(' ', '').strip())
         if num_val > 0: return 'color: #32cd32; font-weight: bold;'
         elif num_val < 0: return 'color: #ff4b4b; font-weight: bold;'
-        return 'color: white;'
-    except: return 'color: white;' 
+    except: pass
+    return 'color: white;' 
 
 def style_result(val):
     val_str = str(val)
@@ -197,29 +179,23 @@ def play_trade_sound(sound_type="buy"):
 
 def get_mini_chart_data(symbol, tf_id):
     """Scarica dati assicurandosi di accedere correttamente al modulo mt5"""
-    import MetaTrader5 as m5 # Import locale per forzare la visibilità
-    if not m5.initialize():
-        return None
+    if not MT5_AVAILABLE: return None
+    import MetaTrader5 as m5
+    if not m5.initialize(): return None
     try:
         rates = m5.copy_rates_from_pos(symbol, tf_id, 0, 50)
-        if rates is None or len(rates) == 0:
-            return None
+        if rates is None or len(rates) == 0: return None
         df = pd.DataFrame(rates)
-        # Convertiamo subito il tempo per evitare l'errore 'time'
         df['time'] = pd.to_datetime(df['time'], unit='s')
         return df
-    except Exception as e:
-        return None
+    except: return None
 
 # --- 2. SETUP STREAMLIT E SESSIONE ---
 st.set_page_config(page_title="Sentinel AI", page_icon="🚀", layout="wide")
 st.markdown("""<style>[data-testid="stAppViewContainer"] * { transition: none !important; } div[data-testid="stVerticalBlock"] { opacity: 1 !important; }</style>""", unsafe_allow_html=True)
 
-try:
-    logo = Image.open("banner.png")
-    st.image(logo, use_column_width=True)
-except:
-    st.image("https://via.placeholder.com/800x100/ff4b4b/white?text=SENTINEL+AI", use_column_width=True)
+try: st.image(Image.open("banner.png"), use_column_width=True)
+except: st.image("https://via.placeholder.com/800x100/ff4b4b/white?text=SENTINEL+AI", use_column_width=True)
 
 if 'connected' not in st.session_state: st.session_state.connected = False
 if 'connection_source' not in st.session_state: st.session_state.connection_source = "Nessuna"
@@ -228,16 +204,6 @@ if 'signal_history' not in st.session_state: st.session_state.signal_history = l
 if 'local_balance' not in st.session_state: st.session_state.local_balance = 10000.0
 if 'scanner_on' not in st.session_state: st.session_state.scanner_on = False
 if 'weekend_mode' not in st.session_state: st.session_state.weekend_mode = is_weekend_reale 
-if 'api_token' not in st.session_state: st.session_state.api_token = DERIV_TOKEN
-# --- INIZIALIZZAZIONE VARIABILI DI CONTROLLO ---
-if 'use_rsi' not in st.session_state:
-    st.session_state.use_rsi = True
-if 'use_bb' not in st.session_state:
-    st.session_state.use_bb = True
-
-# Trasferiamo i valori per il resto dello script
-use_rsi = st.session_state.use_rsi
-use_bb = st.session_state.use_bb
 
 # --- 3. SIDEBAR ---
 with st.sidebar:
@@ -246,14 +212,12 @@ with st.sidebar:
     if not st.session_state.connected:
         if st.button("🔌 CONNETTI SISTEMA", use_container_width=True, type="primary"):
             with st.spinner("Ricerca connessione disponibile..."):
-                # Prova la connessione e mostra la sorgente trovata
                 test_data, source = get_candles("EURUSD", 60, 1)
                 if test_data:
                     st.session_state.connected = True
                     st.session_state.connection_source = source
                     st.rerun()
-                else:
-                    st.error("Nessuna sorgente dati disponibile.")
+                else: st.error("Nessuna sorgente dati disponibile.")
     else:
         st.success(f"Connesso a: **DERIV.COM 🔵**")
         if st.button("🔴 DISCONNETTI", use_container_width=True):
@@ -270,27 +234,26 @@ with st.sidebar:
         if st.session_state.scanner_on:
             st.caption(f"🔄 Scanner attivo...  \nUltimo check: {now_roma.time().strftime('%H:%M:%S')}")
         
-            st.divider()
-            st.subheader("💸 **MERCATO LIVE/OTC**")
-            # Niente più menu a tendina o scelte multiple: l'algoritmo sa già cosa fare.
+        # FIX: Blocco configurazione estratto per non crashare se lo scanner è spento
+        st.divider()
+        st.subheader("💸 **MERCATO LIVE/OTC**")
 
-            if st.session_state.weekend_mode:
-                st.warning("🚨 **MERCATO OTC (Sab-Dom)**\n\n**Asset:**\n\n🇪🇺🇺🇸 (R_10) e 🇺🇸🇯🇵 (R_25)\n\n**🔍 Strategia:**\n\nBB 20/2.20 + RSI 20/80")
-
-                use_bb, use_rsi = True, True
-                bb_period, bb_std = 20, 2.20
-                custom_rsi_buy, custom_rsi_sell = 20, 80
-            else:
-                st.success("🟢 **MERCATO LIVE (Lun-Ven)**")
-                col_t1, col_t2 = st.columns(2)
-                use_bb = col_t1.toggle("**BB**", value=True)
-                use_rsi = col_t2.toggle("**RSI**", value=True)
-                c_bb1, c_rsi1 = st.columns(2)
-                bb_period = c_bb1.selectbox("Periodo BB", [14, 20], index = 1)
-                custom_rsi_buy = c_rsi1.selectbox("RSI Buy", [30, 25, 20, 15], index = 2)
-                c_bb2, c_rsi2 = st.columns(2)
-                bb_std = c_bb2.selectbox("Dev BB", [2.00, 2.20, 2.50, 2.70], index = 0)
-                custom_rsi_sell = c_rsi2.selectbox("RSI Sell", [70, 75, 80, 85], index = 2)
+        if st.session_state.weekend_mode:
+            st.warning("🚨 **MERCATO OTC (Sab-Dom)**\n\n**Asset:**\n\n🇪🇺🇺🇸 (R_10) e 🇺🇸🇯🇵 (R_25)\n\n**🔍 Strategia:**\n\nBB 20/2.20 + RSI 20/80")
+            use_bb, use_rsi = True, True
+            bb_period, bb_std = 20, 2.20
+            custom_rsi_buy, custom_rsi_sell = 20, 80
+        else:
+            st.success("🟢 **MERCATO LIVE (Lun-Ven)**")
+            col_t1, col_t2 = st.columns(2)
+            use_bb = col_t1.toggle("**BB**", value=True)
+            use_rsi = col_t2.toggle("**RSI**", value=True)
+            c_bb1, c_rsi1 = st.columns(2)
+            bb_period = c_bb1.selectbox("Periodo BB", [14, 20], index = 1)
+            custom_rsi_buy = c_rsi1.selectbox("RSI Buy", [30, 25, 20, 15], index = 2)
+            c_bb2, c_rsi2 = st.columns(2)
+            bb_std = c_bb2.selectbox("Dev BB", [2.00, 2.20, 2.50, 2.70], index = 0)
+            custom_rsi_sell = c_rsi2.selectbox("RSI Sell", [70, 75, 80, 85], index = 2)
         
         st.divider()
         st.subheader("🌍 SESSIONI DI MERCATO")
@@ -311,11 +274,6 @@ with st.sidebar:
             st.warning("⚠️ **Modalità TEST:**\n\nno BB - RSI (45/55)")
             use_bb, use_rsi = False, True
             custom_rsi_buy, custom_rsi_sell = 45, 55
-        else:
-            if is_weekend_reale:
-                st.info("⚠️ **WEEKEND OTC**")
-            else:
-                st.success("🟢 **Modalità REALE:**\n\nvedi gli indicatori scelti sopra")
 
         st.divider()
         if st.button("🔔 **TEST AUDIO & TELEGRAM**", use_container_width=True):
@@ -338,24 +296,8 @@ with st.sidebar:
         else:
             st.button("📥 ESPORTA STORICO (CSV)", disabled=True, use_container_width=True)
 
-        uploaded_file = st.file_uploader("📤 IMPORTA DATI", type=["csv"], label_visibility="collapsed")
-        if uploaded_file is not None:
-            if st.button("🔄 UNISCI DATI CARICATI", use_container_width=True, type="secondary"):
-                try:
-                    df_import = pd.read_csv(uploaded_file)
-                    st.session_state.signal_history.extend(df_import.to_dict('records'))
-                    df_pulito = pd.DataFrame(st.session_state.signal_history).drop_duplicates(subset=['time', 'pair'], keep='last')
-                    st.session_state.signal_history = df_pulito.to_dict('records')
-                    save_journal(st.session_state.signal_history) 
-                    st.success("✅ Storico caricato con successo!")
-                    time_module.sleep(1.5)
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"⚠️ Errore nel file: {e}")
-
 # --- 4. MAIN DASHBOARD ---
 if st.session_state.connected:
-    # FILTRO DINAMICO DELLE COPPIE
     CURRENT_PAIRS = ["EURUSD", "USDJPY"] if st.session_state.weekend_mode else ALL_PAIRS
     
     window_1 = (time(0, 0), time(12, 0))
@@ -366,221 +308,135 @@ if st.session_state.connected:
     st.subheader("🌍 Live Market Flow 24h")
     
     if st.session_state.weekend_mode or is_weekend_reale:
-        try:
-            img_weekend = Image.open("banner2.png")
-            st.image(img_weekend, use_column_width=True, caption="MODALITÀ WEEKEND ATTIVA 🔴 MERCATI CHIUSI")
-        except:
-            st.warning("Immagine banner2.png non trovata. Carica il file nella cartella del progetto.")
+        try: st.image(Image.open("banner2.png"), use_column_width=True, caption="MODALITÀ WEEKEND ATTIVA 🔴 MERCATI CHIUSI")
+        except: st.warning("Immagine banner2.png non trovata.")
     else:
         st.plotly_chart(draw_market_map_inverted(trading_autorizzato), use_container_width=True)
 
-    placeholder_scanner = st.empty()
-    
     if st.session_state.scanner_on:
         if st.session_state.weekend_mode:
             st.success("SCANNER OTC ATTIVO su 🇪🇺🇺🇸 (EURUSD) E 🇺🇸🇯🇵 (USDJPY)", icon="🎯")
-            esegui_scansione = True
         else:
             if not trading_autorizzato:
                 st.warning("🛡️ PROTEZIONE ATTIVA: Mercato fuori orario. Scanner in pausa.")
-                esegui_scansione = False
             else:
-                if st.session_state.scanner_on:
-                    with placeholder_scanner.container(): 
-                        st.success("SISTEMA IN SCANSIONE ATTIVA 🔥🔥🔥", icon="📡")
-                st.divider()
-                st.subheader("🕵️ Coppie di valute osservate")
-                cols = st.columns(5)
-                                
-                for i, pair in enumerate(CURRENT_PAIRS):
-                    with cols[i % 5]: st.code(f"{icons.get(pair, '🔍')} {pair}")
+                st.success("SISTEMA IN SCANSIONE ATTIVA 🔥🔥🔥", icon="📡")
+        
+        st.divider()
+        st.subheader("🕵️ Coppie di valute osservate")
+        cols = st.columns(5)
+        for i, pair in enumerate(CURRENT_PAIRS):
+            with cols[i % 5]: st.code(f"{icons.get(pair, '🔍')} {pair}")
+
+        for pair in CURRENT_PAIRS:
+            try:
+                candles, source = get_candles(pair, timeframe, 100) 
+                if not candles or len(candles) < 20: continue
                 
-                esegui_scansione = True
-
-    for pair in CURRENT_PAIRS:
-
-        try:
-            # Estrai in modo sicuro le variabili dalla funzione ibrida
-            candles, source = get_candles(pair, timeframe, 100) 
-            if not candles or len(candles) < 20: continue
-            
-            df = pd.DataFrame(candles)
-            
-            # --- LOGICA OTC SEMPLIFICATA ---
-            if st.session_state.weekend_mode and not stress_test:
-                r_buy, r_sell = 20, 80
-                b_per = 20
-                b_std = 2.20  # Valore fisso da cecchino
-            elif stress_test:
-                r_buy, r_sell = 45, 55
-                b_per, b_std = 20, 2.20
-            else:
-                # Parametri Mercato LIVE (Lun-Ven)
-                r_buy, r_sell = custom_rsi_buy, custom_rsi_sell
-                b_per, b_std = bb_period, bb_std
-
-            # Calcolo effettivo degli indicatori
-            df['RSI'] = ta.rsi(df['close'], length=7)
-            bb = ta.bbands(df['close'], length=b_per, std=b_std)
-            # ----------------------------------
-
-            if bb is None or bb.empty: continue
-            price, curr_rsi = df['close'].iloc[-1], df['RSI'].iloc[-1]
-            curr_bb_low = float(bb.filter(like='BBL').iloc[-1].iloc[0])
-            curr_bb_up = float(bb.filter(like='BBU').iloc[-1].iloc[0])
-            
-            cond_rsi_buy = (curr_rsi < r_buy) if use_rsi else True
-            cond_bb_buy = (price <= curr_bb_low) if use_bb else True
-            cond_rsi_sell = (curr_rsi > r_sell) if use_rsi else True
-            cond_bb_sell = (price >= curr_bb_up) if use_bb else True
-            
-            is_consecutive = check_consecutive_candles(df, count=3)
-            
-            is_buy = (cond_rsi_buy and cond_bb_buy) and (use_rsi or use_bb) and not is_consecutive
-            is_sell = (cond_rsi_sell and cond_bb_sell) and (use_rsi or use_bb) and not is_consecutive
-            
-            if (is_buy or is_sell) and pair not in st.session_state.active_trades:
-                direction = "BUY" if is_buy else "SELL"
-                t_id = genera_trade_id()
-                tipo_mercato = "OTC" if st.session_state.weekend_mode else "LIVE"
-                params_bb = f"{b_per}/{b_std}" if use_bb else "OFF"
-                params_rsi = f"{r_buy}/{r_sell}"
-            
-                st.session_state.active_trades[pair] = {
-                    'id': t_id, 'entry_price': float(price), 'entry_time': time_module.time(), 
-                    'direction': direction, 'stake_num': float(st.session_state.stake)
-                }
+                df = pd.DataFrame(candles)
                 
-                st.session_state.signal_history.append({
-                    'id': t_id, 'time': datetime.now(fuso_roma).strftime("%Y-%m-%d %H:%M:%S"),
-                    'pair': pair, 'dir': direction, 'price': float(price), 
-                    'stake': f"{st.session_state.stake:.0f}€",                         
-                    'params_bb': params_bb, 'params_rsi': params_rsi, 
-                    'mercato': tipo_mercato, 'result': "⏳ In corso...",
-                    'check_75s': "-", 'check_120s': "-", 'pnl_numeric': 0.0
-                })
+                if st.session_state.weekend_mode and not stress_test:
+                    r_buy, r_sell, b_per, b_std = 20, 80, 20, 2.20
+                elif stress_test:
+                    r_buy, r_sell, b_per, b_std = 45, 55, 20, 2.20
+                else:
+                    r_buy, r_sell, b_per, b_std = custom_rsi_buy, custom_rsi_sell, bb_period, bb_std
 
-                save_journal(st.session_state.signal_history)
-                send_telegram_signal(direction, pair, price, curr_rsi, t_id, st.session_state.stake, tipo_mercato)
-                play_trade_sound("buy")
-        except Exception as e:
-            continue
+                df['RSI'] = ta.rsi(df['close'], length=7)
+                bb = ta.bbands(df['close'], length=b_per, std=b_std)
+
+                if bb is None or bb.empty: continue
+                price, curr_rsi = df['close'].iloc[-1], df['RSI'].iloc[-1]
+                curr_bb_low = float(bb.filter(like='BBL').iloc[-1].iloc[0])
+                curr_bb_up = float(bb.filter(like='BBU').iloc[-1].iloc[0])
+                
+                cond_rsi_buy = (curr_rsi < r_buy) if use_rsi else True
+                cond_bb_buy = (price <= curr_bb_low) if use_bb else True
+                cond_rsi_sell = (curr_rsi > r_sell) if use_rsi else True
+                cond_bb_sell = (price >= curr_bb_up) if use_bb else True
+                
+                is_consecutive = check_consecutive_candles(df, count=3)
+                
+                is_buy = (cond_rsi_buy and cond_bb_buy) and (use_rsi or use_bb) and not is_consecutive
+                is_sell = (cond_rsi_sell and cond_bb_sell) and (use_rsi or use_bb) and not is_consecutive
+                
+                if (is_buy or is_sell) and pair not in st.session_state.active_trades:
+                    direction = "BUY" if is_buy else "SELL"
+                    t_id = genera_trade_id()
+                    tipo_mercato = "OTC" if st.session_state.weekend_mode else "LIVE"
+                
+                    st.session_state.active_trades[pair] = {
+                        'id': t_id, 'entry_price': float(price), 'entry_time': time_module.time(), 
+                        'direction': direction, 'stake_num': float(st.session_state.stake)
+                    }
+                    
+                    st.session_state.signal_history.append({
+                        'id': t_id, 'time': datetime.now(fuso_roma).strftime("%Y-%m-%d %H:%M:%S"),
+                        'pair': pair, 'dir': direction, 'price': float(price), 
+                        'stake': f"{st.session_state.stake:.0f}€",                         
+                        'params_bb': f"{b_per}/{b_std}" if use_bb else "OFF", 
+                        'params_rsi': f"{r_buy}/{r_sell}", 
+                        'mercato': tipo_mercato, 'result': "⏳ In corso...",
+                        'check_75s': "-", 'check_120s': "-", 'pnl_numeric': 0.0
+                    })
+
+                    save_journal(st.session_state.signal_history)
+                    send_telegram_signal(direction, pair, price, curr_rsi, t_id, st.session_state.stake, tipo_mercato)
+                    play_trade_sound("buy")
+            except Exception as e:
+                continue
     
     # --- 5. ANALISI TECNICA GRAFICA ---
     st.divider()
-    st.subheader("📈 Analisi Tecnica")
+    st.subheader("📈 Analisi Tecnica Principale")
     pair_display = st.selectbox("Seleziona asset per grafico", CURRENT_PAIRS)
     
     try:
-        if st.session_state.weekend_mode and pair_display in st.session_state.get('manual_prices', {}) and st.session_state.manual_prices[pair_display] > 0:
-            candles_ta, src_ta = get_candles(pair_display, timeframe, 160)
-            if candles_ta:
-                candles_ta[-1]['close'] = st.session_state.manual_prices[pair_display]
-        else:
-            candles_ta, src_ta = get_candles(pair_display, timeframe, 160)
+        candles_ta, src_ta = get_candles(pair_display, timeframe, 160)
             
         if candles_ta:
             st.caption(f"Sorgente dati attuale: **{src_ta}**")
             df_raw = pd.DataFrame(candles_ta)
-            
             df_raw['RSI'] = ta.rsi(df_raw['close'], length=7)
             
-            # Parametri dinamici anche per il grafico
             b_per_graf, b_std_graf = (20, 2.20) if st.session_state.weekend_mode and not stress_test else (bb_period, bb_std)
             r_buy_graf, r_sell_graf = (20, 80) if st.session_state.weekend_mode and not stress_test else (custom_rsi_buy, custom_rsi_sell)
             
             bb_ta = ta.bbands(df_raw['close'], length=b_per_graf, std=b_std_graf)
-            if bb_ta is None or bb_ta.empty: st.stop()
-            
-            bb_ta.columns = ['BBL', 'BBM', 'BBU', 'BBB', 'BBP'] 
-            df_final = pd.concat([df_raw, bb_ta[['BBL', 'BBM', 'BBU']]], axis=1).tail(100)
+            if bb_ta is not None and not bb_ta.empty:
+                bb_ta.columns = ['BBL', 'BBM', 'BBU', 'BBB', 'BBP'] 
+                df_final = pd.concat([df_raw, bb_ta[['BBL', 'BBM', 'BBU']]], axis=1).tail(100)
 
-            df_final['buy_sig'] = df_final.apply(lambda x: (x['close'] * 0.9998) if (
-                ((x['RSI'] < r_buy_graf) if use_rsi else True) and 
-                ((x['close'] <= x['BBL']) if use_bb else True) 
-            ) else float('nan'), axis=1)
-            
-            df_final['sell_sig'] = df_final.apply(lambda x: (x['close'] * 1.0002) if (
-                ((x['RSI'] > r_sell_graf) if use_rsi else True) and 
-                ((x['close'] >= x['BBU']) if use_bb else True)
-            ) else float('nan'), axis=1)
-         
-            asse_x = df_final['time']
-            fig = make_subplots(rows=2, cols=1, shared_xaxes=True, row_heights=[0.5, 0.25], vertical_spacing=0.07, subplot_titles=("📊 Prezzo & Volatilità", "📉 Oscillatore RSI"))
-            fig.add_trace(go.Candlestick(x=asse_x, open=df_final['open'], high=df_final['max'], low=df_final['min'], close=df_final['close'], name="Prezzo"), row=1, col=1)
-            fig.add_trace(go.Scatter(x=asse_x, y=df_final['BBU'], line=dict(color='rgba(0,71,171,0.4)', width=1), name="BBU"), row=1, col=1)
-            fig.add_trace(go.Scatter(x=asse_x, y=df_final['BBM'], line=dict(color='rgba(170,170,170,0.3)', width=1), name="BBM"), row=1, col=1)
-            fig.add_trace(go.Scatter(x=asse_x, y=df_final['BBL'], line=dict(color='rgba(0,71,171,0.4)', width=1), fill='tonexty', fillcolor='rgba(100, 100, 255, 0.05)', name="BBL"), row=1, col=1)
-            fig.add_trace(go.Scatter(x=asse_x, y=df_final['RSI'], line=dict(color='#AB63FA'), name="RSI"), row=2, col=1)
-            fig.add_hline(y=r_buy_graf, line_color="green", row=2, col=1, line_dash="dash")
-            fig.add_hline(y=r_sell_graf, line_color="red", row=2, col=1, line_dash="dash")
-            fig.update_layout(xaxis_rangeslider_visible=False, hovermode="x unified", template="plotly_dark", height=800)
-            fig.update_xaxes(type='category', tickangle=45, nticks=20, showgrid=True, gridcolor='rgba(130,130,130,0.08)', showspikes=True, spikemode='across', spikecolor="black", spikethickness=1, spikedash="solid")
-            fig.add_trace(go.Scatter(x=asse_x, y=df_final['buy_sig'], mode='markers', marker=dict(symbol='triangle-up', size=15, color='#00ff88', line=dict(width=1, color='white')), name="Entry BUY"), row=1, col=1)
-            fig.add_trace(go.Scatter(x=asse_x, y=df_final['sell_sig'], mode='markers', marker=dict(symbol='triangle-down', size=15, color='#ff3333', line=dict(width=1, color='white')), name="Entry SELL"), row=1, col=1)
-            st.plotly_chart(fig, use_container_width=True)
-
-            # --- MONITORAGGIO GRAFICO (DUAL CHART) ---
-            #if st.session_state.weekend_mode:
-            st.divider()
-            
-            # --- MONITORAGGIO GRAFICO (DUAL CHART) ---
-            st.subheader("📈 Real-Time Sniper Monitor")
-            if is_weekend_reale:
-                c1, c2 = st.columns(2)
-                assets_to_draw = [("EURUSD", "R_10", c1), ("USDJPY", "R_25", c2)]
+                # Gestione sicura dei triangolini sul grafico usando NaN
+                df_final['buy_sig'] = df_final.apply(lambda x: (x['close'] * 0.9998) if (
+                    ((x['RSI'] < r_buy_graf) if use_rsi else True) and 
+                    ((x['close'] <= x['BBL']) if use_bb else True) 
+                ) else float('nan'), axis=1)
                 
-                for pair, deriv_id, col in assets_to_draw:
-                    # FIX: Aggiunta la virgola e il _ per scaricare correttamente i dati
-                    data_list, _ = get_candles(pair, timeframe, 50) 
-                    
-                    if data_list:
-                        df_g = pd.DataFrame(data_list)
-                        fig = go.Figure(data=[go.Candlestick(
-                            x=df_g['time'], 
-                            open=df_g['open'], 
-                            high=df_g['max'], 
-                            low=df_g['min'], 
-                            close=df_g['close']
-                        )])
-                        fig.update_layout(title=f"{pair} ({deriv_id})", xaxis_rangeslider_visible=False, height=300, template="plotly_dark", margin=dict(l=10, r=10, t=40, b=10))
-                        col.plotly_chart(fig, use_container_width=True, key=f"sniper_{pair}")
-            
-            st.write("---")
-            st.subheader("📊 Analisi Performance (1m)")
-            n_buy, n_sell = df_final['buy_sig'].notnull().sum(), df_final['sell_sig'].notnull().sum()
-            totale_segnali = n_buy + n_sell
+                df_final['sell_sig'] = df_final.apply(lambda x: (x['close'] * 1.0002) if (
+                    ((x['RSI'] > r_sell_graf) if use_rsi else True) and 
+                    ((x['close'] >= x['BBU']) if use_bb else True)
+                ) else float('nan'), axis=1)
+             
+                asse_x = df_final['time']
+                fig = make_subplots(rows=2, cols=1, shared_xaxes=True, row_heights=[0.5, 0.25], vertical_spacing=0.07, subplot_titles=("📊 Prezzo & Volatilità", "📉 Oscillatore RSI"))
+                fig.add_trace(go.Candlestick(x=asse_x, open=df_final['open'], high=df_final['max'], low=df_final['min'], close=df_final['close'], name="Prezzo"), row=1, col=1)
+                fig.add_trace(go.Scatter(x=asse_x, y=df_final['BBU'], line=dict(color='rgba(0,71,171,0.4)', width=1), name="BBU"), row=1, col=1)
+                fig.add_trace(go.Scatter(x=asse_x, y=df_final['BBM'], line=dict(color='rgba(170,170,170,0.3)', width=1), name="BBM"), row=1, col=1)
+                fig.add_trace(go.Scatter(x=asse_x, y=df_final['BBL'], line=dict(color='rgba(0,71,171,0.4)', width=1), fill='tonexty', fillcolor='rgba(100, 100, 255, 0.05)', name="BBL"), row=1, col=1)
+                fig.add_trace(go.Scatter(x=asse_x, y=df_final['RSI'], line=dict(color='#AB63FA'), name="RSI"), row=2, col=1)
+                fig.add_hline(y=r_buy_graf, line_color="green", row=2, col=1, line_dash="dash")
+                fig.add_hline(y=r_sell_graf, line_color="red", row=2, col=1, line_dash="dash")
+                fig.update_layout(xaxis_rangeslider_visible=False, hovermode="x unified", template="plotly_dark", height=600)
+                fig.update_xaxes(type='category', tickangle=45, nticks=20, showgrid=True, gridcolor='rgba(130,130,130,0.08)', showspikes=True, spikemode='across', spikecolor="black", spikethickness=1, spikedash="solid")
+                fig.add_trace(go.Scatter(x=asse_x, y=df_final['buy_sig'], mode='markers', marker=dict(symbol='triangle-up', size=15, color='#00ff88', line=dict(width=1, color='white')), name="Entry BUY"), row=1, col=1)
+                fig.add_trace(go.Scatter(x=asse_x, y=df_final['sell_sig'], mode='markers', marker=dict(symbol='triangle-down', size=15, color='#ff3333', line=dict(width=1, color='white')), name="Entry SELL"), row=1, col=1)
+                st.plotly_chart(fig, use_container_width=True)
 
-            if st.button("🔍 **VERIFICA ESITO (60s)**", use_container_width=True, type="primary"):
-                wins_buy, wins_sell = 0, 0
-                for i in range(len(df_final) - 1):
-                    if pd.notnull(df_final['buy_sig'].iloc[i]) and df_final['close'].iloc[i+1] > df_final['close'].iloc[i]: wins_buy += 1
-                    if pd.notnull(df_final['sell_sig'].iloc[i]) and df_final['close'].iloc[i+1] < df_final['close'].iloc[i]: wins_sell += 1
-
-                tot_vinti = wins_buy + wins_sell
-                tot_persi = totale_segnali - tot_vinti
-                accuracy = (tot_vinti / totale_segnali * 100) if totale_segnali > 0 else 0
-                bilancio_netto = (tot_vinti * (st.session_state.stake * 0.85)) - (tot_persi * st.session_state.stake)
-
-                c1, c2, c3 = st.columns(3)
-                c1.metric("🟢 BUY VINCENTI", f"{wins_buy} / {n_buy}")
-                c2.metric("🔴 SELL VINCENTI", f"{wins_sell} / {n_sell}")
-                c3.metric("🎯 ACCURACY", f"{accuracy:.1f}%")
-                colore_box = "green" if bilancio_netto > 0 else "red"
-                st.markdown(f"""
-                <div style="padding:20px; border-radius:10px; border: 2px solid {colore_box}; background-color: rgba(0,0,0,0.1);">
-                    <h3 style="margin-top:0;">💰 Risultato Economico Stimato</h3>
-                    <p>Segnali Totali: <b>{totale_segnali}</b> (Vinti: <span style="color:#00ff88;">{tot_vinti}</span> | Persi: <span style="color:#ff3333;">{tot_persi}</span>)</p>
-                    <h2 style="color:{colore_box}; margin-bottom:0;">Profitto Netto: {bilancio_netto:.2f} €</h2>
-                    <small>Basato su investimento di {st.session_state.stake}€ e payout 85%</small>
-                </div>
-                """, unsafe_allow_html=True)
-            else:
-                st.info("Regola i parametri e verifica il profitto")
     except Exception as e:
-        st.error(f"Errore grafico: {e}")
+        st.error(f"Errore generazione grafico: {e}")
     
-    # --- 6. VERIFICA ESITI TRADE CON DERIV (FIX FINALE) ---
+    # --- 6. VERIFICA ESITI TRADE CON DERIV ---
     current_ts = time_module.time() 
     trades_pendenti = list(st.session_state.active_trades.items())
 
@@ -609,8 +465,7 @@ if st.session_state.connected:
                             s.update({'result': f"{icona_esito} {res_status}", 'check_75s': "✅" if win_75 else "❌", 'check_120s': "✅" if win_120 else "❌", 'pnl_numeric': float(profit)})
                             break
 
-                    msg = (f"🏁 *ESITO* {'💰' if win else '💀'} {res_status}\n"
-                           f"🆔 ID: `{t_id}`\n📊 Asset: {pair}\n"
+                    msg = (f"🏁 *ESITO* {'💰' if win else '💀'} {res_status}\n🆔 ID: `{t_id}`\n📊 Asset: {pair}\n"
                            f"📉 Esito 60s: {res_status}\n⏱️ Esito 75s: {'✅' if win_75 else '❌'}\n"
                            f"⏱️ Esito 120s: {'✅' if win_120 else '❌'}\n💵 P&L: `{profit:.2f} €`")
                     invia_telegram(msg)
@@ -620,7 +475,6 @@ if st.session_state.connected:
                     save_journal(st.session_state.signal_history)
                     st.rerun()
             except Exception as e:
-                st.error(f"Errore critico verifica {pair}: {e}")
                 continue
 
     st.divider()
@@ -664,35 +518,14 @@ if st.session_state.connected:
     win_rate = (wins / (wins + losses) * 100) if (wins + losses) > 0 else 0.0
     win_rate_75 = (wins_75 / (wins_75 + losses_75) * 100) if (wins_75 + losses_75) > 0 else 0.0
     win_rate_120 = (wins_120 / (wins_120 + losses_120) * 100) if (wins_120 + losses_120) > 0 else 0.0
-    diff_win_rate = win_rate_75 - win_rate
     
     c1, c2, c3, c4, c5, c6 = st.columns(6)
-    c1.metric("💰 Profitto", f"{total_pnl:.2f} €", delta=f"{total_pnl:.2f} €")
-    c2.metric("🎯 Win/Loss", f"{wins}W - {losses}L", delta=f"Totali: {total_trades}")
+    c1.metric("💰 Profitto", f"{total_pnl:.2f} €")
+    c2.metric("🎯 Win/Loss", f"{wins}W - {losses}L")
     c3.metric("🏁 Win Rate 60s", f"{win_rate:.1f}%")
     c4.metric("🏁 Win Rate 75s", f"{win_rate_75:.1f}%")
     c5.metric("🏁 Win Rate 120s", f"{win_rate_120:.1f}%")
     c6.metric("🏆 Top Asset", best_pairs_str if best_pairs_str else "-")
-
-    if total_trades >= 3:
-        with st.expander("🔍 Analisi Strategica: Quali coppie eliminare?"):
-            stats_per_pair = []
-            for p in df_filtered['pair'].unique():
-                df_p = df_filtered[df_filtered['pair'] == p]
-                w, w_75 = df_p['result'].astype(str).str.contains("WIN").sum(), df_p['check_75s'].astype(str).str.contains("✅").sum()
-                w_120 = df_p['check_120s'].astype(str).str.contains("✅").sum()
-                tot_p = len(df_p)
-                wr, wr_75, wr_120 = (w / tot_p * 100), (w_75 / tot_p * 100), (w_120 / tot_p * 100)
-                diff = wr_75 - wr
-                stats_per_pair.append({"Coppia": p, "Trades": tot_p, "WR 60s": f"{wr:.1f}%", "WR 75s": f"{wr_75:.1f}%", "WR 120s": f"{wr_120:.1f}%", "Stabilità": "🟢 Alta" if abs(diff) < 5 else ("🟡 Media" if abs(diff) < 15 else "🔴 Critica")})
-            st.dataframe(pd.DataFrame(stats_per_pair), hide_index=True, use_container_width=True)
-
-    if (wins + losses) >= 5:
-        if diff_win_rate <= -10: st.error(f"⚡ **ALLERTA VELOCITÀ:** Se ritardi le entrate perdi il {abs(diff_win_rate):.1f}% di Win Rate.")
-        elif diff_win_rate >= 10: st.success(f"🐢 **NESSUNA FRETTA:** I trade a 75s vanno meglio del {diff_win_rate:.1f}%.")
-        else: st.info(f"⚖️ **STABILITÀ ALTA:** La differenza di timing è irrilevante ({diff_win_rate:+.1f}%).")
-    
-    if st.session_state.scanner_on: st.caption(f"🔄 Scanner attivo... Ultimo check: {now_roma.time().strftime('%H:%M:%S')}")
 
     if not df_filtered.empty:
         rename_map = {'id': '🆔 ID', 'time': '⏰ DATA', 'pair': '💱 VALUTE', 'dir': '🚀 TIPO', 'price': '💰 PRICE', 'stake': '💶 STAKE', 'params_bb': '↔️ BB', 'params_rsi': '📉 RSI', 'mercato': '🌍 MERCATO', 'result': '🔍 ESITO 60s', 'check_75s': '⏱️ 75s', 'check_120s': '⏱️ 120s', 'pnl_numeric': '📈 P&L'}
@@ -701,50 +534,40 @@ if st.session_state.connected:
         try:
             colonne_esito = [c for c in ['🔍 ESITO 60s', '⏱️ 75s', '⏱️ 120s'] if c in df_display.columns]
             st.dataframe(df_display.style.applymap(style_result, subset=colonne_esito).applymap(style_pnl, subset=['📈 P&L']), use_container_width=True, hide_index=True)
-        except Exception as e:
+        except Exception:
             st.dataframe(df_display, use_container_width=True, hide_index=True)
     else:
-        if not st.session_state.signal_history: st.info("⏳ Avvia lo Scanner e attendi il primo segnale...")
-        else: st.warning("❌ Nessun segnale corrisponde ai filtri selezionati.")
+        st.info("⏳ Avvia lo Scanner e attendi il primo segnale...")
     
-    # --- 6. DUAL CHART MONITOR (R_10 & R_25) ---
+    # --- 8. DUAL CHART MONITOR (R_10 & R_25) ---
     st.markdown("---")
     st.subheader("🖥️ Monitor Asset Globali (OTC)")
     
     col_m1, col_m2 = st.columns(2)
+    s1, s2 = "Volatility 10 Index", "Volatility 25 Index"
     
-    # Se il tuo broker usa nomi diversi (es. "R_10"), cambiali qui sotto:
-    s1 = "Volatility 10 Index"
-    s2 = "Volatility 25 Index"
+    # Se mt5 è disponibile, usa la costante 1 (che equivale a TIMEFRAME_M1 in mt5)
+    tf_m1 = 1 if MT5_AVAILABLE else 1
     
     with col_m1:
         st.caption(f"📊 {s1}")
-        df_r10 = get_mini_chart_data(s1, mt5.TIMEFRAME_M1)
-        
+        df_r10 = get_mini_chart_data(s1, tf_m1)
         if df_r10 is not None and not df_r10.empty:
-            fig_r10 = go.Figure(data=[go.Candlestick(
-                x=df_r10['time'], open=df_r10['open'], high=df_r10['high'],
-                low=df_r10['low'], close=df_r10['close'],
-                increasing_line_color='#00ff88', decreasing_line_color='#ff3333'
-            )])
+            fig_r10 = go.Figure(data=[go.Candlestick(x=df_r10['time'], open=df_r10['open'], high=df_r10['high'], low=df_r10['low'], close=df_r10['close'], increasing_line_color='#00ff88', decreasing_line_color='#ff3333')])
             fig_r10.update_layout(height=250, margin=dict(l=5, r=5, t=5, b=5), showlegend=False, xaxis_rangeslider_visible=False)
             st.plotly_chart(fig_r10, use_container_width=True, key="chart_r10_bottom")
         else:
-            st.warning(f"{s1} non disponibile")
+            st.warning(f"{s1} non disponibile o Terminale chiuso.")
     
     with col_m2:
         st.caption(f"📊 {s2}")
-        df_r25 = get_mini_chart_data(s2, mt5.TIMEFRAME_M1)
+        df_r25 = get_mini_chart_data(s2, tf_m1)
         if df_r25 is not None and not df_r25.empty:
-            fig_r25 = go.Figure(data=[go.Candlestick(
-                x=df_r25['time'], open=df_r25['open'], high=df_r25['high'],
-                low=df_r25['low'], close=df_r25['close'],
-                increasing_line_color='#00ff88', decreasing_line_color='#ff3333'
-            )])
+            fig_r25 = go.Figure(data=[go.Candlestick(x=df_r25['time'], open=df_r25['open'], high=df_r25['high'], low=df_r25['low'], close=df_r25['close'], increasing_line_color='#00ff88', decreasing_line_color='#ff3333')])
             fig_r25.update_layout(height=250, margin=dict(l=5, r=5, t=5, b=5), showlegend=False, xaxis_rangeslider_visible=False)
             st.plotly_chart(fig_r25, use_container_width=True, key="chart_r25_bottom")
         else:
-            st.warning(f"{s2} non disponibile")
+            st.warning(f"{s2} non disponibile o Terminale chiuso.")
     
     if st.session_state.scanner_on:
         time_module.sleep(5) 
