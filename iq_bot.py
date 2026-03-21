@@ -27,6 +27,37 @@ now_cet = now_roma.time()
 ora_attuale = now_roma.hour
 
 def to_deriv_symbol(pair):
+    # Mapping per il weekend o mercati chiusi
+    # Questi simboli Deriv funzionano SEMPRE (24/7)
+    otc_mapping = {
+        "EURUSD": "R_10",    # Volatility 10 Index
+        "USDJPY": "R_25",    # Volatility 25 Index
+        "GBPUSD": "R_50",    # Volatility 50 Index
+        "AUDUSD": "R_75",    # Volatility 75 Index
+        "EURJPY": "R_100",   # Volatility 100 Index
+        "USDCAD": "1HZ10V",  # Volatility 10 (1s) Index
+        "USDCHF": "1HZ25V",  # Volatility 25 (1s) Index
+    }
+    
+    # Se è sabato o domenica, forziamo l'uso dei sintetici
+    if is_weekend_reale:
+        return otc_mapping.get(pair, "R_10")
+    
+    # In settimana usa il Forex reale
+    return f"frx{pair}"
+
+
+def to_deriv_symbol(pair):
+    # Se è weekend, Deriv non accetta frxEURUSD. 
+    # Usiamo i Volatility Indices che sono i veri OTC di Deriv sempre attivi.
+    otc_mapping = {
+        "EURUSD": "1HZ10V", # Esempio: Volatility 10
+        "USDJPY": "1HZ25V", # Esempio: Volatility 25
+        "GBPUSD": "1HZ50V",
+        "EURGBP": "
+    }
+    if is_weekend_reale:
+        return otc_mapping.get(pair, "1HZ10V") 
     return f"frx{pair}"
 
 # --- NUOVA FUNZIONE IBRIDA (DERIV + YAHOO) ---
@@ -57,32 +88,18 @@ def get_candles(pair, timeframe_sec, count):
                 })
             return candles, "DERIV 🟢"
     except:
+        print(f"Errore Deriv: {e}")
         pass # Passa a Yahoo
 
-    # 2. Tentativo Yahoo Finance
-    try:
-        yahoo_symbol = f"{pair}=X"
-        interval = "1m" if timeframe_sec <= 60 else "2m"
-        data = yf.download(tickers=yahoo_symbol, period="1d", interval=interval, progress=False)
-        
-        if not data.empty:
-            data = data.tail(count)
-            candles = []
-            for index, row in data.iterrows():
-                dt = index.astimezone(fuso_roma)
-                # Estrazione sicura dei valori (evita FutureWarning di Pandas)
-                candles.append({
-                    'time': dt.strftime("%H:%M:%S"),
-                    'open': float(row['Open'].iloc[0]) if isinstance(row['Open'], pd.Series) else float(row['Open']),
-                    'max': float(row['High'].iloc[0]) if isinstance(row['High'], pd.Series) else float(row['High']),
-                    'min': float(row['Low'].iloc[0]) if isinstance(row['Low'], pd.Series) else float(row['Low']),
-                    'close': float(row['Close'].iloc[0]) if isinstance(row['Close'], pd.Series) else float(row['Close'])
-                })
+    # 2. Tentativo Yahoo Finance (SOLO SE NON È WEEKEND)
+    if not is_weekend_reale:
+        try:
+            # ... (tua logica Yahoo Finance attuale)
             return candles, "YAHOO FINANCE 🔵"
-    except Exception as e:
-        print(f"Errore Yahoo Finance: {e}")
+        except:
+            pass
     
-    return None, "ERRORE SORGENTI 🔴"
+    return None, "MERCATO CHIUSO/ERRORE 🔴"
 
 def get_deriv_balance(token):
     try:
@@ -167,6 +184,7 @@ def send_telegram_signal(signal_type, pair, price, rsi, trade_id, stake):
         f"🚀 *NUOVO TRADE*\n"
         f"🔔 *Segnale:* {signal_type}\n"
         f"🆔 ID: `{trade_id}`\n"
+        f"Market: 
         f"📊 Asset: {pair}\n"
         f"💵 Stake: `{stake:.0f} €` \n" 
         f"💰 Prezzo: `{price:.5f}`\n"
@@ -285,15 +303,27 @@ with st.sidebar:
 
         if st.session_state.weekend_mode:
             st.divider()
-            st.subheader("🎯 PREZZO MANUALE OTC")
-            st.info("Inserisci il prezzo dal Broker se Yahoo è fermo:")
-            if 'manual_prices' not in st.session_state:
-                st.session_state.manual_prices = {"EURGBP": 0.0, "USDCHF": 0.0, "AUDUSD": 0.0, "EURUSD": 0.0}
-            for pair in ["EURGBP", "USDCHF", "AUDUSD", "EURUSD"]:
-                st.session_state.manual_prices[pair] = st.number_input(
-                    f"Prezzo {pair}", value=st.session_state.manual_prices.get(pair, 0.0), format="%.5f", key=f"input_{pair}")
-            if st.button("🧹 RESET PREZZI", use_container_width=True):
-                reset_manual_prices()
+            st.subheader("🎯 CONFIGURAZIONE OTC")
+            st.info("Assegna un Indice di Volatilità a ogni coppia:")
+            
+            # Inizializza il dizionario delle preferenze se non esiste
+            if 'otc_config' not in st.session_state:
+                st.session_state.otc_config = {pair: "10" for pair in ALL_PAIRS}
+        
+            # Crea la lista con i menu a tendina
+            for pair in ALL_PAIRS:
+                col_p, col_v = st.columns([2, 1])
+                with col_p:
+                    st.markdown(f"**{pair}**")
+                with col_v:
+                    # Menu a tendina per scegliere la volatilità
+                    vol_choice = st.selectbox(
+                        f"Vol", ["10", "25", "50", "75", "100"], 
+                        key=f"vol_{pair}", 
+                        index=["10", "25", "50", "75", "100"].index(st.session_state.otc_config.get(pair, "10")),
+                        label_visibility="collapsed"
+                    )
+                    st.session_state.otc_config[pair] = vol_choice
         
         st.divider()
         st.subheader("🌍 SESSIONI DI MERCATO")
