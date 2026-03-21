@@ -62,7 +62,7 @@ def get_candles(pair, timeframe_sec, count):
                     'open': c['open'], 'max': c['high'],
                     'min': c['low'], 'close': c['close']
                 })
-            return candles, "DERIV.COM 🟢🔵"
+            return candles, "DERIV.COM 🔵"
     except Exception as e: # Aggiungi 'Exception as e'
         print(f"Errore Deriv: {e}")
         pass 
@@ -229,7 +229,7 @@ with st.sidebar:
                 else:
                     st.error("Nessuna sorgente dati disponibile.")
     else:
-        st.success(f"Connesso a: **DERIV.COM 🟢🔵**")
+        st.success(f"Connesso a: **DERIV.COM 🔵**")
         if st.button("🔴 DISCONNETTI", use_container_width=True):
             st.session_state.connected = False
             st.session_state.scanner_on = False
