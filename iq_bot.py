@@ -287,7 +287,7 @@ with st.sidebar:
             custom_rsi_buy, custom_rsi_sell = 45, 55
         else:
             if is_weekend_reale:
-                st.info("⚠️ **Modalità WEEKEND OTC**")
+                st.info("⚠️ **WEEKEND OTC**")
             else:
                 st.success("🟢 **Modalità REALE:**\n\nvedi gli indicatori scelti sopra")
 
