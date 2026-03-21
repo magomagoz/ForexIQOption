@@ -389,37 +389,37 @@ window_2 = (time(12, 0), time(23, 0))
 is_trading_time = (window_1[0] <= now_cet <= window_1[1]) or (window_2[0] <= now_cet <= window_2[1])
 trading_autorizzato = is_trading_time or stress_test
 
-st.subheader("🌍 Live Market Flow 24h")
-
-if st.session_state.weekend_mode or is_weekend_reale:
-    try:
-        img_weekend = Image.open("banner2.png")
-        st.image(img_weekend, use_column_width=True, caption="MODALITÀ WEEKEND ATTIVA 🔴 MERCATI CHIUSI")
-    except:
-        st.warning("Immagine banner2.png non trovata. Carica il file nella cartella del progetto.")
-else:
-    st.plotly_chart(draw_market_map_inverted(trading_autorizzato), use_container_width=True)
-
-placeholder_scanner = st.empty()
-
-if st.session_state.scanner_on:
-    if st.session_state.weekend_mode:
-        st.success("SCANNER OTC ATTIVO su 🇪🇺🇬🇧-🇺🇸🇨🇭-🇦🇺🇺🇸-🇪🇺🇺🇸 ", icon="🎯")
-        esegui_scansione = True
+    st.subheader("🌍 Live Market Flow 24h")
+    
+    if st.session_state.weekend_mode or is_weekend_reale:
+        try:
+            img_weekend = Image.open("banner2.png")
+            st.image(img_weekend, use_column_width=True, caption="MODALITÀ WEEKEND ATTIVA 🔴 MERCATI CHIUSI")
+        except:
+            st.warning("Immagine banner2.png non trovata. Carica il file nella cartella del progetto.")
     else:
-        if not trading_autorizzato:
-            st.warning("🛡️ PROTEZIONE ATTIVA: Mercato fuori orario. Scanner in pausa.")
-            esegui_scansione = False
-        else:
-            if st.session_state.scanner_on:
-                with placeholder_scanner.container(): 
-                    st.success("SISTEMA IN SCANSIONE ATTIVA 🔥🔥🔥", icon="📡")
-            st.divider()
-            st.subheader("🕵️ Coppie di valute osservate")
-            cols = st.columns(5)
-            for i, pair in enumerate(ALL_PAIRS):
-                with cols[i % 5]: st.code(f"{icons.get(pair, '🔍')} {pair}")
+        st.plotly_chart(draw_market_map_inverted(trading_autorizzato), use_container_width=True)
+
+    placeholder_scanner = st.empty()
+    
+    if st.session_state.scanner_on:
+        if st.session_state.weekend_mode:
+            st.success("SCANNER OTC ATTIVO su 🇪🇺🇬🇧-🇺🇸🇨🇭-🇦🇺🇺🇸-🇪🇺🇺🇸 ", icon="🎯")
             esegui_scansione = True
+        else:
+            if not trading_autorizzato:
+                st.warning("🛡️ PROTEZIONE ATTIVA: Mercato fuori orario. Scanner in pausa.")
+                esegui_scansione = False
+            else:
+                if st.session_state.scanner_on:
+                    with placeholder_scanner.container(): 
+                        st.success("SISTEMA IN SCANSIONE ATTIVA 🔥🔥🔥", icon="📡")
+                st.divider()
+                st.subheader("🕵️ Coppie di valute osservate")
+                cols = st.columns(5)
+                for i, pair in enumerate(ALL_PAIRS):
+                    with cols[i % 5]: st.code(f"{icons.get(pair, '🔍')} {pair}")
+                esegui_scansione = True
 
     for pair in ALL_PAIRS:
 
