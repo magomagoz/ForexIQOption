@@ -383,6 +383,7 @@ with st.sidebar:
                     st.error(f"⚠️ Errore nel file: {e}")
 
     # --- 4. MAIN DASHBOARD ---
+if st.session_state.connected:
     
     window_1 = (time(0, 0), time(12, 0))
     window_2 = (time(12, 0), time(23, 0))
