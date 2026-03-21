@@ -119,10 +119,6 @@ def get_market_status():
     if new_york[0] <= now_time <= new_york[1]: return "🇺🇸 **SESSIONE NEW YORK**"
     return "💤 **MERCATO LENTO**"
 
-def reset_manual_prices():
-    st.session_state.manual_prices = {"EURGBP": 0.0, "USDCHF": 0.0, "AUDUSD": 0.0, "EURUSD": 0.0}
-    st.rerun()
-
 def draw_market_map_inverted(trading_autorizzato):
     fig = go.Figure()
     tz_roma = pytz.timezone('Europe/Rome')
@@ -267,7 +263,7 @@ with st.sidebar:
         if st.session_state.weekend_mode:
             st.divider()
             st.subheader("🎯 SETTAGGIO SNIPER OTC")
-            st.success("✅ **Asset:** EURUSD (R_10) e USDJPY (R_25)\n\n**Strategia:** BB 20/2.20 + RSI 20/80")
+            st.success("✅ **Asset:**\nEURUSD (R_10) e USDJPY (R_25)\n\n**Strategia:** BB 20/2.20 + RSI 20/80")
             # Niente più menu a tendina o scelte multiple: l'algoritmo sa già cosa fare.
         
         st.divider()
