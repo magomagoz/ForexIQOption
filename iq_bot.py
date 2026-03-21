@@ -309,7 +309,7 @@ with st.sidebar:
         
             # Griglia per selezionare la velocità dell'indice per ogni coppia
             for pair in ALL_PAIRS:
-                col_p, col_v = st.columns([2, 1])
+                col_p, col_v = st.columns([1, 1])
                 with col_p:
                     st.markdown(f"**{pair}**")
                 with col_v:
