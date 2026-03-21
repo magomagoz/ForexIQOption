@@ -265,8 +265,8 @@ with st.sidebar:
         if st.session_state.weekend_mode:
             st.warning("🚨 MERCATO OTC (Sab-Dom)")
             use_bb, use_rsi = True, True
-            bb_period, bb_std = 20, 2.65
-            custom_rsi_buy, custom_rsi_sell = 15, 85
+            bb_period, bb_std = 20, 2.50
+            custom_rsi_buy, custom_rsi_sell = 20, 80
         else:
             st.success("🟢 MERCATO LIVE (Lun-Ven)")
             col_t1, col_t2 = st.columns(2)
