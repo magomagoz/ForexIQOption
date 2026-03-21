@@ -90,7 +90,7 @@ def check_consecutive_candles(df, count=3):
     return all_green or all_red
 
 def genera_trade_id():
-    return f"TRD-{int(datetime.now().timestamp()) % 1000000}"
+    return f"ID-{int(datetime.now().timestamp()) % 1000000}"
 
 def get_market_status():
     fuso_roma = pytz.timezone('Europe/Rome')
@@ -251,9 +251,9 @@ with st.sidebar:
             if st.session_state.weekend_mode:
                 st.warning("🚨 **MERCATO OTC (Sab-Dom)**\n\n**Asset:**\n\n🇪🇺🇺🇸 (R_10) e 🇺🇸🇯🇵 (R_25)\n\n**🔍 Strategia:**\n\nBB 20/2.20 + RSI 20/80")
 
-                #use_bb, use_rsi = True, True
-                #bb_period, bb_std = 20, 2.20
-                #custom_rsi_buy, custom_rsi_sell = 20, 80
+                use_bb, use_rsi = True, True
+                bb_period, bb_std = 20, 2.20
+                custom_rsi_buy, custom_rsi_sell = 20, 80
             else:
                 st.success("🟢 **MERCATO LIVE (Lun-Ven)**")
                 col_t1, col_t2 = st.columns(2)
@@ -469,15 +469,15 @@ if st.session_state.connected:
             bb_ta.columns = ['BBL', 'BBM', 'BBU', 'BBB', 'BBP'] 
             df_final = pd.concat([df_raw, bb_ta[['BBL', 'BBM', 'BBU']]], axis=1).tail(100)
 
-            df_final['buy_sig'] = df_final.apply(lambda x: x['close'] if (
+            df_final['buy_sig'] = df_final.apply(lambda x: (x['close'] * 0.9998) if (
                 ((x['RSI'] < r_buy_graf) if use_rsi else True) and 
                 ((x['close'] <= x['BBL']) if use_bb else True) 
-            ) else None, axis=1)
+            ) else float('nan'), axis=1)
             
-            df_final['sell_sig'] = df_final.apply(lambda x: x['close'] if (
+            df_final['sell_sig'] = df_final.apply(lambda x: (x['close'] * 1.0002) if (
                 ((x['RSI'] > r_sell_graf) if use_rsi else True) and 
                 ((x['close'] >= x['BBU']) if use_bb else True)
-            ) else None, axis=1)
+            ) else float('nan'), axis=1)
          
             asse_x = df_final['time']
             fig = make_subplots(rows=2, cols=1, shared_xaxes=True, row_heights=[0.5, 0.25], vertical_spacing=0.07, subplot_titles=("📊 Prezzo & Volatilità", "📉 Oscillatore RSI"))
@@ -490,8 +490,8 @@ if st.session_state.connected:
             fig.add_hline(y=r_sell_graf, line_color="red", row=2, col=1, line_dash="dash")
             fig.update_layout(xaxis_rangeslider_visible=False, hovermode="x unified", template="plotly_dark", height=800)
             fig.update_xaxes(type='category', tickangle=45, nticks=20, showgrid=True, gridcolor='rgba(130,130,130,0.08)', showspikes=True, spikemode='across', spikecolor="black", spikethickness=1, spikedash="solid")
-            fig.add_trace(go.Scatter(x=asse_x, y=df_final['buy_sig'] * 0.9998, mode='markers', marker=dict(symbol='triangle-up', size=15, color='#00ff88', line=dict(width=1, color='white')), name="Entry BUY"), row=1, col=1)
-            fig.add_trace(go.Scatter(x=asse_x, y=df_final['sell_sig'] * 1.0002, mode='markers', marker=dict(symbol='triangle-down', size=15, color='#ff3333', line=dict(width=1, color='white')), name="Entry SELL"), row=1, col=1)
+            fig.add_trace(go.Scatter(x=asse_x, y=df_final['buy_sig'], mode='markers', marker=dict(symbol='triangle-up', size=15, color='#00ff88', line=dict(width=1, color='white')), name="Entry BUY"), row=1, col=1)
+            fig.add_trace(go.Scatter(x=asse_x, y=df_final['sell_sig'], mode='markers', marker=dict(symbol='triangle-down', size=15, color='#ff3333', line=dict(width=1, color='white')), name="Entry SELL"), row=1, col=1)
             st.plotly_chart(fig, use_container_width=True)
 
             # --- MONITORAGGIO GRAFICO (DUAL CHART) ---
