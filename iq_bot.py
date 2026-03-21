@@ -103,13 +103,13 @@ def get_market_status():
     if is_londra and is_ny:
         return "🔥 **OVERLAP EU+USA**\n\nAlta Volatilità"
     elif is_londra:
-        return "🇪🇺 SESSIONE LONDRA"
+        return "🇪🇺 **SESSIONE LONDRA**"
     elif is_ny:
-        return "🇺🇸 SESSIONE NEW YORK"
+        return "🇺🇸 **SESSIONE NEW YORK**"
     elif we:
-        return "⚠️ WEEKEND OTC"
+        return "⚠️ **WEEKEND OTC**"
     else:
-        return "💤 MERCATO LENTO"
+        return "💤 **MERCATO LENTO**"
 
 def reset_manual_prices():
     st.session_state.manual_prices = {"EURGBP": 0.0, "USDCHF": 0.0, "AUDUSD": 0.0, "EURUSD": 0.0}
