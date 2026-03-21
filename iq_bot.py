@@ -11,13 +11,13 @@ import json
 import os
 import websocket  # Richiede: pip install websocket-client
 from datetime import datetime, time, timedelta
+import yfinance as yf  # <--- NUOVO
 
-# --- 1. CONFIGURAZIONI, TELEGRAM E DERIV ---
-TELEGRAM_TOKEN = st.secrets.get("TELEGRAM_TOKEN", "IL_TUO_TOKEN_QUI")
-TELEGRAM_CHAT_ID = st.secrets.get("TELEGRAM_CHAT_ID", "IL_TUO_CHAT_ID_QUI")
-DERIV_TOKEN = st.secrets.get("DERIV_TOKEN", "") # Inserisci qui il tuo token API Demo di Deriv (Read/Trade)
-
-DERIV_APP_ID = "71759" # App ID generico di Deriv
+# --- 1. CONFIGURAZIONI ---
+TELEGRAM_TOKEN = st.secrets.get("TELEGRAM_TOKEN", "")
+TELEGRAM_CHAT_ID = st.secrets.get("TELEGRAM_CHAT_ID", "")
+DERIV_TOKEN = st.secrets.get("DERIV_TOKEN", "")
+DERIV_APP_ID = "71759" 
 
 fuso_roma = pytz.timezone('Europe/Rome')
 now_roma = datetime.now(fuso_roma)
@@ -30,26 +30,15 @@ def to_deriv_symbol(pair):
     """Converte EURUSD in frxEURUSD per l'API di Deriv"""
     return f"frx{pair}"
 
-def get_deriv_balance(token):
-    """Recupera il saldo live dal conto Deriv"""
+# --- NUOVA FUNZIONE IBRIDA DI RECUPERO DATI ---
+def get_candles(pair, timeframe_sec, count):
+    """
+    Prova a recuperare i dati da Deriv. 
+    Se fallisce (errore o mercato chiuso), prova Yahoo Finance.
+    """
+    # 1. TENTATIVO DERIV
     try:
-        ws = websocket.create_connection(f"wss://ws.binaryws.com/websockets/v3?app_id={DERIV_APP_ID}", timeout=10)
-        ws.send(json.dumps({"authorize": token}))
-        res = json.loads(ws.recv())
-        if "error" in res:
-            ws.close()
-            return None
-        ws.send(json.dumps({"balance": 1}))
-        res_bal = json.loads(ws.recv())
-        ws.close()
-        return res_bal['balance']['balance']
-    except:
-        return None
-
-def get_deriv_candles(pair, timeframe_sec, count):
-    """Scarica le candele tramite WebSocket di Deriv"""
-    try:
-        ws = websocket.create_connection(f"wss://ws.binaryws.com/websockets/v3?app_id={DERIV_APP_ID}", timeout=10)
+        ws = websocket.create_connection(f"wss://ws.binaryws.com/websockets/v3?app_id={DERIV_APP_ID}", timeout=5)
         req = {
             "ticks_history": to_deriv_symbol(pair),
             "end": "latest",
@@ -70,11 +59,54 @@ def get_deriv_candles(pair, timeframe_sec, count):
                     'open': c['open'], 'max': c['high'],
                     'min': c['low'], 'close': c['close']
                 })
-            return candles
-        return None
+            return candles, "DERIV 🟢"
+    except:
+        pass # Se fallisce Deriv, proseguiamo verso Yahoo
+
+    # 2. TENTATIVO YAHOO FINANCE (FALLBACK)
+    try:
+        # Mappatura simboli e intervalli
+        yahoo_symbol = f"{pair}=X"
+        # Yahoo accetta 1m, 2m, 5m, 15m...
+        interval = "1m" if timeframe_sec <= 60 else "2m"
+        
+        data = yf.download(tickers=yahoo_symbol, period="1d", interval=interval, progress=False)
+        
+        if not data.empty:
+            data = data.tail(count)
+            candles = []
+            for index, row in data.iterrows():
+                # Convertiamo l'indice (Datetime) nel fuso di Roma
+                dt = index.astimezone(fuso_roma)
+                candles.append({
+                    'time': dt.strftime("%H:%M:%S"),
+                    'open': float(row['Open']),
+                    'max': float(row['High']),
+                    'min': float(row['Low']),
+                    'close': float(row['Close'])
+                })
+            return candles, "YAHOO FINANCE 🔵 (Fallback)"
     except Exception as e:
-        print(f"Errore Deriv WebSocket per {pair}: {e}")
+        print(f"Errore critico: {e}")
+    
+    return None, "DISCONNESSO 🔴"
+
+# --- FUNZIONI DI SUPPORTO (Invariate o ottimizzate) ---
+def get_deriv_balance(token):
+    try:
+        ws = websocket.create_connection(f"wss://ws.binaryws.com/websockets/v3?app_id={DERIV_APP_ID}", timeout=10)
+        ws.send(json.dumps({"authorize": token}))
+        res = json.loads(ws.recv())
+        if "error" in res:
+            ws.close()
+            return None
+        ws.send(json.dumps({"balance": 1}))
+        res_bal = json.loads(ws.recv())
+        ws.close()
+        return res_bal['balance']['balance']
+    except:
         return None
+
 
 def check_consecutive_candles(df, count=3):
     """Ritorna True se le ultime 'count' candele sono dello stesso segno"""
@@ -214,10 +246,13 @@ try:
 except:
     st.image("https://via.placeholder.com/800x100/ff4b4b/white?text=SENTINEL+AI+DERIV", use_column_width=True)
 
+# --- 2. SETUP SESSIONE ---
 if 'connected' not in st.session_state: st.session_state.connected = False
+if 'connection_source' not in st.session_state: st.session_state.connection_source = "Nessuna"
 if 'account_type' not in st.session_state: st.session_state.account_type = "DEMO (DERIV)"
 if 'active_trades' not in st.session_state: st.session_state.active_trades = {}
-if 'signal_history' not in st.session_state: st.session_state.signal_history = load_journal()
+if 'signal_history' not in st.session_state: st.session_state.signal_history = []
+#if 'signal_history' not in st.session_state: st.session_state.signal_history = load_journal()
 if 'local_balance' not in st.session_state: st.session_state.local_balance = 10000.0
 if 'scanner_on' not in st.session_state: st.session_state.scanner_on = False
 if 'weekend_mode' not in st.session_state: st.session_state.weekend_mode = is_weekend_reale 
@@ -225,28 +260,24 @@ if 'api_token' not in st.session_state: st.session_state.api_token = DERIV_TOKEN
 
 # --- 3. SIDEBAR ---
 with st.sidebar:
-    st.title("⚙️ DERIV TRADING")
+    st.title("⚙️ MULTI-BRIDGE SYSTEM")
     
-    st.session_state.api_token = st.text_input("🔑 Token Deriv", value=st.session_state.api_token, type="password")
-
     if not st.session_state.connected:
-        st.info("Connettiti per i dati live.")
         if st.button("🔌 CONNETTI SISTEMA", use_container_width=True, type="primary"):
-            with st.spinner("Sincronizzazione WS..."):
-                test_data = get_deriv_candles("EURUSD", 60, 1)
+            with st.spinner("Ricerca connessione disponibile..."):
+                # Testiamo la connessione su EURUSD
+                test_data, source = get_candles("EURUSD", 60, 1)
                 if test_data:
                     st.session_state.connected = True
-                    # Tenta di prendere il saldo vero se c'è il token
-                    if st.session_state.api_token:
-                        bal = get_deriv_balance(st.session_state.api_token)
-                        if bal: st.session_state.local_balance = bal
+                    st.session_state.connection_source = source
+                    st.success(f"Connesso via {source}")
                     st.rerun()
                 else:
-                    st.error("Errore connessione a Deriv API.")
+                    st.error("Nessuna sorgente dati disponibile (Mercati chiusi o API Down).")
     else:
+        st.success(f"Sorgente: **{st.session_state.connection_source}**")
         if st.button("🔴 DISCONNETTI", use_container_width=True):
             st.session_state.connected = False
-            st.session_state.scanner_on = False
             st.rerun()
 
         st.divider()
@@ -400,6 +431,7 @@ with st.sidebar:
                     st.error(f"⚠️ Errore nel file: {e}")
 
         st.divider()
+
 # --- 4. MAIN DASHBOARD ---
 if st.session_state.connected:
     ALL_PAIRS = ["EURGBP", "USDCHF", "USDJPY", "EURUSD", "GBPUSD", "AUDUSD", "USDCAD", "NZDUSD", "EURJPY", "GBPJPY"]
@@ -424,9 +456,11 @@ if st.session_state.connected:
 
     # Crea un contenitore vuoto prima del loop
     placeholder_scanner = st.empty()
-    
+
     # --- GESTIONE STATO SCANNER E PROTEZIONE ORARIA ---        
     if st.session_state.scanner_on:
+        st.info(f"📡 Scansione attiva tramite: {st.session_state.connection_source}")
+
         # Messaggio dinamico in base alla modalità
         if st.session_state.weekend_mode:
             st.success("SCANNER OTC ATTIVO su 🇪🇺🇬🇧-🇺🇸🇨🇭-🇦🇺🇺🇸-🇪🇺🇺🇸 ", icon="🎯")
@@ -450,9 +484,8 @@ if st.session_state.connected:
 
         for pair in ALL_PAIRS:
             try:
-                # Utilizziamo la nuova funzione Deriv
-                candles = get_deriv_candles(pair, timeframe, 100)
-                if not candles or len(candles) < 20: continue
+                candles, source = get_candles(pair, 60, 100) # Usiamo get_candles ovunque
+                if not candles: continue
                 
                 df = pd.DataFrame(candles)
                 df['RSI'] = ta.rsi(df['close'], length=7)
@@ -522,17 +555,24 @@ if st.session_state.connected:
     st.divider()
     st.subheader("📈 Analisi Tecnica")
     pair_display = st.selectbox("Seleziona asset per grafico", ALL_PAIRS)
+
+    
+            # [Codice Plotly per le candele...]
     
     try:
         # LOGICA COERENTE CON L'OVERRIDE (Niente 'token' passato alla funzione)
         if st.session_state.weekend_mode and pair_display in st.session_state.get('manual_prices', {}) and st.session_state.manual_prices[pair_display] > 0:
-            candles_ta = get_deriv_candles(pair_display, timeframe, 160)
+            candles_ta, src_ta = get_candles(pair_display, timeframe, 160)
+
+            #candles_ta = get_deriv_candles(pair_display, timeframe, 160)
+            
             if candles_ta:
                 candles_ta[-1]['close'] = st.session_state.manual_prices[pair_display]
         else:
             candles_ta = get_deriv_candles(pair_display, timeframe, 160)
-            
+
         if candles_ta:
+            st.caption(f"Dati forniti da: {src_ta}")
             df_raw = pd.DataFrame(candles_ta)
             
             # Calcolo indicatori
