@@ -11,6 +11,7 @@ import json
 import os
 import websocket
 from datetime import datetime, time, timedelta
+import MetaTrader5 as mt5
 
 # --- 1. CONFIGURAZIONI, TELEGRAM E DERIV ---
 TELEGRAM_TOKEN = st.secrets.get("TELEGRAM_TOKEN", "IL_TUO_TOKEN_QUI")
@@ -194,24 +195,21 @@ def play_trade_sound(sound_type="buy"):
     except: pass
     placeholder.empty()
 
-def get_mini_chart_data(symbol, timeframe_id):
-    """Versione corretta con import interno per evitare errori di Scope"""
-    import MetaTrader5 as mt5_internal # Importiamo localmente per sicurezza
-    
-    if not mt5_internal.initialize():
+def get_mini_chart_data(symbol, tf_id):
+    """Scarica dati assicurandosi di accedere correttamente al modulo mt5"""
+    import MetaTrader5 as m5 # Import locale per forzare la visibilità
+    if not m5.initialize():
         return None
     try:
-        # Usiamo il riferimento interno mt5_internal
-        rates = mt5_internal.copy_rates_from_pos(symbol, timeframe_id, 0, 50)
+        rates = m5.copy_rates_from_pos(symbol, tf_id, 0, 50)
         if rates is None or len(rates) == 0:
             return None
         df = pd.DataFrame(rates)
+        # Convertiamo subito il tempo per evitare l'errore 'time'
         df['time'] = pd.to_datetime(df['time'], unit='s')
         return df
     except Exception as e:
         return None
-
-
 
 # --- 2. SETUP STREAMLIT E SESSIONE ---
 st.set_page_config(page_title="Sentinel AI", page_icon="🚀", layout="wide")
@@ -525,6 +523,7 @@ if st.session_state.connected:
             # --- MONITORAGGIO GRAFICO (DUAL CHART) ---
             #if st.session_state.weekend_mode:
             st.divider()
+            
             # --- MONITORAGGIO GRAFICO (DUAL CHART) ---
             st.subheader("📈 Real-Time Sniper Monitor")
             if is_weekend_reale:
@@ -532,12 +531,20 @@ if st.session_state.connected:
                 assets_to_draw = [("EURUSD", "R_10", c1), ("USDJPY", "R_25", c2)]
                 
                 for pair, deriv_id, col in assets_to_draw:
-                    data = get_candles(pair, timeframe, 50)
-                    if data:
-                        df_g = pd.DataFrame(data)
-                        fig = go.Figure(data=[go.Candlestick(x=df_g['time'], open=df_g['open'], high=df_g['max'], low=df_g['min'], close=df_g['close'])])
+                    # FIX: Aggiunta la virgola e il _ per scaricare correttamente i dati
+                    data_list, _ = get_candles(pair, timeframe, 50) 
+                    
+                    if data_list:
+                        df_g = pd.DataFrame(data_list)
+                        fig = go.Figure(data=[go.Candlestick(
+                            x=df_g['time'], 
+                            open=df_g['open'], 
+                            high=df_g['max'], 
+                            low=df_g['min'], 
+                            close=df_g['close']
+                        )])
                         fig.update_layout(title=f"{pair} ({deriv_id})", xaxis_rangeslider_visible=False, height=300, template="plotly_dark", margin=dict(l=10, r=10, t=40, b=10))
-                        col.plotly_chart(fig, use_container_width=True)
+                        col.plotly_chart(fig, use_container_width=True, key=f"sniper_{pair}")
             
             st.write("---")
             st.subheader("📊 Analisi Performance (1m)")
@@ -706,15 +713,13 @@ if st.session_state.connected:
     
     col_m1, col_m2 = st.columns(2)
     
-    # Definiamo i simboli esatti (controlla se nel tuo MT5 si chiamano così o solo R_10 / R_25)
-    symbol_1 = "Volatility 10 Index"
-    symbol_2 = "Volatility 25 Index"
+    # Se il tuo broker usa nomi diversi (es. "R_10"), cambiali qui sotto:
+    s1 = "Volatility 10 Index"
+    s2 = "Volatility 25 Index"
     
     with col_m1:
-        st.caption(f"🇪🇺🇺🇸 {symbol_1}")
-        # Usiamo direttamente mt5.TIMEFRAME_M1 (tutto maiuscolo)
-        df_r10 = get_mini_chart_data("Volatility 10 Index", mt5.TIMEFRAME_M1)
-        #df_r10 = get_mini_chart_data(symbol_1, MT5.TIMEFRAME_M1)
+        st.caption(f"📊 {s1}")
+        df_r10 = get_mini_chart_data(s1, mt5.TIMEFRAME_M1)
         
         if df_r10 is not None and not df_r10.empty:
             fig_r10 = go.Figure(data=[go.Candlestick(
@@ -723,14 +728,13 @@ if st.session_state.connected:
                 increasing_line_color='#00ff88', decreasing_line_color='#ff3333'
             )])
             fig_r10.update_layout(height=250, margin=dict(l=5, r=5, t=5, b=5), showlegend=False, xaxis_rangeslider_visible=False)
-            st.plotly_chart(fig_r10, use_container_width=True, key="chart_r10")
+            st.plotly_chart(fig_r10, use_container_width=True, key="chart_r10_bottom")
         else:
-            st.warning(f"Simbolo {symbol_1} non trovato")
+            st.warning(f"{s1} non disponibile")
     
     with col_m2:
-        st.caption(f"🇺🇸🇯🇵 {symbol_2}")
-        df_r25 = get_mini_chart_data("Volatility 25 Index", mt5.TIMEFRAME_M1)
-        #df_r25 = get_mini_chart_data(symbol_2, MT5.TIMEFRAME_M1)
+        st.caption(f"📊 {s2}")
+        df_r25 = get_mini_chart_data(s2, mt5.TIMEFRAME_M1)
         if df_r25 is not None and not df_r25.empty:
             fig_r25 = go.Figure(data=[go.Candlestick(
                 x=df_r25['time'], open=df_r25['open'], high=df_r25['high'],
@@ -738,10 +742,9 @@ if st.session_state.connected:
                 increasing_line_color='#00ff88', decreasing_line_color='#ff3333'
             )])
             fig_r25.update_layout(height=250, margin=dict(l=5, r=5, t=5, b=5), showlegend=False, xaxis_rangeslider_visible=False)
-            st.plotly_chart(fig_r25, use_container_width=True, key="chart_r25")
+            st.plotly_chart(fig_r25, use_container_width=True, key="chart_r25_bottom")
         else:
-            st.warning(f"Simbolo {symbol_2} non trovato")
-
+            st.warning(f"{s2} non disponibile")
     
     if st.session_state.scanner_on:
         time_module.sleep(5) 
