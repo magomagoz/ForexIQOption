@@ -194,6 +194,19 @@ def play_trade_sound(sound_type="buy"):
     except: pass
     placeholder.empty()
 
+def get_mini_chart_data(symbol, timeframe):
+    """Scarica dati rapidi per i mini-grafici del monitor"""
+    try:
+        # Usiamo un numero ridotto di candele per velocità
+        data = mt5.copy_rates_from_pos(symbol, timeframe, 0, 50)
+        if data is None or len(data) == 0:
+            return None
+        df = pd.DataFrame(data)
+        df['time'] = pd.to_datetime(df['time'], unit='s')
+        return df
+    except:
+        return None
+
 # --- 2. SETUP STREAMLIT E SESSIONE ---
 st.set_page_config(page_title="Sentinel AI", page_icon="🚀", layout="wide")
 st.markdown("""<style>[data-testid="stAppViewContainer"] * { transition: none !important; } div[data-testid="stVerticalBlock"] { opacity: 1 !important; }</style>""", unsafe_allow_html=True)
@@ -672,6 +685,41 @@ if st.session_state.connected:
         if not st.session_state.signal_history: st.info("⏳ Avvia lo Scanner e attendi il primo segnale...")
         else: st.warning("❌ Nessun segnale corrisponde ai filtri selezionati.")
 
+    # --- 6. DUAL CHART MONITOR (R_10 & R_25) ---
+    st.markdown("---")
+    st.subheader("🖥️ Monitor Asset Globali (OTC)")
+    
+    col_m1, col_m2 = st.columns(2)
+    
+    with col_m1:
+        st.caption("🇪🇺🇺🇸 Volatility 10 Index (R_10)")
+        df_r10 = get_mini_chart_data("Volatility 10 Index", mt5.TIMEFRAME_M1)
+        if df_r10 is not None:
+            fig_r10 = go.Figure(data=[go.Candlestick(
+                x=df_r10['time'], open=df_r10['open'], high=df_r10['high'],
+                low=df_r10['low'], close=df_r10['close'],
+                increasing_line_color='#00ff88', decreasing_line_color='#ff3333'
+            )])
+            fig_r10.update_layout(height=250, margin=dict(l=10, r=10, t=10, b=10), showlegend=False, xaxis_rangeslider_visible=False)
+            st.plotly_chart(fig_r10, use_container_width=True)
+        else:
+            st.info("In attesa di dati R_10...")
+    
+    with col_m2:
+        st.caption("🇺🇸🇯🇵 Volatility 25 Index (R_25)")
+        df_r25 = get_mini_chart_data("Volatility 25 Index", mt5.TIMEFRAME_M1)
+        if df_r25 is not None:
+            fig_r25 = go.Figure(data=[go.Candlestick(
+                x=df_r25['time'], open=df_r25['open'], high=df_r25['high'],
+                low=df_r25['low'], close=df_r25['close'],
+                increasing_line_color='#00ff88', decreasing_line_color='#ff3333'
+            )])
+            fig_r25.update_layout(height=250, margin=dict(l=10, r=10, t=10, b=10), showlegend=False, xaxis_rangeslider_visible=False)
+            st.plotly_chart(fig_r25, use_container_width=True)
+        else:
+            st.info("In attesa di dati R_25...")
+        
+    
     if st.session_state.scanner_on:
         time_module.sleep(5) 
         st.rerun()
