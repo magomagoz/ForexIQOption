@@ -263,7 +263,7 @@ with st.sidebar:
         if st.session_state.weekend_mode:
             st.divider()
             st.subheader("🎯 SETTAGGIO SNIPER OTC")
-            st.success("✅ **Asset:**\nEURUSD (R_10) e USDJPY (R_25)\n\n**Strategia:** BB 20/2.20 + RSI 20/80")
+            st.success("✅ **Asset:**\n\nEURUSD (R_10) e USDJPY (R_25)\n\n**Strategia:** BB 20/2.20 + RSI 20/80")
             # Niente più menu a tendina o scelte multiple: l'algoritmo sa già cosa fare.
         
         st.divider()
