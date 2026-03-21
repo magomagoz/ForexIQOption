@@ -382,23 +382,23 @@ with st.sidebar:
                 except Exception as e:
                     st.error(f"⚠️ Errore nel file: {e}")
 
-# --- 4. MAIN DASHBOARD ---
+    # --- 4. MAIN DASHBOARD ---
+    
+    window_1 = (time(0, 0), time(12, 0))
+    window_2 = (time(12, 0), time(23, 0))
+    is_trading_time = (window_1[0] <= now_cet <= window_1[1]) or (window_2[0] <= now_cet <= window_2[1])
+    trading_autorizzato = is_trading_time or stress_test
 
-window_1 = (time(0, 0), time(12, 0))
-window_2 = (time(12, 0), time(23, 0))
-is_trading_time = (window_1[0] <= now_cet <= window_1[1]) or (window_2[0] <= now_cet <= window_2[1])
-trading_autorizzato = is_trading_time or stress_test
-
-        st.subheader("🌍 Live Market Flow 24h")
-        
-        if st.session_state.weekend_mode or is_weekend_reale:
-            try:
-                img_weekend = Image.open("banner2.png")
-                st.image(img_weekend, use_column_width=True, caption="MODALITÀ WEEKEND ATTIVA 🔴 MERCATI CHIUSI")
-            except:
-                st.warning("Immagine banner2.png non trovata. Carica il file nella cartella del progetto.")
-        else:
-            st.plotly_chart(draw_market_map_inverted(trading_autorizzato), use_container_width=True)
+    st.subheader("🌍 Live Market Flow 24h")
+    
+    if st.session_state.weekend_mode or is_weekend_reale:
+        try:
+            img_weekend = Image.open("banner2.png")
+            st.image(img_weekend, use_column_width=True, caption="MODALITÀ WEEKEND ATTIVA 🔴 MERCATI CHIUSI")
+        except:
+            st.warning("Immagine banner2.png non trovata. Carica il file nella cartella del progetto.")
+    else:
+        st.plotly_chart(draw_market_map_inverted(trading_autorizzato), use_container_width=True)
 
     placeholder_scanner = st.empty()
     
