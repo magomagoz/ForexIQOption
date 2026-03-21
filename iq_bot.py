@@ -330,14 +330,17 @@ with st.sidebar:
         st.divider()
         stress_test = st.toggle("🚀 **STRESS MODE**", value=False)
         if stress_test:
-            st.warning("⚠️ **Modalità TEST:** \nno BB - RSI (45/55)")
+            st.warning("⚠️ **Modalità TEST:**\n\nno BB - RSI (45/55)")
             # --- OVERRIDE DI SISTEMA ---
             use_bb = False       # Spegne forzatamente le BB
             use_rsi = True       # Accende forzatamente l'RSI
             custom_rsi_buy = 45  # Forza soglia BUY
             custom_rsi_sell = 55 # Forza soglia SELL
         else:
-            st.success("🟢 **Modalità REALE:** \nvedi gli indicatori scelti sopra")
+            if is_weekend_reale:
+                st.info("⚠️ **Modalità WEEKEND OTC**\n\nBB (20/2.50) - RSI (20/80)")
+            else:
+                st.success("🟢 **Modalità REALE:**\n\nvedi gli indicatori scelti sopra")
 
         #if stress_test:
             #use_bb, use_rsi = False, True       
