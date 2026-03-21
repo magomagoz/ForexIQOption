@@ -95,6 +95,7 @@ def get_market_status():
 
     londra = (time(9,0), time(18,0))
     new_york = (time(14,0), time(23,0))
+    we = is_weekend_reale
     
     is_londra = londra[0] <= now_time <= londra[1]
     is_ny = new_york[0] <= now_time <= new_york[1]
@@ -105,6 +106,8 @@ def get_market_status():
         return "🇪🇺 SESSIONE LONDRA"
     elif is_ny:
         return "🇺🇸 SESSIONE NEW YORK"
+    elif we:
+        return "⚠️ WEEKEND OTC"
     else:
         return "💤 MERCATO LENTO"
 
