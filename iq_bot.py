@@ -160,7 +160,7 @@ def send_telegram_signal(signal_type, pair, price, rsi, trade_id, stake):
         f"🚀 *NUOVO TRADE*\n"
         f"🔔 *Segnale:* {signal_type}\n"
         f"🆔 ID: `{trade_id}`\n"
-        f"Market: 
+        f"🌍 Market: {mercato}\n"
         f"📊 Asset: {pair}\n"
         f"💵 Stake: `{stake:.0f} €` \n" 
         f"💰 Prezzo: `{price:.5f}`\n"
