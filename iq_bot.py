@@ -384,112 +384,112 @@ with st.sidebar:
 
 # --- 4. MAIN DASHBOARD ---
 
-    window_1 = (time(0, 0), time(12, 0))
-    window_2 = (time(12, 0), time(23, 0))
-    is_trading_time = (window_1[0] <= now_cet <= window_1[1]) or (window_2[0] <= now_cet <= window_2[1])
-    trading_autorizzato = is_trading_time or stress_test
+window_1 = (time(0, 0), time(12, 0))
+window_2 = (time(12, 0), time(23, 0))
+is_trading_time = (window_1[0] <= now_cet <= window_1[1]) or (window_2[0] <= now_cet <= window_2[1])
+trading_autorizzato = is_trading_time or stress_test
 
-    st.subheader("🌍 Live Market Flow 24h")
-    
-    if st.session_state.weekend_mode or is_weekend_reale:
-        try:
-            img_weekend = Image.open("banner2.png")
-            st.image(img_weekend, use_column_width=True, caption="MODALITÀ WEEKEND ATTIVA 🔴 MERCATI CHIUSI")
-        except:
-            st.warning("Immagine banner2.png non trovata. Carica il file nella cartella del progetto.")
+st.subheader("🌍 Live Market Flow 24h")
+
+if st.session_state.weekend_mode or is_weekend_reale:
+    try:
+        img_weekend = Image.open("banner2.png")
+        st.image(img_weekend, use_column_width=True, caption="MODALITÀ WEEKEND ATTIVA 🔴 MERCATI CHIUSI")
+    except:
+        st.warning("Immagine banner2.png non trovata. Carica il file nella cartella del progetto.")
+else:
+    st.plotly_chart(draw_market_map_inverted(trading_autorizzato), use_container_width=True)
+
+placeholder_scanner = st.empty()
+
+if st.session_state.scanner_on:
+    if st.session_state.weekend_mode:
+        st.success("SCANNER OTC ATTIVO su 🇪🇺🇬🇧-🇺🇸🇨🇭-🇦🇺🇺🇸-🇪🇺🇺🇸 ", icon="🎯")
+        esegui_scansione = True
     else:
-        st.plotly_chart(draw_market_map_inverted(trading_autorizzato), use_container_width=True)
-
-    placeholder_scanner = st.empty()
-    
-    if st.session_state.scanner_on:
-        if st.session_state.weekend_mode:
-            st.success("SCANNER OTC ATTIVO su 🇪🇺🇬🇧-🇺🇸🇨🇭-🇦🇺🇺🇸-🇪🇺🇺🇸 ", icon="🎯")
-            esegui_scansione = True
+        if not trading_autorizzato:
+            st.warning("🛡️ PROTEZIONE ATTIVA: Mercato fuori orario. Scanner in pausa.")
+            esegui_scansione = False
         else:
-            if not trading_autorizzato:
-                st.warning("🛡️ PROTEZIONE ATTIVA: Mercato fuori orario. Scanner in pausa.")
-                esegui_scansione = False
+            if st.session_state.scanner_on:
+                with placeholder_scanner.container(): 
+                    st.success("SISTEMA IN SCANSIONE ATTIVA 🔥🔥🔥", icon="📡")
+            st.divider()
+            st.subheader("🕵️ Coppie di valute osservate")
+            cols = st.columns(5)
+            for i, pair in enumerate(ALL_PAIRS):
+                with cols[i % 5]: st.code(f"{icons.get(pair, '🔍')} {pair}")
+            esegui_scansione = True
+
+    for pair in ALL_PAIRS:
+
+        try:
+            # Estrai in modo sicuro le variabili dalla funzione ibrida
+            candles, source = get_candles(pair, timeframe, 100) 
+            if not candles or len(candles) < 20: continue
+            
+            df = pd.DataFrame(candles)
+            
+            # --- LOGICA OTTIMIZZATA PUNTO 3 ---
+            if st.session_state.weekend_mode and not stress_test:
+                # Parametri basati sulla scelta nella Sidebar (Config 1 o Config 2)
+                r_buy, r_sell = 20, 80
+                b_per = 20
+                b_std = bb_std_otc  # Questa variabile arriva dalla selezione radio nella sidebar
+            elif stress_test:
+                r_buy, r_sell = 45, 55
+                b_per, b_std = 20, 2.20
             else:
-                if st.session_state.scanner_on:
-                    with placeholder_scanner.container(): 
-                        st.success("SISTEMA IN SCANSIONE ATTIVA 🔥🔥🔥", icon="📡")
-                st.divider()
-                st.subheader("🕵️ Coppie di valute osservate")
-                cols = st.columns(5)
-                for i, pair in enumerate(ALL_PAIRS):
-                    with cols[i % 5]: st.code(f"{icons.get(pair, '🔍')} {pair}")
-                esegui_scansione = True
+                # Parametri Mercato LIVE (Lun-Ven)
+                r_buy, r_sell = custom_rsi_buy, custom_rsi_sell
+                b_per, b_std = bb_period, bb_std
 
-        for pair in ALL_PAIRS:
+            # Calcolo effettivo degli indicatori
+            df['RSI'] = ta.rsi(df['close'], length=7)
+            bb = ta.bbands(df['close'], length=b_per, std=b_std)
+            # ----------------------------------
 
-            try:
-                # Estrai in modo sicuro le variabili dalla funzione ibrida
-                candles, source = get_candles(pair, timeframe, 100) 
-                if not candles or len(candles) < 20: continue
+            if bb is None or bb.empty: continue
+            price, curr_rsi = df['close'].iloc[-1], df['RSI'].iloc[-1]
+            curr_bb_low = float(bb.filter(like='BBL').iloc[-1].iloc[0])
+            curr_bb_up = float(bb.filter(like='BBU').iloc[-1].iloc[0])
+            
+            cond_rsi_buy = (curr_rsi < r_buy) if use_rsi else True
+            cond_bb_buy = (price <= curr_bb_low) if use_bb else True
+            cond_rsi_sell = (curr_rsi > r_sell) if use_rsi else True
+            cond_bb_sell = (price >= curr_bb_up) if use_bb else True
+            
+            is_consecutive = check_consecutive_candles(df, count=3)
+            
+            is_buy = (cond_rsi_buy and cond_bb_buy) and (use_rsi or use_bb) and not is_consecutive
+            is_sell = (cond_rsi_sell and cond_bb_sell) and (use_rsi or use_bb) and not is_consecutive
+            
+            if (is_buy or is_sell) and pair not in st.session_state.active_trades:
+                direction = "BUY" if is_buy else "SELL"
+                t_id = genera_trade_id()
+                tipo_mercato = "OTC" if st.session_state.weekend_mode else "LIVE"
+                params_bb = f"{b_per}/{b_std}" if use_bb else "OFF"
+                params_rsi = f"{r_buy}/{r_sell}"
+            
+                st.session_state.active_trades[pair] = {
+                    'id': t_id, 'entry_price': float(price), 'entry_time': time_module.time(), 
+                    'direction': direction, 'stake_num': float(st.session_state.stake)
+                }
                 
-                df = pd.DataFrame(candles)
+                st.session_state.signal_history.append({
+                    'id': t_id, 'time': datetime.now(fuso_roma).strftime("%Y-%m-%d %H:%M:%S"),
+                    'pair': pair, 'dir': direction, 'price': float(price), 
+                    'stake': f"{st.session_state.stake:.0f}€",                         
+                    'params_bb': params_bb, 'params_rsi': params_rsi, 
+                    'mercato': tipo_mercato, 'result': "⏳ In corso...",
+                    'check_75s': "-", 'check_120s': "-", 'pnl_numeric': 0.0
+                })
                 
-                # --- LOGICA OTTIMIZZATA PUNTO 3 ---
-                if st.session_state.weekend_mode and not stress_test:
-                    # Parametri basati sulla scelta nella Sidebar (Config 1 o Config 2)
-                    r_buy, r_sell = 20, 80
-                    b_per = 20
-                    b_std = bb_std_otc  # Questa variabile arriva dalla selezione radio nella sidebar
-                elif stress_test:
-                    r_buy, r_sell = 45, 55
-                    b_per, b_std = 20, 2.20
-                else:
-                    # Parametri Mercato LIVE (Lun-Ven)
-                    r_buy, r_sell = custom_rsi_buy, custom_rsi_sell
-                    b_per, b_std = bb_period, bb_std
-
-                # Calcolo effettivo degli indicatori
-                df['RSI'] = ta.rsi(df['close'], length=7)
-                bb = ta.bbands(df['close'], length=b_per, std=b_std)
-                # ----------------------------------
-
-                if bb is None or bb.empty: continue
-                price, curr_rsi = df['close'].iloc[-1], df['RSI'].iloc[-1]
-                curr_bb_low = float(bb.filter(like='BBL').iloc[-1].iloc[0])
-                curr_bb_up = float(bb.filter(like='BBU').iloc[-1].iloc[0])
-                
-                cond_rsi_buy = (curr_rsi < r_buy) if use_rsi else True
-                cond_bb_buy = (price <= curr_bb_low) if use_bb else True
-                cond_rsi_sell = (curr_rsi > r_sell) if use_rsi else True
-                cond_bb_sell = (price >= curr_bb_up) if use_bb else True
-                
-                is_consecutive = check_consecutive_candles(df, count=3)
-                
-                is_buy = (cond_rsi_buy and cond_bb_buy) and (use_rsi or use_bb) and not is_consecutive
-                is_sell = (cond_rsi_sell and cond_bb_sell) and (use_rsi or use_bb) and not is_consecutive
-                
-                if (is_buy or is_sell) and pair not in st.session_state.active_trades:
-                    direction = "BUY" if is_buy else "SELL"
-                    t_id = genera_trade_id()
-                    tipo_mercato = "OTC" if st.session_state.weekend_mode else "LIVE"
-                    params_bb = f"{b_per}/{b_std}" if use_bb else "OFF"
-                    params_rsi = f"{r_buy}/{r_sell}"
-                
-                    st.session_state.active_trades[pair] = {
-                        'id': t_id, 'entry_price': float(price), 'entry_time': time_module.time(), 
-                        'direction': direction, 'stake_num': float(st.session_state.stake)
-                    }
-                    
-                    st.session_state.signal_history.append({
-                        'id': t_id, 'time': datetime.now(fuso_roma).strftime("%Y-%m-%d %H:%M:%S"),
-                        'pair': pair, 'dir': direction, 'price': float(price), 
-                        'stake': f"{st.session_state.stake:.0f}€",                         
-                        'params_bb': params_bb, 'params_rsi': params_rsi, 
-                        'mercato': tipo_mercato, 'result': "⏳ In corso...",
-                        'check_75s': "-", 'check_120s': "-", 'pnl_numeric': 0.0
-                    })
-                    
-                    save_journal(st.session_state.signal_history)
-                    send_telegram_signal(direction, pair, price, curr_rsi, t_id, st.session_state.stake)
-                    play_trade_sound("buy")
-            except Exception as e:
-                continue
+                save_journal(st.session_state.signal_history)
+                send_telegram_signal(direction, pair, price, curr_rsi, t_id, st.session_state.stake)
+                play_trade_sound("buy")
+        except Exception as e:
+            continue
     
     # --- 5. ANALISI TECNICA GRAFICA ---
     st.divider()
