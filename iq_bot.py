@@ -11,7 +11,6 @@ import json
 import os
 import websocket
 from datetime import datetime, time, timedelta
-import yfinance as yf  # <--- AGGIUNTO YAHOO FINANCE
 
 # --- 1. CONFIGURAZIONI, TELEGRAM E DERIV ---
 TELEGRAM_TOKEN = st.secrets.get("TELEGRAM_TOKEN", "IL_TUO_TOKEN_QUI")
@@ -41,8 +40,6 @@ def to_deriv_symbol(pair):
 
 # --- NUOVA FUNZIONE IBRIDA (DERIV + YAHOO) ---
 def get_candles(pair, timeframe_sec, count):
-    """Prova Deriv, se fallisce usa Yahoo Finance"""
-    # 1. Tentativo Deriv
     try:
         ws = websocket.create_connection(f"wss://ws.binaryws.com/websockets/v3?app_id={DERIV_APP_ID}", timeout=5)
         req = {
@@ -65,20 +62,10 @@ def get_candles(pair, timeframe_sec, count):
                     'open': c['open'], 'max': c['high'],
                     'min': c['low'], 'close': c['close']
                 })
-            return candles, "DERIV 🟢"
+            return candles, "DERIV 🟢🔵"
     except Exception as e: # Aggiungi 'Exception as e'
         print(f"Errore Deriv: {e}")
         pass 
-
-    # 2. Tentativo Yahoo Finance (SOLO SE NON È WEEKEND)
-    if not is_weekend_reale:
-        try:
-            # ... (tua logica Yahoo Finance attuale)
-            return candles, "YAHOO FINANCE 🔵"
-        except:
-            pass
-    
-    return None, "MERCATO CHIUSO/ERRORE 🔴"
 
 def get_deriv_balance(token):
     try:
@@ -163,7 +150,7 @@ def send_telegram_signal(signal_type, pair, price, rsi, trade_id, stake, tipo_me
         f"📊 Asset: {pair}\n"
         f"💵 Stake: `{stake:.0f} €` \n" 
         f"💰 Prezzo: `{price:.5f}`\n"
-        f"📊 RSI: `{rsi:.1f}`\n"
+        f"📈 RSI: `{rsi:.1f}`\n"
         f"⏰ Ora: {timestamp}"
     )
     invia_telegram(message)
@@ -256,13 +243,10 @@ with st.sidebar:
             st.rerun()
         if st.session_state.scanner_on:
             st.caption(f"🔄 Scanner attivo...  \nUltimo check: {now_roma.time().strftime('%H:%M:%S')}")
-
-        st.divider()
-        st.subheader("💸 **MERCATO LIVE/OTC**")
         
         if st.session_state.weekend_mode:
             st.divider()
-            st.subheader("🎯 SETTAGGIO SNIPER OTC")
+            st.subheader("💸 MERCATO OTC")
             st.success("🔍 **Asset:**\n\n🇪🇺🇺🇸 (R_10) e 🇺🇸🇯🇵 (R_25)\n\n**✅ Strategia:**\n\nBB 20/2.20 + RSI 20/80")
             # Niente più menu a tendina o scelte multiple: l'algoritmo sa già cosa fare.
         
