@@ -194,20 +194,23 @@ def play_trade_sound(sound_type="buy"):
     except: pass
     placeholder.empty()
 
-def get_mini_chart_data(symbol, timeframe):
-    """Scarica dati rapidi per i mini-grafici assicurandosi che MT5 sia connesso"""
-    if not mt5.initialize():
+def get_mini_chart_data(symbol, timeframe_id):
+    """Versione corretta con import interno per evitare errori di Scope"""
+    import MetaTrader5 as mt5_internal # Importiamo localmente per sicurezza
+    
+    if not mt5_internal.initialize():
         return None
     try:
-        rates = mt5.copy_rates_from_pos(symbol, timeframe, 0, 50)
+        # Usiamo il riferimento interno mt5_internal
+        rates = mt5_internal.copy_rates_from_pos(symbol, timeframe_id, 0, 50)
         if rates is None or len(rates) == 0:
             return None
         df = pd.DataFrame(rates)
         df['time'] = pd.to_datetime(df['time'], unit='s')
         return df
     except Exception as e:
-        print(f"Errore mini-chart: {e}")
         return None
+
 
 
 # --- 2. SETUP STREAMLIT E SESSIONE ---
@@ -710,7 +713,9 @@ if st.session_state.connected:
     with col_m1:
         st.caption(f"🇪🇺🇺🇸 {symbol_1}")
         # Usiamo direttamente mt5.TIMEFRAME_M1 (tutto maiuscolo)
-        df_r10 = get_mini_chart_data(symbol_1, MT5.TIMEFRAME_M1)
+        df_r10 = get_mini_chart_data("Volatility 10 Index", mt5.TIMEFRAME_M1)
+        #df_r10 = get_mini_chart_data(symbol_1, MT5.TIMEFRAME_M1)
+        
         if df_r10 is not None and not df_r10.empty:
             fig_r10 = go.Figure(data=[go.Candlestick(
                 x=df_r10['time'], open=df_r10['open'], high=df_r10['high'],
@@ -724,7 +729,8 @@ if st.session_state.connected:
     
     with col_m2:
         st.caption(f"🇺🇸🇯🇵 {symbol_2}")
-        df_r25 = get_mini_chart_data(symbol_2, MT5.TIMEFRAME_M1)
+        df_r25 = get_mini_chart_data("Volatility 25 Index", mt5.TIMEFRAME_M1)
+        #df_r25 = get_mini_chart_data(symbol_2, MT5.TIMEFRAME_M1)
         if df_r25 is not None and not df_r25.empty:
             fig_r25 = go.Figure(data=[go.Candlestick(
                 x=df_r25['time'], open=df_r25['open'], high=df_r25['high'],
