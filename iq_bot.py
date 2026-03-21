@@ -244,11 +244,27 @@ with st.sidebar:
         if st.session_state.scanner_on:
             st.caption(f"🔄 Scanner attivo...  \nUltimo check: {now_roma.time().strftime('%H:%M:%S')}")
         
-        if st.session_state.weekend_mode:
             st.divider()
-            st.subheader("💸 MERCATO OTC")
-            st.success("🔍 **Asset:**\n\n🇪🇺🇺🇸 (R_10) e 🇺🇸🇯🇵 (R_25)\n\n**✅ Strategia:**\n\nBB 20/2.20 + RSI 20/80")
+            st.subheader("💸 **MERCATO LIVE/OTC**")
             # Niente più menu a tendina o scelte multiple: l'algoritmo sa già cosa fare.
+
+            if st.session_state.weekend_mode:
+                st.warning("🚨 **MERCATO OTC (Sab-Dom)**\n\n**Asset:**\n\n🇪🇺🇺🇸 (R_10) e 🇺🇸🇯🇵 (R_25)\n\n**🔍 Strategia:**\n\nBB 20/2.20 + RSI 20/80")
+
+                #use_bb, use_rsi = True, True
+                #bb_period, bb_std = 20, 2.20
+                #custom_rsi_buy, custom_rsi_sell = 20, 80
+            else:
+                st.success("🟢 **MERCATO LIVE (Lun-Ven)**")
+                col_t1, col_t2 = st.columns(2)
+                use_bb = col_t1.toggle("**BB**", value=True)
+                use_rsi = col_t2.toggle("**RSI**", value=True)
+                c_bb1, c_rsi1 = st.columns(2)
+                bb_period = c_bb1.selectbox("Periodo BB", [14, 20], index = 1)
+                custom_rsi_buy = c_rsi1.selectbox("RSI Buy", [30, 25, 20, 15], index = 2)
+                c_bb2, c_rsi2 = st.columns(2)
+                bb_std = c_bb2.selectbox("Dev BB", [2.00, 2.20, 2.50, 2.70], index = 0)
+                custom_rsi_sell = c_rsi2.selectbox("RSI Sell", [70, 75, 80, 85], index = 2)
         
         st.divider()
         st.subheader("🌍 SESSIONI DI MERCATO")
