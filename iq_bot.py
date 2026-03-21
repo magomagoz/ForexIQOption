@@ -195,17 +195,20 @@ def play_trade_sound(sound_type="buy"):
     placeholder.empty()
 
 def get_mini_chart_data(symbol, timeframe):
-    """Scarica dati rapidi per i mini-grafici del monitor"""
+    """Scarica dati rapidi per i mini-grafici assicurandosi che MT5 sia connesso"""
+    if not mt5.initialize():
+        return None
     try:
-        # Usiamo un numero ridotto di candele per velocità
-        data = mt5.copy_rates_from_pos(symbol, timeframe, 0, 50)
-        if data is None or len(data) == 0:
+        rates = mt5.copy_rates_from_pos(symbol, timeframe, 0, 50)
+        if rates is None or len(rates) == 0:
             return None
-        df = pd.DataFrame(data)
+        df = pd.DataFrame(rates)
         df['time'] = pd.to_datetime(df['time'], unit='s')
         return df
-    except:
+    except Exception as e:
+        print(f"Errore mini-chart: {e}")
         return None
+
 
 # --- 2. SETUP STREAMLIT E SESSIONE ---
 st.set_page_config(page_title="Sentinel AI", page_icon="🚀", layout="wide")
@@ -225,6 +228,15 @@ if 'local_balance' not in st.session_state: st.session_state.local_balance = 100
 if 'scanner_on' not in st.session_state: st.session_state.scanner_on = False
 if 'weekend_mode' not in st.session_state: st.session_state.weekend_mode = is_weekend_reale 
 if 'api_token' not in st.session_state: st.session_state.api_token = DERIV_TOKEN
+# --- INIZIALIZZAZIONE VARIABILI DI CONTROLLO ---
+if 'use_rsi' not in st.session_state:
+    st.session_state.use_rsi = True
+if 'use_bb' not in st.session_state:
+    st.session_state.use_bb = True
+
+# Trasferiamo i valori per il resto dello script
+use_rsi = st.session_state.use_rsi
+use_bb = st.session_state.use_bb
 
 # --- 3. SIDEBAR ---
 with st.sidebar:
