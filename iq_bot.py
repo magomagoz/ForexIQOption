@@ -569,7 +569,7 @@ if st.session_state.connected:
             if candles_ta:
                 candles_ta[-1]['close'] = st.session_state.manual_prices[pair_display]
         else:
-            candles_ta = get_deriv_candles(pair_display, timeframe, 160)
+            candles_ta = get_candles(pair_display, timeframe, 160)
 
         if candles_ta:
             st.caption(f"Dati forniti da: {src_ta}")
@@ -767,7 +767,7 @@ if st.session_state.connected:
         if current_ts >= scadenza:
             try:
                 # Recuperiamo le candele recenti per verificare il prezzo di chiusura
-                res = get_deriv_candles(pair, timeframe, 2)
+                res = get_candles(pair, timeframe, 2)
                 if res and len(res) > 0:
                     exit_price = res[-2]['close']
                     exit_price_120 = res[-1]['close']
