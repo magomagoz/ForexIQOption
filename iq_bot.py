@@ -136,7 +136,7 @@ def send_telegram_signal(signal_type, pair, price, rsi, trade_id, stake, tipo_me
     timestamp = datetime.now(fuso_roma).strftime("%H:%M:%S")
     message = (
         f"🚀 *NUOVO TRADE*\n🔔 *Segnale:* {signal_type}\n🆔 ID: `{trade_id}`\n"
-        f"🌍 Market: {tipo_mercato}\n📊 Asset: {pair}\n💵 Stake: `{stake:.0f} €` \n" 
+        f"🌍 Market: {tipo_mercato}\n💱 Asset: {pair}\n💵 Stake: `{stake:.0f} €` \n" 
         f"💰 Prezzo: `{price:.5f}`\n📈 RSI: `{rsi:.1f}`\n⏰ Ora: {timestamp}"
     )
     invia_telegram(message)
@@ -239,7 +239,7 @@ with st.sidebar:
         st.subheader("💸 **MERCATO LIVE/OTC**")
 
         if st.session_state.weekend_mode:
-            st.warning("🚨 **MERCATO OTC (Sab-Dom)**\n\n**Asset:**\n\n🇪🇺🇺🇸 (R_10) e 🇺🇸🇯🇵 (R_25)\n\n**🔍 Strategia:**\n\nBB 20/2.20 + RSI 20/80")
+            st.warning("🚨 **MERCATO OTC (Sab-Dom)**\n\n**💱 Asset:**\n\n🇪🇺🇺🇸 (R_10) e 🇺🇸🇯🇵 (R_25)\n\n**🔍 Strategia:**\n\nBB 20/2.20 + RSI 20/80")
             use_bb, use_rsi = True, True
             bb_period, bb_std = 20, 2.20
             custom_rsi_buy, custom_rsi_sell = 20, 80
@@ -482,7 +482,7 @@ if st.session_state.connected:
                             s.update({'result': f"{icona_esito} {res_status}", 'check_75s': "✅" if win_75 else "❌", 'check_120s': "✅" if win_120 else "❌", 'pnl_numeric': float(profit)})
                             break
 
-                    msg = (f"🏁 *ESITO* {'💰' if win else '💀'} {res_status}\n🆔 ID: `{t_id}`\n📊 Asset: {pair}\n"
+                    msg = (f"🏁 *ESITO* {'💰' if win else '💀'} {res_status}\n🆔 ID: `{t_id}`\n💱 Asset: {pair}\n"
                            f"📉 Esito 60s: {res_status}\n⏱️ Esito 75s: {'✅' if win_75 else '❌'}\n"
                            f"⏱️ Esito 120s: {'✅' if win_120 else '❌'}\n💵 P&L: `{profit:.2f} €`")
                     invia_telegram(msg)
