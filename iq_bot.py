@@ -34,7 +34,6 @@ giorno_settimana = now_roma.weekday()
 is_weekend_reale = giorno_settimana >= 5  
 now_cet = now_roma.time()
 ora_attuale = now_roma.hour
-tipo_mercato = "OTC" if st.session_state.weekend_mode else "LIVE"
 
 def to_deriv_symbol(pair):
     if is_weekend_reale:
@@ -134,11 +133,11 @@ def invia_telegram(messaggio):
     try: requests.post(url, data={"chat_id": TELEGRAM_CHAT_ID, "text": messaggio, "parse_mode": "Markdown"}, timeout=5)
     except: pass
 
-def send_telegram_signal(signal_type, pair, price, rsi, trade_id, stake, tipo_mercato="OTC"): 
+def send_telegram_signal(signal_type, pair, price, rsi, trade_id, stake, tipo_mercato): 
     timestamp = datetime.now(fuso_roma).strftime("%H:%M:%S")
     
     # Aggiungi questo piccolo dizionario di mappatura per il messaggio
-    mapping_nomi = {"EURUSD": "R_10", "USDJPY": "R_25", "AUDUSD": "R_50"}
+    mapping_nomi = {"EURUSD": "R10", "USDJPY": "R25", "AUDUSD": "R50"}
     nome_reale = mapping_nomi.get(pair, pair)
 
     message = (
@@ -490,7 +489,7 @@ if st.session_state.connected:
                             s.update({'result': f"{icona_esito} {res_status}", 'check_75s': "✅" if win_75 else "❌", 'check_120s': "✅" if win_120 else "❌", 'pnl_numeric': float(profit)})
                             break
 
-                    msg = (f"🏁 *ESITO* {'💰' if win else '💀'} {res_status}\n🆔 ID: `{t_id}`\n💱 Asset: {pair}\n"
+                    msg = (f"🏁 *ESITO* {'💰' if win else '💀'} {res_status}\n🆔 ID: `{t_id}`\n💱 Asset: {pair} ({nome_reale})\n"
                            f"📉 Esito 60s: {icona_esito} {res_status}\n⏱️ Esito 75s: {'✅' if win_75 else '❌'}\n"
                            f"⏱️ Esito 120s: {'✅' if win_120 else '❌'}\n💵 P&L: `{profit:.2f} €`")
                     invia_telegram(msg)
@@ -564,20 +563,26 @@ if st.session_state.connected:
     else:
         st.info("⏳ Avvia lo Scanner e attendi il primo segnale...")
     
-    # --- 8. DUAL CHART MONITOR (R_10 & R_25) ---
+    # --- 8. DUAL CHART MONITOR (R_10, R_25, R_50) ---
     st.markdown("---")
     st.subheader("🖥️ Monitor Asset Globali (OTC)")
-    m_cols = st.columns(3) # Cambiato da 2 a 3
-    indices = [("Volatility R_10", "R_10"), ("Volatility R_25", "R_25"), ("Volatility R_50", "R_50")]
+    m_cols = st.columns(3) 
     
-    for i, (name, sym) in enumerate(indices):
+    # FIX: Usiamo le coppie fittizie, così get_candles capisce in automatico che deve scaricare R_10, R_25 e R_50
+    indices = [("Volatility 10", "EURUSD"), ("Volatility 25", "USDJPY"), ("Volatility 50", "AUDUSD")]
+    
+    for i, (name, pair) in enumerate(indices):
         with m_cols[i]:
             st.caption(f"📈 {name}")
-            data = get_mini_chart_data(name + " Index", 1)
-            if data is not None:
-                fig = go.Figure(data=[go.Candlestick(x=data['time'], open=data['open'], high=data['high'], low=data['low'], close=data['close'])])
+            # Usiamo i WebSocket di Deriv invece di MT5
+            candles, _ = get_candles(pair, 60, 40)
+            if candles:
+                df = pd.DataFrame(candles)
+                fig = go.Figure(data=[go.Candlestick(x=df['time'], open=df['open'], high=df['max'], low=df['min'], close=df['close'])])
                 fig.update_layout(height=200, margin=dict(l=0,r=0,t=0,b=0), xaxis_rangeslider_visible=False, template="plotly_dark")
-                st.plotly_chart(fig, use_container_width=True, key=f"mini_{sym}")
+                st.plotly_chart(fig, use_container_width=True, key=f"mini_{pair}")
+            else:
+                st.warning("In attesa di dati...")
     
     if st.session_state.scanner_on:
         time_module.sleep(5) 
