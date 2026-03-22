@@ -239,7 +239,7 @@ with st.sidebar:
         st.subheader("💸 **MERCATO LIVE/OTC**")
 
         if st.session_state.weekend_mode:
-            st.warning("🚨 **MERCATO OTC (Sab-Dom)**\n\n**💱 Asset:**\n\n🇪🇺🇺🇸 (R_10) e 🇺🇸🇯🇵 (R_25)\n\n**🔍 Strategia:**\n\nBB 20/2.20 + RSI 20/80")
+            st.success("🚨 **MERCATO OTC (Sab-Dom)**\n\n**💱 Asset:**\n\n🇪🇺🇺🇸 (R_10) e 🇺🇸🇯🇵 (R_25)\n\n**🔍 Strategia:**\n\nBB 20/2.20 + RSI 20/80")
             use_bb, use_rsi = True, True
             bb_period, bb_std = 20, 2.20
             custom_rsi_buy, custom_rsi_sell = 20, 80
