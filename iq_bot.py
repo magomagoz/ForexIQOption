@@ -574,7 +574,7 @@ if st.session_state.connected:
             fig_r10.update_layout(height=250, margin=dict(l=5, r=5, t=5, b=5), showlegend=False, xaxis_rangeslider_visible=False)
             st.plotly_chart(fig_r10, use_container_width=True, key="chart_r10_bottom")
         else:
-            st.warning(f"{s1} non disponibile o Terminale chiuso.")
+            st.warning(f"Non disponibile o Terminale chiuso.")
     
     with col_m2:
         st.caption(f"📊 {s2}")
@@ -584,7 +584,7 @@ if st.session_state.connected:
             fig_r25.update_layout(height=250, margin=dict(l=5, r=5, t=5, b=5), showlegend=False, xaxis_rangeslider_visible=False)
             st.plotly_chart(fig_r25, use_container_width=True, key="chart_r25_bottom")
         else:
-            st.warning(f"{s2} non disponibile o Terminale chiuso.")
+            st.warning(f"Non disponibile o Terminale chiuso.")
     
     if st.session_state.scanner_on:
         time_module.sleep(5) 
