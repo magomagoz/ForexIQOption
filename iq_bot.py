@@ -211,6 +211,7 @@ if 'signal_history' not in st.session_state: st.session_state.signal_history = l
 if 'local_balance' not in st.session_state: st.session_state.local_balance = 10000.0
 if 'scanner_on' not in st.session_state: st.session_state.scanner_on = False
 if 'weekend_mode' not in st.session_state: st.session_state.weekend_mode = is_weekend_reale 
+if 'session_pnl' not in st.session_state: st.session_state.session_pnl = 0.0
 
 # --- 3. SIDEBAR ---
 with st.sidebar:
@@ -240,7 +241,24 @@ with st.sidebar:
             st.rerun()
         if st.session_state.scanner_on:
             st.caption(f"🔄 Scanner attivo...  \nUltimo check: {now_roma.time().strftime('%H:%M:%S')}")
+
+        st.divider()
+        st.subheader("🛡️ PROTEZIONE ACCOUNT")
+        stop_loss_limit = st.number_input("Stop Loss Sessione (€)", value=50.0, step=10.0)
+        take_profit_limit = st.number_input("Take Profit Sessione (€)", value=200.0, step=10.0)
         
+        if st.session_state.scanner_on:
+            # Controllo automatico: se la perdita supera il limite, spegne tutto
+            if st.session_state.session_pnl <= -stop_loss_limit:
+                st.session_state.scanner_on = False
+                invia_telegram(f"⚠️ **STOP LOSS RAGGIUNTO!**\nPerdita: {st.session_state.session_pnl:.2f}€\nScanner disattivato per sicurezza.")
+                st.error("STOP LOSS RAGGIUNTO. Scanner spento.")
+            
+            if st.session_state.session_pnl >= take_profit_limit:
+                st.session_state.scanner_on = False
+                invia_telegram(f"💰 **TAKE PROFIT RAGGIUNTO!**\nProfitto: {st.session_state.session_pnl:.2f}€\nOttima sessione, a domani!")
+                st.success("TAKE PROFIT RAGGIUNTO. Scanner spento.")
+       
         # FIX: Blocco configurazione estratto per non crashare se lo scanner è spento
         st.divider()
         st.subheader("💸 **MERCATO LIVE/OTC**")
@@ -484,6 +502,8 @@ if st.session_state.connected:
                     profit = (stake_usato * 0.85) if win else -stake_usato
                     
                     st.session_state.local_balance += profit
+                    st.session_state.session_pnl += profit
+
                     for s in st.session_state.signal_history:
                         if s.get('id') == t_id: 
                             s.update({'result': f"{icona_esito} {res_status}", 'check_75s': "✅" if win_75 else "❌", 'check_120s': "✅" if win_120 else "❌", 'pnl_numeric': float(profit)})
