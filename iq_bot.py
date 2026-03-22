@@ -504,15 +504,33 @@ if st.session_state.connected:
                     st.session_state.local_balance += profit
                     st.session_state.session_pnl += profit
 
+
+                    # --- Dentro il ciclo della verifica esiti (Sezione 6) ---
+                    rsi_ingresso = "-"
                     for s in st.session_state.signal_history:
                         if s.get('id') == t_id: 
-                            s.update({'result': f"{icona_esito} {res_status}", 'check_75s': "✅" if win_75 else "❌", 'check_120s': "✅" if win_120 else "❌", 'pnl_numeric': float(profit)})
+                            rsi_ingresso = s.get('rsi_val', "-") # Recupera il valore salvato prima
+                            s.update({
+                                'result': f"{icona_esito} {res_status}", 
+                                'check_75s': "✅" if win_75 else "❌", 
+                                'check_120s': "✅" if win_120 else "❌", 
+                                'pnl_numeric': float(profit)
+                            })
                             break
-
-                    msg = (f"🏁 *ESITO* {'💰' if win else '💀'} {res_status}\n🆔 ID: `{t_id}`\n💱 Asset: {pair}\n"
-                           f"📉 Esito 60s: {icona_esito} {res_status}\n⏱️ Esito 75s: {'✅' if win_75 else '❌'}\n"
-                           f"⏱️ Esito 120s: {'✅' if win_120 else '❌'}\n💵 P&L: `{profit:.2f} €`")
+                    
+                    mapping_nomi = {"EURUSD": "V50", "USDJPY": "V75", "AUDUSD": "V100"}
+                    nome_reale = mapping_nomi.get(pair, pair)
+                    
+                    msg = (f"🏁 *ESITO* {'💰' if win else '💀'} {res_status}\n"
+                           f"🆔 ID: `{t_id}`\n"
+                           f"💱 Asset: {nome_reale}\n"
+                           f"📈 RSI Ingresso: `{rsi_ingresso}`\n" # <--- AGGIUNTO NEL MESSAGGIO
+                           f"📉 Esito 60s: {icona_esito} {res_status}\n"
+                           f"⏱️ Esito 75s: {'✅' if win_75 else '❌'}\n"
+                           f"⏱️ Esito 120s: {'✅' if win_120 else '❌'}\n"
+                           f"💵 P&L: `{profit:.2f} €` / Sessione: `{st.session_state.session_pnl:.2f}€` ")
                     invia_telegram(msg)
+
                     if win: play_trade_sound("win")
                         
                     del st.session_state.active_trades[pair]
@@ -570,9 +588,12 @@ if st.session_state.connected:
     c4.metric("🏁 Win Rate 75s", f"{win_rate_75:.1f}%")
     c5.metric("🏁 Win Rate 120s", f"{win_rate_120:.1f}%")
     c6.metric("🏆 Top Asset", best_pairs_str if best_pairs_str else "-")
-
+    
     if not df_filtered.empty:
-        rename_map = {'id': '🆔 ID', 'time': '⏰ DATA', 'pair': '💱 VALUTE', 'dir': '🚀 TIPO', 'price': '💰 PRICE', 'stake': '💶 STAKE', 'params_bb': '↔️ BB', 'params_rsi': '📉 RSI', 'mercato': '🌍 MARKET', 'result': '🔍 ESITO 60s', 'check_75s': '⏱️ 75s', 'check_120s': '⏱️ 120s', 'pnl_numeric': '📈 P&L'}
+        rename_map = {'id': '🆔 ID', 'time': '⏰ DATA', 'pair': '💱 VALUTE', 'dir': '🚀 TIPO', 'price': '💰 PRICE', 'rsi_val': '📈 RSI IN', 'stake': '💶 STAKE', 'params_bb': '↔️ BB', 'params_rsi': '📉 RSI', 'mercato': '🌍 MARKET', 'result': '🔍 ESITO 60s', 'check_75s': '⏱️ 75s', 'check_120s': '⏱️ 120s', 'pnl_numeric': '📈 P&L'}
+
+        colonne_da_mostrare = ['id', 'time', 'pair', 'dir', 'price', 'rsi_val', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'check_75s', 'check_120s', 'pnl_numeric']
+
         df_display = df_filtered.iloc[::-1].copy()[[c for c in ['id', 'time', 'pair', 'dir', 'price', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'check_75s', 'check_120s', 'pnl_numeric'] if c in df_filtered.columns]].rename(columns=rename_map)
         df_display['📈 P&L'] = df_display['📈 P&L'].apply(lambda x: f"{x:.1f}€" if x % 1 != 0 else f"{x:.0f}€")
         try:
