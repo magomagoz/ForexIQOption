@@ -37,10 +37,10 @@ ora_attuale = now_roma.hour
 
 def to_deriv_symbol(pair):
     if is_weekend_reale:
-        if pair == "EURUSD": return "R_10"
-        if pair == "USDJPY": return "R_25"
-        if pair == "AUDUSD": return "R_50"
-        return "R_10" 
+        if pair == "EURUSD": return "R_50"
+        if pair == "USDJPY": return "R_75"
+        if pair == "AUDUSD": return "R_100"
+        return "R_50" 
     return f"frx{pair}"
 
 # Funzione resa 100% sicura: restituisce SEMPRE due valori (dati, sorgente)
@@ -137,7 +137,7 @@ def send_telegram_signal(signal_type, pair, price, rsi, trade_id, stake, tipo_me
     timestamp = datetime.now(fuso_roma).strftime("%H:%M:%S")
     
     # Aggiungi questo piccolo dizionario di mappatura per il messaggio
-    mapping_nomi = {"EURUSD": "R10", "USDJPY": "R25", "AUDUSD": "R50"}
+    mapping_nomi = {"EURUSD": "V50", "USDJPY": "V75", "AUDUSD": "V100"}
     nome_reale = mapping_nomi.get(pair, pair)
 
     message = (
@@ -246,7 +246,7 @@ with st.sidebar:
         st.subheader("💸 **MERCATO LIVE/OTC**")
 
         if st.session_state.weekend_mode:
-            st.success("🚨 **MERCATO OTC (Sab-Dom)**\n\n**💱 Asset:**\n\n🇪🇺🇺🇸 **(R_10)**\n\n🇺🇸🇯🇵 **(R_25)**\n\n🇦🇺🇺🇸 **(R_50)**\n\n🔍 **Strategia:**\n\nBB 20/2.20 + RSI 20/80")
+            st.success("🚨 **MERCATO OTC (Sab-Dom)**\n\n**💱 Asset:**\n\n🇪🇺🇺🇸 **(R_50)**\n\n🇺🇸🇯🇵 **(R_75)**\n\n🇦🇺🇺🇸 **(R_100)**\n\n🔍 **Strategia:**\n\nBB 20/2.20 + RSI 20/80")
             use_bb, use_rsi = True, True
             bb_period, bb_std = 20, 2.20
             custom_rsi_buy, custom_rsi_sell = 20, 80
@@ -568,8 +568,8 @@ if st.session_state.connected:
     st.subheader("🖥️ Monitor Asset Globali (OTC)")
     m_cols = st.columns(3) 
     
-    # FIX: Usiamo le coppie fittizie, così get_candles capisce in automatico che deve scaricare R_10, R_25 e R_50
-    indices = [("Volatility 10", "EURUSD"), ("Volatility 25", "USDJPY"), ("Volatility 50", "AUDUSD")]
+    # FIX: Usiamo le coppie fittizie, così get_candles capisce in automatico che deve scaricare R_50, R_75 e R_100
+    indices = [("Volatility 50", "EURUSD"), ("Volatility 75", "USDJPY"), ("Volatility 100", "AUDUSD")]
     
     for i, (name, pair) in enumerate(indices):
         with m_cols[i]:
