@@ -269,19 +269,20 @@ with st.sidebar:
         timeframe = st.selectbox("⏱️ TIMEFRAME (s)", [60, 120], index=0)
 
         st.divider()
+        st.subheader("🖥️ TEST DASHBOARD")
         stress_test = st.toggle("🚀 **STRESS MODE**", value=False)
         if stress_test:
             st.warning("⚠️ **Modalità TEST:**\n\nno BB - RSI (45/55)")
             use_bb, use_rsi = False, True
             custom_rsi_buy, custom_rsi_sell = 45, 55
 
-        st.divider()
+        #st.divider()
         if st.button("🔔 **TEST AUDIO & TELEGRAM**", use_container_width=True):
             play_trade_sound("buy")
             invia_telegram("✅ **SENTINEL AI: SYSTEM CHECK**\nBot online e pronto 🚀")
             st.toast("Test completato!", icon="📲")
 
-        st.divider()
+        #st.divider()
         if st.button("🗑️ **PULISCI SEGNALI**", use_container_width=True):
             st.session_state.signal_history = []
             save_journal([]) 
@@ -295,6 +296,21 @@ with st.sidebar:
             st.download_button(label="📥 ESPORTA STORICO (CSV)", data=csv_data, file_name=f"sentinel_history_{now_roma.time().strftime('%d%m%Y_%H%M')}.csv", mime="text/csv", use_container_width=True)
         else:
             st.button("📥 ESPORTA STORICO (CSV)", disabled=True, use_container_width=True)
+
+        uploaded_file = st.file_uploader("📤 IMPORTA DATI", type=["csv"], label_visibility="collapsed")
+        if uploaded_file is not None:
+            if st.button("🔄 CARICA DATI", use_container_width=True, type="secondary"):
+                try:
+                    df_import = pd.read_csv(uploaded_file)
+                    st.session_state.signal_history.extend(df_import.to_dict('records'))
+                    df_pulito = pd.DataFrame(st.session_state.signal_history).drop_duplicates(subset=['time', 'pair'], keep='last')
+                    st.session_state.signal_history = df_pulito.to_dict('records')
+                    save_journal(st.session_state.signal_history) 
+                    st.success("✅ Storico caricato con successo!")
+                    time_module.sleep(1.5)
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"⚠️ Errore nel file: {e}")
 
 # --- 4. MAIN DASHBOARD ---
 if st.session_state.connected:
@@ -528,11 +544,11 @@ if st.session_state.connected:
     c6.metric("🏆 Top Asset", best_pairs_str if best_pairs_str else "-")
 
     if not df_filtered.empty:
-        rename_map = {'id': '🆔 ID', 'time': '⏰ DATA', 'pair': '💱 VALUTE', 'dir': '🚀 TIPO', 'price': '💰 PRICE', 'stake': '💶 STAKE', 'params_bb': '↔️ BB', 'params_rsi': '📉 RSI', 'mercato': '🌍 MERCATO', 'result': '🔍 ESITO 60s', 'check_75s': '⏱️ 75s', 'check_120s': '⏱️ 120s', 'pnl_numeric': '📈 P&L'}
+        rename_map = {'id': '🆔 ID', 'time': '⏰ DATA', 'pair': '💱 VALUTE', 'dir': '🚀 TIPO', 'price': '💰 PRICE', 'stake': '💶 STAKE', 'params_bb': '↔️ BB', 'params_rsi': '📉 RSI', 'mercato': '🌍 MARKET', 'result': '🔍 ESITO 60s', 'check_75s': '⏱️ 75s', 'check_120s': '⏱️ 120s', 'pnl_numeric': '📈 P&L 60s'}
         df_display = df_filtered.iloc[::-1].copy()[[c for c in ['id', 'time', 'pair', 'dir', 'price', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'check_75s', 'check_120s', 'pnl_numeric'] if c in df_filtered.columns]].rename(columns=rename_map)
         df_display['📈 P&L'] = df_display['📈 P&L'].apply(lambda x: f"{x:.1f}€" if x % 1 != 0 else f"{x:.0f}€")
         try:
-            colonne_esito = [c for c in ['🔍 ESITO 60s', '⏱️ 75s', '⏱️ 120s'] if c in df_display.columns]
+            colonne_esito = [c for c in ['🔍 60s', '⏱️ 75s', '⏱️ 120s'] if c in df_display.columns]
             st.dataframe(df_display.style.applymap(style_result, subset=colonne_esito).applymap(style_pnl, subset=['📈 P&L']), use_container_width=True, hide_index=True)
         except Exception:
             st.dataframe(df_display, use_container_width=True, hide_index=True)
