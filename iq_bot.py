@@ -563,10 +563,10 @@ if st.session_state.connected:
     else:
         st.info("⏳ Avvia lo Scanner e attendi il primo segnale...")
     
-    # --- 8. DUAL CHART MONITOR (R_10, R_25, R_50) ---
+    # --- 8. TRI CHART MONITOR (R_50, R_75, R_100) ---
     st.markdown("---")
     st.subheader("🖥️ Monitor Asset Globali (OTC)")
-    m_cols = st.columns(3) 
+    m_cols = st.columns(3)
     
     # FIX: Usiamo le coppie fittizie, così get_candles capisce in automatico che deve scaricare R_50, R_75 e R_100
     indices = [("Volatility 50", "EURUSD"), ("Volatility 75", "USDJPY"), ("Volatility 100", "AUDUSD")]
