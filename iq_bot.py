@@ -489,7 +489,7 @@ if st.session_state.connected:
                             s.update({'result': f"{icona_esito} {res_status}", 'check_75s': "✅" if win_75 else "❌", 'check_120s': "✅" if win_120 else "❌", 'pnl_numeric': float(profit)})
                             break
 
-                    msg = (f"🏁 *ESITO* {'💰' if win else '💀'} {res_status}\n🆔 ID: `{t_id}`\n💱 Asset: {pair} ({nome_reale})\n"
+                    msg = (f"🏁 *ESITO* {'💰' if win else '💀'} {res_status}\n🆔 ID: `{t_id}`\n💱 Asset: {pair}\n"
                            f"📉 Esito 60s: {icona_esito} {res_status}\n⏱️ Esito 75s: {'✅' if win_75 else '❌'}\n"
                            f"⏱️ Esito 120s: {'✅' if win_120 else '❌'}\n💵 P&L: `{profit:.2f} €`")
                     invia_telegram(msg)
