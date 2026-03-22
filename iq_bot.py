@@ -340,7 +340,7 @@ if st.session_state.connected:
 
     if st.session_state.scanner_on:
         if st.session_state.weekend_mode:
-            st.success("SCANNER OTC ATTIVO su 🇪🇺🇺🇸 (EURUSD) E 🇺🇸🇯🇵 (USDJPY)", icon="🎯")
+            st.success("SCANNER OTC ATTIVO", icon="🎯")
         else:
             if not trading_autorizzato:
                 st.warning("🛡️ PROTEZIONE ATTIVA: Mercato fuori orario. Scanner in pausa.")
