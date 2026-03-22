@@ -39,6 +39,7 @@ def to_deriv_symbol(pair):
     if is_weekend_reale:
         if pair == "EURUSD": return "R_10"
         if pair == "USDJPY": return "R_25"
+        if pair == "AUDUSD": return "R_50"
         return "R_10" 
     return f"frx{pair}"
 
@@ -134,9 +135,15 @@ def invia_telegram(messaggio):
 
 def send_telegram_signal(signal_type, pair, price, rsi, trade_id, stake, tipo_mercato="OTC"): 
     timestamp = datetime.now(fuso_roma).strftime("%H:%M:%S")
+    
+    # Aggiungi questo piccolo dizionario di mappatura per il messaggio
+    mapping_nomi = {"EURUSD": "R_10", "USDJPY": "R_25", "AUDUSD": "R_50"}
+    nome_reale = mapping_nomi.get(pair, pair)
+
     message = (
         f"🚀 *NUOVO TRADE*\n🔔 *Segnale:* {signal_type}\n🆔 ID: `{trade_id}`\n"
-        f"🌍 Market: {tipo_mercato}\n💱 Asset: {pair}\n💵 Stake: `{stake:.0f} €` \n" 
+        f"💱 Asset: {pair} ({nome_reale})\n" # Mostra entrambi i nomi
+        f"🌍 Market: {tipo_mercato}\n💵 Stake: `{stake:.0f} €` \n" 
         f"💰 Prezzo: `{price:.5f}`\n📈 RSI: `{rsi:.1f}`\n⏰ Ora: {timestamp}"
     )
     invia_telegram(message)
@@ -315,7 +322,7 @@ with st.sidebar:
 
 # --- 4. MAIN DASHBOARD ---
 if st.session_state.connected:
-    CURRENT_PAIRS = ["EURUSD", "USDJPY"] if st.session_state.weekend_mode else ALL_PAIRS
+    CURRENT_PAIRS = ["EURUSD", "USDJPY", "AUDUSD"] if st.session_state.weekend_mode else ALL_PAIRS
     
     window_1 = (time(0, 0), time(12, 0))
     window_2 = (time(12, 0), time(23, 0))
@@ -559,32 +566,17 @@ if st.session_state.connected:
     # --- 8. DUAL CHART MONITOR (R_10 & R_25) ---
     st.markdown("---")
     st.subheader("🖥️ Monitor Asset Globali (OTC)")
+    m_cols = st.columns(3) # Cambiato da 2 a 3
+    indices = [("Volatility 10", "R_10"), ("Volatility 25", "R_25"), ("Volatility 50", "R_50")]
     
-    col_m1, col_m2 = st.columns(2)
-    s1, s2 = "Volatility 10 Index", "Volatility 25 Index"
-    
-    # Se mt5 è disponibile, usa la costante 1 (che equivale a TIMEFRAME_M1 in mt5)
-    tf_m1 = 1 if MT5_AVAILABLE else 1
-    
-    with col_m1:
-        st.caption(f"📊 {s1}")
-        df_r10 = get_mini_chart_data(s1, tf_m1)
-        if df_r10 is not None and not df_r10.empty:
-            fig_r10 = go.Figure(data=[go.Candlestick(x=df_r10['time'], open=df_r10['open'], high=df_r10['high'], low=df_r10['low'], close=df_r10['close'], increasing_line_color='#00ff88', decreasing_line_color='#ff3333')])
-            fig_r10.update_layout(height=250, margin=dict(l=5, r=5, t=5, b=5), showlegend=False, xaxis_rangeslider_visible=False)
-            st.plotly_chart(fig_r10, use_container_width=True, key="chart_r10_bottom")
-        else:
-            st.warning(f"Non disponibile o Terminale chiuso.")
-    
-    with col_m2:
-        st.caption(f"📊 {s2}")
-        df_r25 = get_mini_chart_data(s2, tf_m1)
-        if df_r25 is not None and not df_r25.empty:
-            fig_r25 = go.Figure(data=[go.Candlestick(x=df_r25['time'], open=df_r25['open'], high=df_r25['high'], low=df_r25['low'], close=df_r25['close'], increasing_line_color='#00ff88', decreasing_line_color='#ff3333')])
-            fig_r25.update_layout(height=250, margin=dict(l=5, r=5, t=5, b=5), showlegend=False, xaxis_rangeslider_visible=False)
-            st.plotly_chart(fig_r25, use_container_width=True, key="chart_r25_bottom")
-        else:
-            st.warning(f"Non disponibile o Terminale chiuso.")
+    for i, (name, sym) in enumerate(indices):
+        with m_cols[i]:
+            st.caption(f"📈 {name}")
+            data = get_mini_chart_data(name + " Index", 1)
+            if data is not None:
+                fig = go.Figure(data=[go.Candlestick(x=data['time'], open=data['open'], high=data['high'], low=data['low'], close=data['close'])])
+                fig.update_layout(height=200, margin=dict(l=0,r=0,t=0,b=0), xaxis_rangeslider_visible=False, template="plotly_dark")
+                st.plotly_chart(fig, use_container_width=True, key=f"mini_{sym}")
     
     if st.session_state.scanner_on:
         time_module.sleep(5) 
