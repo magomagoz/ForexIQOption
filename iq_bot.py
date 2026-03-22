@@ -34,6 +34,7 @@ giorno_settimana = now_roma.weekday()
 is_weekend_reale = giorno_settimana >= 5  
 now_cet = now_roma.time()
 ora_attuale = now_roma.hour
+tipo_mercato = "OTC" if st.session_state.weekend_mode else "LIVE"
 
 def to_deriv_symbol(pair):
     if is_weekend_reale:
@@ -490,7 +491,7 @@ if st.session_state.connected:
                             break
 
                     msg = (f"🏁 *ESITO* {'💰' if win else '💀'} {res_status}\n🆔 ID: `{t_id}`\n💱 Asset: {pair}\n"
-                           f"📉 Esito 60s: {res_status}\n⏱️ Esito 75s: {'✅' if win_75 else '❌'}\n"
+                           f"📉 Esito 60s: {icona_esito} {res_status}\n⏱️ Esito 75s: {'✅' if win_75 else '❌'}\n"
                            f"⏱️ Esito 120s: {'✅' if win_120 else '❌'}\n💵 P&L: `{profit:.2f} €`")
                     invia_telegram(msg)
                     if win: play_trade_sound("win")
