@@ -537,8 +537,8 @@ if st.session_state.connected:
     win_rate_120 = (wins_120 / (wins_120 + losses_120) * 100) if (wins_120 + losses_120) > 0 else 0.0
     
     c1, c2, c3, c4, c5, c6 = st.columns(6)
-    c1.metric("💰 Profitto", f"{total_pnl:.2f} €")
-    c2.metric("🎯 Win/Loss", f"{wins}W - {losses}L")
+    c1.metric("💰 Profitto 60s", f"{total_pnl:.2f} €")
+    c2.metric("🎯 Win/Loss 60s", f"{wins}W - {losses}L")
     c3.metric("🏁 Win Rate 60s", f"{win_rate:.1f}%")
     c4.metric("🏁 Win Rate 75s", f"{win_rate_75:.1f}%")
     c5.metric("🏁 Win Rate 120s", f"{win_rate_120:.1f}%")
