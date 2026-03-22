@@ -567,7 +567,7 @@ if st.session_state.connected:
     st.markdown("---")
     st.subheader("🖥️ Monitor Asset Globali (OTC)")
     m_cols = st.columns(3) # Cambiato da 2 a 3
-    indices = [("Volatility 10", "R_10"), ("Volatility 25", "R_25"), ("Volatility 50", "R_50")]
+    indices = [("Volatility R_10", "R_10"), ("Volatility R_25", "R_25"), ("Volatility R_50", "R_50")]
     
     for i, (name, sym) in enumerate(indices):
         with m_cols[i]:
