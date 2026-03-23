@@ -546,8 +546,8 @@ if st.session_state.connected:
                 fig.add_trace(go.Scatter(x=asse_x, y=df_final['sell_sig'], mode='markers', marker=dict(symbol='triangle-down', size=15, color='#ff3333', line=dict(width=1, color='white')), name="Entry SELL"), row=1, col=1)
                 st.plotly_chart(fig, use_container_width=True)
 
-    #except Exception as e:
-        #st.error(f"Errore generazione grafico: {e}")
+    except Exception as e:
+        st.error(f"Errore generazione grafico: {e}")
 
         st.write("---")
         st.subheader("📊 Analisi Performance (1m)")
@@ -580,13 +580,8 @@ if st.session_state.connected:
             """, unsafe_allow_html=True)
         else:
             st.info("Regola i parametri e verifica il profitto")
-except Exception as e:
-    st.error(f"Errore grafico: {e}")
-
-
-
-
-
+#except Exception as e:
+    #st.error(f"Errore grafico: {e}")
     
     # --- 6. VERIFICA ESITI TRADE CON DERIV ---
     current_ts = time_module.time() 
