@@ -303,19 +303,12 @@ with st.sidebar:
         st.divider()
         st.subheader("🖥️ TEST DASHBOARD")
         
-        stress_test = st.toggle("🚀 **STRESS MODE**", value=False)
-        if stress_test:
-            st.warning("⚠️ **Modalità TEST:**\n\nno BB - RSI (45/55)")
-            use_bb, use_rsi = False, True
-            custom_rsi_buy, custom_rsi_sell = 45, 55
-
-        #st.divider()
         if st.button("🔔 **TEST AUDIO & TELEGRAM**", use_container_width=True):
             play_trade_sound("buy")
             invia_telegram("✅ **SENTINEL AI: SYSTEM CHECK**\nBot online e pronto 🚀")
             st.toast("Test completato!", icon="📲")
 
-        if st.button("🗑️ **PULISCI SEGNALI & RESET PNL**", use_container_width=True):
+        if st.button("🗑️ **PULISCI SEGNALI**", use_container_width=True):
             st.session_state.signal_history = []
             st.session_state.session_pnl = 0.0  # <--- AGGIUNGI QUESTA RIGA
             st.session_state.local_balance = 10000.0 # <--- RESETTA IL BILANCIO VIRTUALE
@@ -324,6 +317,12 @@ with st.sidebar:
             time_module.sleep(1)
             st.rerun()
 
+        stress_test = st.toggle("🚀 **STRESS MODE**", value=False)
+        if stress_test:
+            st.warning("⚠️ **Modalità TEST:**\n\nno BB - RSI (45/55)")
+            use_bb, use_rsi = False, True
+            custom_rsi_buy, custom_rsi_sell = 45, 55
+     
         st.divider()
         st.header("💾 GESTIONE SEGNALI")
         if st.session_state.signal_history:
