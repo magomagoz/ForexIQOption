@@ -278,9 +278,9 @@ with st.sidebar:
             custom_rsi_buy, custom_rsi_sell = 20, 80
 
         else:
-            st.success("🟢 **MERCATO LIVE**\n\n🇪🇺🇺🇸 EURUSD\n\n🇦🇺🇺🇸 AUDUSD\n\n🇳🇿🇺🇸 NZDUSD\n\n🇺🇸🇨🇦 USDCAD\n\n🔍 **Setup:**\n\nBB 20/2.50 + RSI 20/80")
+            st.success("🟢 **MERCATO LIVE**\n\n🇪🇺🇺🇸 EURUSD\n\n🇦🇺🇺🇸 AUDUSD\n\n🇳🇿🇺🇸 NZDUSD\n\n🇺🇸🇨🇦 USDCAD\n\n🔍 **Setup:**\n\nBB 20/2.20 + RSI 20/80")
             use_bb, use_rsi = True, True
-            bb_period, bb_std = 20, 2.50
+            bb_period, bb_std = 20, 2.20
             custom_rsi_buy, custom_rsi_sell = 20, 80
             
         st.markdown("---")
