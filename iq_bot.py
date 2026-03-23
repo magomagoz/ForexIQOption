@@ -269,7 +269,7 @@ with st.sidebar:
         st.divider()
         st.subheader("💸 MERCATO OPERATIVO")
 
-        st.session_state.weekend_mode = st.toggle("🚀 FORZA MERCATO OTC (V50-V75-V100)", value=st.session_state.weekend_mode)
+        st.session_state.weekend_mode = st.toggle("🚀 FORZA MERCATO OTC", value=st.session_state.weekend_mode)
 
         if st.session_state.weekend_mode:
             st.success("🚨 **MERCATO OTC / VOLATILITY**\n\n🇪🇺🇺🇸 (R_50)\n\n🇺🇸🇯🇵 (R_75)\n\n🇦🇺🇺🇸 (R_100)\n\n🔍 **Setup:**\n\nBB 20/2.20 + RSI 20/80")
@@ -277,7 +277,6 @@ with st.sidebar:
             bb_period, bb_std = 20, 2.20
             custom_rsi_buy, custom_rsi_sell = 20, 80
 
-        
         else:
             st.success("🟢 **MERCATO LIVE**\n\n🇪🇺🇺🇸 EURUSD\n\n🇦🇺🇺🇸 AUDUSD\n\n🇳🇿🇺🇸 NZDUSD\n\n🇺🇸🇨🇦 USDCAD\n\n🔍 **Setup:**\n\nBB 20/2.50 + RSI 20/80")
             use_bb, use_rsi = True, True
