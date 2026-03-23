@@ -581,7 +581,7 @@ if st.session_state.connected:
                     msg = (f"🏁 *ESITO* {'💰' if win else '💀'} {res_status}\n"
                            f"🆔 ID: `{t_id}`\n"
                            f"💱 Asset: {nome_reale}\n"
-                           f"🌍 Market: {tipo_mercato}\n
+                           f"🌍 Market: {tipo_mercato}\n"
                            f"📈 RSI Ingresso: `{rsi_ingresso}`\n" # <--- AGGIUNTO NEL MESSAGGIO
                            f"📉 Esito 60s: {icona_esito} {res_status}\n"
                            f"⏱️ Esito 75s: {'✅' if win_75 else '❌'}\n"
