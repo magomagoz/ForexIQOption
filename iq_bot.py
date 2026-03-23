@@ -401,12 +401,12 @@ if st.session_state.connected:
                 df = pd.DataFrame(candles)
 
                 if st.session_state.weekend_mode and not stress_test:
-                    r_buy, r_sell, b_per, b_std = 20, 80, 20, 2.20
+                    r_buy, r_sell, b_period, b_std = 20, 80, 20, 2.20
                 elif stress_test:
-                    r_buy, r_sell, b_per, b_std = 45, 55, 20, 2.20
+                    r_buy, r_sell, b_period, b_std = 45, 55, 20, 2.20
                 else:
                     # Mercato LIVE
-                    r_buy, r_sell, b_per, b_std = custom_rsi_buy, custom_rsi_sell, bb_period, bb_std
+                    r_buy, r_sell, b_period, b_std = custom_rsi_buy, custom_rsi_sell, bb_period, bb_std
 
                 df['RSI'] = ta.rsi(df['close'], length=7)
                 bb = ta.bbands(df['close'], length=b_per, std=b_std)
@@ -441,7 +441,7 @@ if st.session_state.connected:
                         'pair': pair, 'dir': direction, 'price': float(price), 
                         'rsi_val': f"{curr_rsi:.1f}", # <--- AGGIUNGI QUESTA RIGA
                         'stake': f"{st.session_state.stake:.0f}€",                         
-                        'params_bb': f"{b_per}/{b_std}" if use_bb else "OFF", 
+                        'params_bb': f"{b_period}/{b_std}" if use_bb else "OFF", 
                         'params_rsi': f"{r_buy}/{r_sell}", 
                         'mercato': tipo_mercato, 'result': "⏳ In corso...",
                         'check_75s': "-", 'check_120s': "-", 'pnl_numeric': 0.0
@@ -467,10 +467,10 @@ if st.session_state.connected:
             df_raw['RSI'] = ta.rsi(df_raw['close'], length=7)
 
             # Impostazione Base per il Grafico
-            b_per_graf, b_std_graf = b_per, b_std
+            b_period_graf, b_std_graf = b_period, b_std
             r_buy_graf, r_sell_graf = r_buy, r_sell
 
-            bb_ta = ta.bbands(df_raw['close'], length=b_per_graf, std=b_std_graf)
+            bb_ta = ta.bbands(df_raw['close'], length=b_period_graf, std=b_std_graf)
             if bb_ta is not None and not bb_ta.empty:
                 bb_ta.columns = ['BBL', 'BBM', 'BBU', 'BBB', 'BBP'] 
                 df_final = pd.concat([df_raw, bb_ta[['BBL', 'BBM', 'BBU']]], axis=1).tail(100)
