@@ -106,7 +106,7 @@ def genera_trade_id():
 def get_market_status():
     fuso_roma = pytz.timezone('Europe/Rome')
     now_time = datetime.now(fuso_roma).time()
-    sidneytokyo = (time(0,0), time(9,0))
+    tokyo = (time(0,0), time(9,0))
     londra = (time(9,0), time(18,0))
     new_york = (time(14,0), time(23,0))
     chiuso = (time(23,0), time(0,0))
@@ -117,7 +117,7 @@ def get_market_status():
     if londra[0] <= now_time <= londra[1]: return "🇪🇺 **SESSIONE LONDRA**"
     if new_york[0] <= now_time <= new_york[1]: return "🇺🇸 **SESSIONE NEW YORK**"
     if chiuso: return "💤 **MERCATI CHIUSI**"
-    if sidneytokyo: return "🐌 **MERCATO LENTO**"
+    if tokyo: return "🐌 **MERCATO LENTO**"
 
 def draw_market_map_inverted(trading_autorizzato):
     fig = go.Figure()
