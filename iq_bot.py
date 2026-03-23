@@ -252,7 +252,7 @@ with st.sidebar:
         st.divider()
         st.subheader("🛡️ PROTEZIONE ACCOUNT")
         stop_loss_limit = st.number_input("Stop Loss Sessione (€)", value=400.0, step=10.0)
-        take_profit_limit = st.number_input("Take Profit Sessione (€)", value=400.0, step=10.0)
+        take_profit_limit = st.number_input("Take Profit Sessione (€)", value=1000.0, step=10.0)
         
         if st.session_state.scanner_on:
             # Controllo automatico: se la perdita supera il limite, spegne tutto
