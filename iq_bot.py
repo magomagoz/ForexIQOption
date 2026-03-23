@@ -108,12 +108,14 @@ def get_market_status():
     now_time = datetime.now(fuso_roma).time()
     londra = (time(9,0), time(18,0))
     new_york = (time(14,0), time(23,0))
+    chiuso = (time(23,0), time(0,0))
+    
     if is_weekend_reale: return "⚠️ **WEEKEND OTC**"
     if londra[0] <= now_time <= londra[1] and new_york[0] <= now_time <= new_york[1]:
         return "🔥 **OVERLAP EU+USA**\n\nAlta Volatilità"
     if londra[0] <= now_time <= londra[1]: return "🇪🇺 **SESSIONE LONDRA**"
     if new_york[0] <= now_time <= new_york[1]: return "🇺🇸 **SESSIONE NEW YORK**"
-    if 23 <= now_time <= 0:
+    if chiuso:
         return "💤 **MERCATI CHIUSI**"
     return "🐌 **MERCATO LENTO**"
 
