@@ -315,7 +315,7 @@ with st.sidebar:
 
         # PUNTO 2: Parametri Dinamici Giorno/Notte
         st.session_state.dynamic_params = st.toggle(
-            "🌗 Auto-BB\n\nGiorno (2.2)/Notte (2.5)", 
+            "🌗 Auto-BB\n\n🌞 Giorno (2.2)/🌚 Notte (2.5)", 
             value=True, 
             help="Usa BB 2.50 di notte (calmo) e BB 2.20 di giorno (mercati aperti e volatili)."
         )
@@ -628,12 +628,13 @@ if st.session_state.connected:
                     
                     msg = (f"🏁 *ESITO* {'💰' if win else '💀'} {res_status}\n"
                            f"🆔 ID: `{t_id}`\n"
-                           f"💱 Asset: {nome_reale}\n"
+                           f"💱 Asset: {pair} {nome_reale}\n"
                            f"📈 RSI Ingresso: `{rsi_ingresso}`\n" # <--- AGGIUNTO NEL MESSAGGIO
                            f"📉 Esito 60s: {icona_esito} {res_status}\n"
                            f"⏱️ Esito 75s: {'✅' if win_75 else '❌'}\n"
                            f"⏱️ Esito 120s: {'✅' if win_120 else '❌'}\n"
-                           f"💵 P&L: `{profit:.2f} €` / Sessione: `{st.session_state.session_pnl:.2f}€` ")
+                           f"💵 P&L: `{profit:.2f} €`"
+                           f"📅 P&L Sessione: `{st.session_state.session_pnl:.2f}€` ")
                     invia_telegram(msg)
 
                     if win: play_trade_sound("win")
