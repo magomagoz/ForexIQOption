@@ -287,7 +287,7 @@ with st.sidebar:
             bb_period = c_bb1.selectbox("Periodo BB", [14, 20], index = 1)
             custom_rsi_buy = c_rsi1.selectbox("RSI Buy", [30, 25, 20, 15], index = 2)
             c_bb2, c_rsi2 = st.columns(2)
-            bb_std = c_bb2.selectbox("Dev BB", [2.00, 2.20, 2.50, 2.70], index = 0)
+            bb_std = c_bb2.selectbox("Dev BB", [2.00, 2.20, 2.50, 2.70], index = 1)
             custom_rsi_sell = c_rsi2.selectbox("RSI Sell", [70, 75, 80, 85], index = 2)
         
         st.divider()
@@ -297,6 +297,28 @@ with st.sidebar:
             st.write(f"{city} {status}")
             
         st.info(get_market_status())
+
+        st.divider()
+        st.subheader("🧠 SMART SETTINGS (MERCATO LIVE)")
+        
+        # PUNTO 1: Filtro Valute Sicure
+        tipo_lista = st.radio(
+            "🎯 Selezione Asset:",
+            ["Solo Valute Sicure (Consigliato)", "Tutte le Valute (Aggressivo)"],
+            index=0,
+            help="Le valute sicure escludono i cross nervosi con JPY e GBP."
+        )
+        if tipo_lista == "Solo Valute Sicure (Consigliato)":
+            st.session_state.live_pairs = ["EURUSD", "AUDUSD", "USDCAD", "NZDUSD", "USDCHF"]
+        else:
+            st.session_state.live_pairs = ALL_PAIRS
+
+        # PUNTO 2: Parametri Dinamici Giorno/Notte
+        st.session_state.dynamic_params = st.toggle(
+            "🌗 Auto-BB Giorno/Notte", 
+            value=True, 
+            help="Usa BB 2.00 di notte (calmo) e BB 2.50 di giorno (mercati aperti e volatili)."
+        )
         
         st.divider()
         st.subheader("🛠️ PARAMETRI TRADING")
@@ -349,8 +371,14 @@ with st.sidebar:
                     st.error(f"⚠️ Errore nel file: {e}")
 
 # --- 4. MAIN DASHBOARD ---
+
+    # --- 4. MAIN DASHBOARD ---
 if st.session_state.connected:
-    CURRENT_PAIRS = ["EURUSD", "USDJPY", "AUDUSD"] if st.session_state.weekend_mode else ALL_PAIRS
+    # Applica il filtro valute LIVE (se non siamo in weekend/OTC)
+    if st.session_state.weekend_mode:
+        CURRENT_PAIRS = ["EURUSD", "USDJPY", "AUDUSD"] # Mappati su V50, V75, V100
+    else:
+        CURRENT_PAIRS = st.session_state.get('live_pairs', ALL_PAIRS)
     
     window_1 = (time(0, 0), time(12, 0))
     window_2 = (time(12, 0), time(23, 0))
@@ -392,7 +420,20 @@ if st.session_state.connected:
                 elif stress_test:
                     r_buy, r_sell, b_per, b_std = 45, 55, 20, 2.20
                 else:
-                    r_buy, r_sell, b_per, b_std = custom_rsi_buy, custom_rsi_sell, bb_period, bb_std
+                    # Mercato LIVE
+                    r_buy, r_sell, b_per = custom_rsi_buy, custom_rsi_sell, bb_period
+                    
+                    # LOGICA PARAMETRI DINAMICI (Giorno vs Notte)
+                    if st.session_state.get('dynamic_params', False):
+                        ora_attuale = now_roma.hour
+                        # Dalle 08:00 alle 22:59 (Sessioni EU e USA) la volatilità è alta -> BB 2.50
+                        if 8 <= ora_attuale < 23:
+                            b_std = 2.50
+                        # Dalle 23:00 alle 07:59 (Sessione Asiatica) la volatilità è bassa -> BB 2.00
+                        else:
+                            b_std = 2.00
+                    else:
+                        b_std = bb_std # Usa quello impostato manualmente nella sidebar
 
                 df['RSI'] = ta.rsi(df['close'], length=7)
                 bb = ta.bbands(df['close'], length=b_per, std=b_std)
@@ -450,8 +491,28 @@ if st.session_state.connected:
             st.caption(f"Sorgente dati attuale: **{src_ta}**")
             df_raw = pd.DataFrame(candles_ta)
             df_raw['RSI'] = ta.rsi(df_raw['close'], length=7)
+
+
+            # Impostazione Base
+            b_per_graf = 20
             
-            b_per_graf, b_std_graf = (20, 2.20) if st.session_state.weekend_mode and not stress_test else (bb_period, bb_std)
+            if st.session_state.weekend_mode and not stress_test:
+                b_std_graf = 2.20
+                r_buy_graf, r_sell_graf = 20, 80
+            elif stress_test:
+                b_std_graf = 2.20
+                r_buy_graf, r_sell_graf = 45, 55
+            else:
+                b_per_graf = bb_period
+                r_buy_graf, r_sell_graf = custom_rsi_buy, custom_rsi_sell
+                
+                # Sincronizza il grafico coi Parametri Dinamici
+                if st.session_state.get('dynamic_params', False):
+                    ora_attuale = now_roma.hour
+                    b_std_graf = 2.50 if 8 <= ora_attuale < 23 else 2.00
+                else:
+                    b_std_graf = bb_std
+
             r_buy_graf, r_sell_graf = (20, 80) if st.session_state.weekend_mode and not stress_test else (custom_rsi_buy, custom_rsi_sell)
             
             bb_ta = ta.bbands(df_raw['close'], length=b_per_graf, std=b_std_graf)
