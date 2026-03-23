@@ -305,11 +305,11 @@ with st.sidebar:
         tipo_lista = st.radio(
             "🎯 Selezione Asset:",
             ["Solo Valute Sicure (Consigliato)", "Tutte le Valute (Aggressivo)"],
-            index=0,
+            index=1,
             help="Le valute sicure escludono i cross nervosi con JPY e GBP."
         )
         if tipo_lista == "Solo Valute Sicure (Consigliato)":
-            st.session_state.live_pairs = ["EURUSD", "AUDUSD", "USDCAD", "NZDUSD", "USDCHF"]
+            st.session_state.live_pairs = ["EURUSD", "AUDUSD", "NZDUSD", "GBPUSD"]
         else:
             st.session_state.live_pairs = ALL_PAIRS
 
