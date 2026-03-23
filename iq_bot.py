@@ -439,6 +439,7 @@ if st.session_state.connected:
                     st.session_state.signal_history.append({
                         'id': t_id, 'time': datetime.now(fuso_roma).strftime("%Y-%m-%d %H:%M:%S"),
                         'pair': pair, 'dir': direction, 'price': float(price), 
+                        'rsi_val': f"{curr_rsi:.1f}", # <--- AGGIUNGI QUESTA RIGA
                         'stake': f"{st.session_state.stake:.0f}€",                         
                         'params_bb': f"{b_per}/{b_std}" if use_bb else "OFF", 
                         'params_rsi': f"{r_buy}/{r_sell}", 
@@ -534,8 +535,6 @@ if st.session_state.connected:
         """, unsafe_allow_html=True)
     else:
         st.info("Regola i parametri e verifica il profitto")
-#except Exception as e:
-    #st.error(f"Errore grafico: {e}")
     
     # --- 6. VERIFICA ESITI TRADE CON DERIV ---
     current_ts = time_module.time() 
@@ -602,10 +601,13 @@ if st.session_state.connected:
     st.divider()
     # --- 7. TABELLA JOURNAL E FILTRI DINAMICI ---
     st.subheader("📋 Trading Journal & Performance Hub")
+
     if st.session_state.signal_history:
         df_journal = pd.DataFrame(st.session_state.signal_history)
-        if 'check_75s' not in df_journal.columns: df_journal['check_75s'] = "-"    
-        if 'check_120s' not in df_journal.columns: df_journal['check_120s'] = "-"    
+        # Assicura che le colonne esistano per evitare KeyError
+        for col in ['check_75s', 'check_120s', 'rsi_val']:
+            if col not in df_journal.columns:
+                df_journal[col] = "-"
     else:
         df_journal = pd.DataFrame(columns=['id', 'time', 'pair', 'dir', 'price', 'rsi_val', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'check_75s', 'check_120s', 'pnl_numeric'])
 
@@ -652,9 +654,13 @@ if st.session_state.connected:
     if not df_filtered.empty:
         rename_map = {'id': '🆔 ID', 'time': '⏰ DATA', 'pair': '💱 VALUTE', 'dir': '🚀 TIPO', 'price': '💰 PRICE', 'rsi_val': '📈 RSI IN', 'stake': '💶 STAKE', 'params_bb': '↔️ BB', 'params_rsi': '📉 RSI', 'mercato': '🌍 MARKET', 'result': '🔍 ESITO 60s', 'check_75s': '⏱️ 75s', 'check_120s': '⏱️ 120s', 'pnl_numeric': '📈 P&L'}
 
-        colonne_da_mostrare = ['id', 'time', 'pair', 'dir', 'price', 'rsi_val', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'check_75s', 'check_120s', 'pnl_numeric']
+        # Lista colonne aggiornata con rsi_val
+        cols_to_use = ['id', 'time', 'pair', 'dir', 'price', 'rsi_val', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'check_75s', 'check_120s', 'pnl_numeric']
+        
+        df_display = df_filtered.iloc[::-1].copy()[[c for c in cols_to_use if c in df_filtered.columns]].rename(columns=rename_map)
 
-        df_display = df_filtered.iloc[::-1].copy()[[c for c in ['id', 'time', 'pair', 'dir', 'price', 'rsi_val', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'check_75s', 'check_120s', 'pnl_numeric'] if c in df_filtered.columns]].rename(columns=rename_map)
+        #colonne_da_mostrare = ['id', 'time', 'pair', 'dir', 'price', 'rsi_val', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'check_75s', 'check_120s', 'pnl_numeric']
+        #df_display = df_filtered.iloc[::-1].copy()[[c for c in ['id', 'time', 'pair', 'dir', 'price', 'rsi_val', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'check_75s', 'check_120s', 'pnl_numeric'] if c in df_filtered.columns]].rename(columns=rename_map)
         
         df_display['📈 P&L'] = df_display['📈 P&L'].apply(lambda x: f"{x:.1f}€" if x % 1 != 0 else f"{x:.0f}€")
         try:
