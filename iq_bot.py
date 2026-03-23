@@ -116,8 +116,8 @@ def get_market_status():
         return "🔥 **OVERLAP EU+USA**\n\nAlta Volatilità"
     if londra[0] <= now_time <= londra[1]: return "🇪🇺 **SESSIONE LONDRA**"
     if new_york[0] <= now_time <= new_york[1]: return "🇺🇸 **SESSIONE NEW YORK**"
-    if chiuso: return "💤 **MERCATI CHIUSI**"
-    if tokyo: return "🐌 **MERCATO LENTO**"
+    if chiuso[0] <= now_time <= chiuso[1]: return "💤 **MERCATI CHIUSI**"
+    if tokyo[0]:x <= now_time <= tokyo[1]: return "🐌 **MERCATO LENTO**"
 
 def draw_market_map_inverted(trading_autorizzato):
     fig = go.Figure()
