@@ -263,11 +263,11 @@ with st.sidebar:
             
             if st.session_state.session_pnl >= take_profit_limit:
                 st.session_state.scanner_on = False
-                invia_telegram(f"💰 **TAKE PROFIT RAGGIUNTO!**\nProfitto: {st.session_state.session_pnl:.2f}€\nOttima sessione, a domani!")
+                invia_telegram(f"💰 **TAKE PROFIT RAGGIUNTO!**\nProfitto: {st.session_state.session_pnl:.2f}€\nOttima sessione!")
                 st.success("TAKE PROFIT RAGGIUNTO. Scanner spento.")
 
         st.divider()
-        st.subheader("💸 MERCATO OPERATIVO")
+        st.subheader("💸 TIPO DI MERCATO")
 
         st.session_state.weekend_mode = st.toggle("🚀 FORZA MERCATO OTC", value=st.session_state.weekend_mode)
 
@@ -278,7 +278,7 @@ with st.sidebar:
             custom_rsi_buy, custom_rsi_sell = 20, 80
 
         else:
-            st.success("🟢 **MERCATO LIVE**\n\n🔍 **Setup:**\n\nBB 20/2.20 + RSI 20/80")
+            st.success("🟢 **MERCATO LIVE**\n\n🔍 BB 20/2.20 + RSI 20/80")
             use_bb, use_rsi = True, True
             bb_period, bb_std = 20, 2.20
             custom_rsi_buy, custom_rsi_sell = 20, 80
