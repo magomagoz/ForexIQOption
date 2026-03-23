@@ -683,9 +683,6 @@ if st.session_state.connected:
         cols_to_use = ['id', 'time', 'pair', 'dir', 'price', 'rsi_val', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'check_75s', 'check_120s', 'pnl_numeric']
         
         df_display = df_filtered.iloc[::-1].copy()[[c for c in cols_to_use if c in df_filtered.columns]].rename(columns=rename_map)
-
-        #colonne_da_mostrare = ['id', 'time', 'pair', 'dir', 'price', 'rsi_val', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'check_75s', 'check_120s', 'pnl_numeric']
-        #df_display = df_filtered.iloc[::-1].copy()[[c for c in ['id', 'time', 'pair', 'dir', 'price', 'rsi_val', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'check_75s', 'check_120s', 'pnl_numeric'] if c in df_filtered.columns]].rename(columns=rename_map)
         
         df_display['📈 P&L'] = df_display['📈 P&L'].apply(lambda x: f"{x:.1f}€" if x % 1 != 0 else f"{x:.0f}€")
         try:
