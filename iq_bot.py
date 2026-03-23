@@ -463,13 +463,20 @@ if st.session_state.connected:
         if candles_ta:
             st.caption(f"Sorgente dati attuale: **{src_ta}**")
             df_raw = pd.DataFrame(candles_ta)
+
             df_raw['RSI'] = ta.rsi(df_raw['close'], length=7)
 
-            # Impostazione Base per il Grafico
-            b_period_graf, b_std_graf = b_period, b_std
-            r_buy_graf, r_sell_graf = r_buy, r_sell
+            # Impostazione Base per il Grafico (Indipendente dallo scanner)
+            if st.session_state.weekend_mode and not stress_test:
+                r_buy_graf, r_sell_graf, b_period_graf, b_std_graf = 20, 80, 20, 2.20
+            elif stress_test:
+                r_buy_graf, r_sell_graf, b_period_graf, b_std_graf = 45, 55, 20, 2.20
+            else:
+                # Usa i parametri dinamici della sidebar
+                r_buy_graf, r_sell_graf, b_period_graf, b_std_graf = custom_rsi_buy, custom_rsi_sell, bb_period, bb_std
 
             bb_ta = ta.bbands(df_raw['close'], length=b_period_graf, std=b_std_graf)
+            
             if bb_ta is not None and not bb_ta.empty:
                 bb_ta.columns = ['BBL', 'BBM', 'BBU', 'BBB', 'BBP'] 
                 df_final = pd.concat([df_raw, bb_ta[['BBL', 'BBM', 'BBU']]], axis=1).tail(100)
