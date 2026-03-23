@@ -287,7 +287,7 @@ with st.sidebar:
             bb_period = c_bb1.selectbox("Periodo BB", [14, 20], index = 1)
             custom_rsi_buy = c_rsi1.selectbox("RSI Buy", [30, 25, 20, 15], index = 2)
             c_bb2, c_rsi2 = st.columns(2)
-            bb_std = c_bb2.selectbox("Dev BB", [2.00, 2.20, 2.50, 2.70], index = 1)
+            bb_std = c_bb2.selectbox("Dev BB", [2.00, 2.20, 2.50, 2.70], index = 2)
             custom_rsi_sell = c_rsi2.selectbox("RSI Sell", [70, 75, 80, 85], index = 2)
         
         st.divider()
