@@ -349,6 +349,8 @@ with st.sidebar:
                 except Exception as e:
                     st.error(f"⚠️ Errore nel file: {e}")
 
+        st.divider()
+
 # --- 4. MAIN DASHBOARD ---
 if st.session_state.connected:
     # Applica i due set di valute "spietati"
