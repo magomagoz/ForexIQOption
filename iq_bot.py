@@ -481,15 +481,27 @@ if st.session_state.connected:
                 bb_ta.columns = ['BBL', 'BBM', 'BBU', 'BBB', 'BBP'] 
                 df_final = pd.concat([df_raw, bb_ta[['BBL', 'BBM', 'BBU']]], axis=1).tail(100)
 
-                # Gestione sicura dei triangolini sul grafico usando NaN
+                # --- FIX 1: CALCOLO CANDELE CONSECUTIVE IN PANDAS ---
+                # Identifica le candele verdi e rosse
+                is_green = df_final['close'] > df_final['open']
+                is_red = df_final['close'] < df_final['open']
+                
+                # Somma mobile a 3 periodi (se è 3, significa che le ultime 3 sono dello stesso colore)
+                tre_verdi = is_green.rolling(3).sum() == 3
+                tre_rosse = is_red.rolling(3).sum() == 3
+                df_final['is_consecutive'] = tre_verdi | tre_rosse
+
+                # Gestione sicura dei triangolini sul grafico (ora usa la stessa identica logica del bot)
                 df_final['buy_sig'] = df_final.apply(lambda x: (x['close'] * 0.9998) if (
                     ((x['RSI'] < r_buy_graf) if use_rsi else True) and 
-                    ((x['close'] <= x['BBL']) if use_bb else True) 
+                    ((x['close'] <= x['BBL']) if use_bb else True) and
+                    not x['is_consecutive'] # Il filtro salvavita!
                 ) else float('nan'), axis=1)
                 
                 df_final['sell_sig'] = df_final.apply(lambda x: (x['close'] * 1.0002) if (
                     ((x['RSI'] > r_sell_graf) if use_rsi else True) and 
-                    ((x['close'] >= x['BBU']) if use_bb else True)
+                    ((x['close'] >= x['BBU']) if use_bb else True) and
+                    not x['is_consecutive'] # Il filtro salvavita!
                 ) else float('nan'), axis=1)
              
                 asse_x = df_final['time']
@@ -511,11 +523,12 @@ if st.session_state.connected:
         st.error(f"Errore generazione grafico: {e}")
 
     st.write("---")
-    st.subheader("📊 Analisi Performance (1m)")
+    st.subheader(f"📊 Analisi Performance ({timeframe}s)")
     n_buy, n_sell = df_final['buy_sig'].notnull().sum(), df_final['sell_sig'].notnull().sum()
     totale_segnali = n_buy + n_sell
 
-    if st.button("🔍 **VERIFICA ESITO (60s)**", use_container_width=True, type="primary"):
+    # --- FIX 2: ETICHETTA BOTTONE DINAMICA ---
+    if st.button(f"🔍 **VERIFICA ESITO ({timeframe}s)**", use_container_width=True, type="primary"):
         wins_buy, wins_sell = 0, 0
         for i in range(len(df_final) - 1):
             if pd.notnull(df_final['buy_sig'].iloc[i]) and df_final['close'].iloc[i+1] > df_final['close'].iloc[i]: wins_buy += 1
