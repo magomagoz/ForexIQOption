@@ -315,10 +315,13 @@ with st.sidebar:
             invia_telegram("✅ **SENTINEL AI: SYSTEM CHECK**\nBot online e pronto 🚀")
             st.toast("Test completato!", icon="📲")
 
-        #st.divider()
-        if st.button("🗑️ **PULISCI SEGNALI**", use_container_width=True):
+        if st.button("🗑️ **PULISCI SEGNALI & RESET PNL**", use_container_width=True):
             st.session_state.signal_history = []
+            st.session_state.session_pnl = 0.0  # <--- AGGIUNGI QUESTA RIGA
+            st.session_state.local_balance = 10000.0 # <--- RESETTA IL BILANCIO VIRTUALE
             save_journal([]) 
+            st.success("Memoria pulita e PNL resettato!")
+            time_module.sleep(1)
             st.rerun()
 
         st.divider()
