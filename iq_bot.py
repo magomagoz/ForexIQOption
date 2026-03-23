@@ -36,7 +36,13 @@ now_cet = now_roma.time()
 ora_attuale = now_roma.hour
 
 def to_deriv_symbol(pair):
-    if is_weekend_reale:
+    # Se passiamo già un simbolo R_, non lo modifichiamo
+    if pair.startswith("R_"): return pair 
+    
+    # Controlla l'interruttore manuale della dashboard (se non c'è, usa il calendario)
+    is_otc = st.session_state.get('weekend_mode', is_weekend_reale)
+    
+    if is_otc:
         if pair == "EURUSD": return "R_50"
         if pair == "USDJPY": return "R_75"
         if pair == "AUDUSD": return "R_100"
@@ -220,7 +226,8 @@ with st.sidebar:
     if not st.session_state.connected:
         if st.button("🔌 CONNETTI SISTEMA", use_container_width=True, type="primary"):
             with st.spinner("Ricerca connessione disponibile..."):
-                test_data, source = get_candles("EURUSD", 60, 1)
+                # FIX: Testiamo R_50 che è sempre aperto 24/7/365
+                test_data, source = get_candles("R_50", 60, 1) 
                 if test_data:
                     st.session_state.connected = True
                     st.session_state.connection_source = source
@@ -259,12 +266,15 @@ with st.sidebar:
                 invia_telegram(f"💰 **TAKE PROFIT RAGGIUNTO!**\nProfitto: {st.session_state.session_pnl:.2f}€\nOttima sessione, a domani!")
                 st.success("TAKE PROFIT RAGGIUNTO. Scanner spento.")
        
-        # FIX: Blocco configurazione estratto per non crashare se lo scanner è spento
         st.divider()
         st.subheader("💸 **MERCATO LIVE/OTC**")
 
+        # --- AGGIUNTO: Toggle manuale per decidere cosa operare ---
+        st.session_state.weekend_mode = st.toggle("🚀 FORZA MERCATO OTC (Volatility 50-75-100)", value=st.session_state.weekend_mode)
+
         if st.session_state.weekend_mode:
-            st.success("🚨 **MERCATO OTC (Sab-Dom)**\n\n🇪🇺🇺🇸 **(R_50)**\n\n🇺🇸🇯🇵 **(R_75)**\n\n🇦🇺🇺🇸 **(R_100)**\n\n🔍 **Strategia:**\n\nBB 20/2.20 + RSI 20/80")
+            st.success("🚨 **MERCATO OTC / VOLATILITY**\n\n🇪🇺🇺🇸 **(R_50)**\n\n🇺🇸🇯🇵 **(R_75)**\n\n🇦🇺🇺🇸 **(R_100)**\n\n🔍 **Strategia:**\n\nBB 20/2.20 + RSI 20/80")
+            # ... il resto rimane uguale ...
             use_bb, use_rsi = True, True
             bb_period, bb_std = 20, 2.20
             custom_rsi_buy, custom_rsi_sell = 20, 80
@@ -547,7 +557,7 @@ if st.session_state.connected:
         if 'check_75s' not in df_journal.columns: df_journal['check_75s'] = "-"    
         if 'check_120s' not in df_journal.columns: df_journal['check_120s'] = "-"    
     else:
-        df_journal = pd.DataFrame(columns=['id', 'time', 'pair', 'dir', 'price', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'check_75s', 'check_120s', 'pnl_numeric'])
+        df_journal = pd.DataFrame(columns=['id', 'time', 'pair', 'dir', 'price', 'rsi_val', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'check_75s', 'check_120s', 'pnl_numeric'])
 
     df_journal['pnl_numeric'] = pd.to_numeric(df_journal.get('pnl_numeric', 0.0), errors='coerce').fillna(0.0)
 
