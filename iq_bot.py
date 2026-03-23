@@ -284,9 +284,9 @@ with st.sidebar:
             bb_period, bb_std = 20, 2.50
             custom_rsi_buy, custom_rsi_sell = 20, 80
             
-            st.markdown("---")
-            # UNICA IMPOSTAZIONE LIVE EXTRA: La Pausa Overlap
-            st.session_state.pause_overlap = st.toggle("🛑 **Pausa Overlap**\n\n(14:30 - 17:30)", value=True, help="Disattiva lo scanner nel momento di massima turbolenza per evitare i falsi segnali.")
+        st.markdown("---")
+        # UNICA IMPOSTAZIONE LIVE EXTRA: La Pausa Overlap
+        st.session_state.pause_overlap = st.toggle("🛑 **No Overlap EU+USA**\n\n(14:30 - 17:30)", value=True, help="Disattiva lo scanner nel momento di massima turbolenza per evitare i falsi segnali.")
 
         st.divider()
         st.subheader("🌍 SESSIONI DI MERCATO")
