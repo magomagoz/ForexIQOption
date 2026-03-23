@@ -265,31 +265,29 @@ with st.sidebar:
                 st.session_state.scanner_on = False
                 invia_telegram(f"💰 **TAKE PROFIT RAGGIUNTO!**\nProfitto: {st.session_state.session_pnl:.2f}€\nOttima sessione, a domani!")
                 st.success("TAKE PROFIT RAGGIUNTO. Scanner spento.")
-       
-        st.divider()
-        st.subheader("💸 **MERCATO LIVE/OTC**")
 
-        # --- AGGIUNTO: Toggle manuale per decidere cosa operare ---
-        st.session_state.weekend_mode = st.toggle("🚀 FORZA MERCATO OTC (Volatility 50-75-100)", value=st.session_state.weekend_mode)
+        st.divider()
+        st.subheader("💸 MERCATO OPERATIVO")
+
+        st.session_state.weekend_mode = st.toggle("🚀 FORZA MERCATO OTC (V50-V75-V100)", value=st.session_state.weekend_mode)
 
         if st.session_state.weekend_mode:
-            st.success("🚨 **MERCATO OTC / VOLATILITY**\n\n🇪🇺🇺🇸 **(R_50)**\n\n🇺🇸🇯🇵 **(R_75)**\n\n🇦🇺🇺🇸 **(R_100)**\n\n🔍 **Strategia:**\n\nBB 20/2.20 + RSI 20/80")
-            # ... il resto rimane uguale ...
+            st.success("🚨 **MERCATO OTC / VOLATILITY**\n\n🇪🇺🇺🇸 **(R_50)** | 🇺🇸🇯🇵 **(R_75)** | 🇦🇺🇺🇸 **(R_100)**\n\n🔍 **Setup:** BB 20/2.20 + RSI 20/80")
             use_bb, use_rsi = True, True
             bb_period, bb_std = 20, 2.20
             custom_rsi_buy, custom_rsi_sell = 20, 80
-        else:
-            st.success("🟢 **MERCATO LIVE (Lun-Ven)**")
-            col_t1, col_t2 = st.columns(2)
-            use_bb = col_t1.toggle("**BB**", value=True)
-            use_rsi = col_t2.toggle("**RSI**", value=True)
-            c_bb1, c_rsi1 = st.columns(2)
-            bb_period = c_bb1.selectbox("Periodo BB", [14, 20], index = 1)
-            custom_rsi_buy = c_rsi1.selectbox("RSI Buy", [30, 25, 20, 15], index = 2)
-            c_bb2, c_rsi2 = st.columns(2)
-            bb_std = c_bb2.selectbox("Dev BB", [2.00, 2.20, 2.50, 2.70], index = 2)
-            custom_rsi_sell = c_rsi2.selectbox("RSI Sell", [70, 75, 80, 85], index = 2)
+
         
+        else:
+            st.success("🟢 **MERCATO LIVE (Cecchino)**\n\n🇪🇺🇺🇸 **EURUSD** | 🇦🇺🇺🇸 **AUDUSD**\n\n🇳🇿🇺🇸 **NZDUSD** | 🇺🇸🇨🇦 **USDCAD**\n\n🔍 **Setup Fisso:** BB 20/2.50 + RSI 20/80")
+            use_bb, use_rsi = True, True
+            bb_period, bb_std = 20, 2.50
+            custom_rsi_buy, custom_rsi_sell = 20, 80
+            
+            st.markdown("---")
+            # UNICA IMPOSTAZIONE LIVE EXTRA: La Pausa Overlap
+            st.session_state.pause_overlap = st.toggle("🛑 Pausa Overlap (14:30 - 17:30)", value=True, help="Disattiva lo scanner nel momento di massima turbolenza per evitare i falsi segnali.")
+
         st.divider()
         st.subheader("🌍 SESSIONI DI MERCATO")
         for city, (start, end) in {"🇬🇧 LONDRA:": (time(9,0), time(18,0)), "🇺🇸 NEW YORK:": (time(14,0), time(23,0)), "🇦🇺 SYDNEY:": (time(0,0), time(8,0)), "🇯🇵 TOKYO:": (time(0,0), time(9,0))}.items():
@@ -297,28 +295,6 @@ with st.sidebar:
             st.write(f"{city} {status}")
             
         st.info(get_market_status())
-
-        st.divider()
-        st.subheader("🧠 SMART SETTINGS (LIVE)")
-        
-        # PUNTO 1: Filtro Valute Sicure
-        tipo_lista = st.radio(
-            "🎯 Selezione Asset:",
-            ["Solo Valute Sicure (Consigliato)", "Tutte le Valute (Aggressivo)"],
-            index=1,
-            help="Le valute sicure escludono i cross nervosi con JPY e GBP."
-        )
-        if tipo_lista == "Solo Valute Sicure (Consigliato)":
-            st.session_state.live_pairs = ["EURUSD", "AUDUSD", "NZDUSD", "GBPUSD"]
-        else:
-            st.session_state.live_pairs = ALL_PAIRS
-
-        # PUNTO 2: Parametri Dinamici Giorno/Notte
-        st.session_state.dynamic_params = st.toggle(
-            "🌗 Auto-BB\n\n🌞 Giorno (2.2)/🌚 Notte (2.5)", 
-            value=True, 
-            help="Usa BB 2.50 di notte (calmo) e BB 2.20 di giorno (mercati aperti e volatili)."
-        )
         
         st.divider()
         st.subheader("🛠️ PARAMETRI TRADING")
@@ -371,19 +347,26 @@ with st.sidebar:
                     st.error(f"⚠️ Errore nel file: {e}")
 
 # --- 4. MAIN DASHBOARD ---
-
-    # --- 4. MAIN DASHBOARD ---
 if st.session_state.connected:
-    # Applica il filtro valute LIVE (se non siamo in weekend/OTC)
+    # Applica i due set di valute "spietati"
     if st.session_state.weekend_mode:
         CURRENT_PAIRS = ["EURUSD", "USDJPY", "AUDUSD"] # Mappati su V50, V75, V100
     else:
-        CURRENT_PAIRS = st.session_state.get('live_pairs', ALL_PAIRS)
-    
+        # LIVE: Solo le 4 valute super liquide per evitare il caos di Sterlina e Yen
+        CURRENT_PAIRS = ["EURUSD", "AUDUSD", "NZDUSD", "USDCAD"] 
+        
     window_1 = (time(0, 0), time(12, 0))
     window_2 = (time(12, 0), time(23, 0))
     is_trading_time = (window_1[0] <= now_cet <= window_1[1]) or (window_2[0] <= now_cet <= window_2[1])
     trading_autorizzato = is_trading_time or stress_test
+
+    # VERIFICA DELLA PAUSA OVERLAP
+    in_pausa_overlap = False
+    if not st.session_state.weekend_mode and st.session_state.get('pause_overlap', True):
+        ora_attuale_time = now_roma.time()
+        if time(14, 30) <= ora_attuale_time <= time(17, 30):
+            trading_autorizzato = False
+            in_pausa_overlap = True
 
     st.subheader("🌍 Live Market Flow 24h")
     
@@ -397,10 +380,12 @@ if st.session_state.connected:
         if st.session_state.weekend_mode:
             st.success("SCANNER OTC ATTIVO", icon="🎯")
         else:
-            if not trading_autorizzato:
+            if in_pausa_overlap:
+                st.warning("🛑 PAUSA OVERLAP ATTIVA: Scanner in attesa. Riprenderà da solo alle 17:30.")
+            elif not trading_autorizzato:
                 st.warning("🛡️ PROTEZIONE ATTIVA: Mercato fuori orario. Scanner in pausa.")
             else:
-                st.success("SISTEMA IN SCANSIONE ATTIVA 🔥🔥🔥", icon="📡")
+                st.success("SISTEMA LIVE IN SCANSIONE ATTIVA 🔥", icon="📡")
         
         st.divider()
         st.subheader("🕵️ Coppie di valute osservate")
@@ -414,26 +399,14 @@ if st.session_state.connected:
                 if not candles or len(candles) < 20: continue
                 
                 df = pd.DataFrame(candles)
-                
+
                 if st.session_state.weekend_mode and not stress_test:
                     r_buy, r_sell, b_per, b_std = 20, 80, 20, 2.20
                 elif stress_test:
                     r_buy, r_sell, b_per, b_std = 45, 55, 20, 2.20
                 else:
                     # Mercato LIVE
-                    r_buy, r_sell, b_per = custom_rsi_buy, custom_rsi_sell, bb_period
-                    
-                    # LOGICA PARAMETRI DINAMICI (Giorno vs Notte)
-                    if st.session_state.get('dynamic_params', False):
-                        ora_attuale = now_roma.hour
-                        # Dalle 08:00 alle 22:59 (Sessioni EU e USA) la volatilità è alta -> BB 2.50
-                        if 8 <= ora_attuale < 23:
-                            b_std = 2.50
-                        # Dalle 23:00 alle 07:59 (Sessione Asiatica) la volatilità è bassa -> BB 2.00
-                        else:
-                            b_std = 2.00
-                    else:
-                        b_std = bb_std # Usa quello impostato manualmente nella sidebar
+                    r_buy, r_sell, b_per, b_std = custom_rsi_buy, custom_rsi_sell, bb_period, bb_std
 
                 df['RSI'] = ta.rsi(df['close'], length=7)
                 bb = ta.bbands(df['close'], length=b_per, std=b_std)
@@ -492,29 +465,10 @@ if st.session_state.connected:
             df_raw = pd.DataFrame(candles_ta)
             df_raw['RSI'] = ta.rsi(df_raw['close'], length=7)
 
+            # Impostazione Base per il Grafico
+            b_per_graf, b_std_graf = b_per, b_std
+            r_buy_graf, r_sell_graf = r_buy, r_sell
 
-            # Impostazione Base
-            b_per_graf = 20
-            
-            if st.session_state.weekend_mode and not stress_test:
-                b_std_graf = 2.20
-                r_buy_graf, r_sell_graf = 20, 80
-            elif stress_test:
-                b_std_graf = 2.20
-                r_buy_graf, r_sell_graf = 45, 55
-            else:
-                b_per_graf = bb_period
-                r_buy_graf, r_sell_graf = custom_rsi_buy, custom_rsi_sell
-                
-                # Sincronizza il grafico coi Parametri Dinamici
-                if st.session_state.get('dynamic_params', False):
-                    ora_attuale = now_roma.hour
-                    b_std_graf = 2.50 if 8 <= ora_attuale < 23 else 2.00
-                else:
-                    b_std_graf = bb_std
-
-            r_buy_graf, r_sell_graf = (20, 80) if st.session_state.weekend_mode and not stress_test else (custom_rsi_buy, custom_rsi_sell)
-            
             bb_ta = ta.bbands(df_raw['close'], length=b_per_graf, std=b_std_graf)
             if bb_ta is not None and not bb_ta.empty:
                 bb_ta.columns = ['BBL', 'BBM', 'BBU', 'BBB', 'BBP'] 
@@ -700,7 +654,8 @@ if st.session_state.connected:
 
         colonne_da_mostrare = ['id', 'time', 'pair', 'dir', 'price', 'rsi_val', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'check_75s', 'check_120s', 'pnl_numeric']
 
-        df_display = df_filtered.iloc[::-1].copy()[[c for c in ['id', 'time', 'pair', 'dir', 'price', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'check_75s', 'check_120s', 'pnl_numeric'] if c in df_filtered.columns]].rename(columns=rename_map)
+        df_display = df_filtered.iloc[::-1].copy()[[c for c in ['id', 'time', 'pair', 'dir', 'price', 'rsi_val', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'check_75s', 'check_120s', 'pnl_numeric'] if c in df_filtered.columns]].rename(columns=rename_map)
+        
         df_display['📈 P&L'] = df_display['📈 P&L'].apply(lambda x: f"{x:.1f}€" if x % 1 != 0 else f"{x:.0f}€")
         try:
             colonne_esito = [c for c in ['🔍 60s', '⏱️ 75s', '⏱️ 120s'] if c in df_display.columns]
