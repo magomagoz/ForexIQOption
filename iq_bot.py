@@ -148,7 +148,7 @@ def send_telegram_signal(signal_type, pair, price, rsi, trade_id, stake, tipo_me
 
     message = (
         f"🚀 *NUOVO TRADE*\n🔔 *Segnale:* {signal_type}\n🆔 ID: `{trade_id}`\n"
-        f"💱 Asset: {pair} ({nome_reale})\n" # Mostra entrambi i nomi
+        f"💱 Asset: {pair}\n" 
         f"🌍 Market: {tipo_mercato}\n💵 Stake: `{stake:.0f} €` \n" 
         f"💰 Prezzo: `{price:.5f}`\n📈 RSI: `{rsi:.1f}`\n⏰ Ora: {timestamp}"
     )
@@ -580,12 +580,13 @@ if st.session_state.connected:
                     
                     msg = (f"🏁 *ESITO* {'💰' if win else '💀'} {res_status}\n"
                            f"🆔 ID: `{t_id}`\n"
-                           f"💱 Asset: {pair} {nome_reale}\n"
+                           f"💱 Asset: {nome_reale}\n"
+                           f"🌍 Market: {tipo_mercato}\n
                            f"📈 RSI Ingresso: `{rsi_ingresso}`\n" # <--- AGGIUNTO NEL MESSAGGIO
                            f"📉 Esito 60s: {icona_esito} {res_status}\n"
                            f"⏱️ Esito 75s: {'✅' if win_75 else '❌'}\n"
                            f"⏱️ Esito 120s: {'✅' if win_120 else '❌'}\n"
-                           f"💵 P&L: `{profit:.2f} €`"
+                           f"💵 P&L: `{profit:.2f} €`\n"
                            f"📅 P&L Sessione: `{st.session_state.session_pnl:.2f}€` ")
                     invia_telegram(msg)
 
