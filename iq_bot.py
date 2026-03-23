@@ -269,7 +269,7 @@ with st.sidebar:
         st.divider()
         st.subheader("💸 TIPO DI MERCATO")
 
-        st.session_state.weekend_mode = st.toggle("🚀 FORZA MERCATO OTC", value=st.session_state.weekend_mode)
+        #st.session_state.weekend_mode = st.toggle("🚀 FORZA MERCATO OTC", value=st.session_state.weekend_mode)
 
         if st.session_state.weekend_mode:
             st.success("🚨 **MERCATO OTC**\n\n🇪🇺🇺🇸 (R_50)\n\n🇺🇸🇯🇵 (R_75)\n\n🇦🇺🇺🇸 (R_100)\n\n🔍 **Setup:**\n\nBB 20/2.20 + RSI 20/80")
