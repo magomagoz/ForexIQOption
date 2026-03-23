@@ -409,7 +409,7 @@ if st.session_state.connected:
                     r_buy, r_sell, b_period, b_std = custom_rsi_buy, custom_rsi_sell, bb_period, bb_std
 
                 df['RSI'] = ta.rsi(df['close'], length=7)
-                bb = ta.bbands(df['close'], length=b_per, std=b_std)
+                bb = ta.bbands(df['close'], length=b_period, std=b_std)
 
                 if bb is None or bb.empty: continue
                 price, curr_rsi = df['close'].iloc[-1], df['RSI'].iloc[-1]
@@ -604,11 +604,12 @@ if st.session_state.connected:
 
     if st.session_state.signal_history:
         df_journal = pd.DataFrame(st.session_state.signal_history)
-        # Assicura che le colonne esistano per evitare KeyError
+        # Assicura che queste colonne esistano sempre nel DataFrame
         for col in ['check_75s', 'check_120s', 'rsi_val']:
             if col not in df_journal.columns:
                 df_journal[col] = "-"
     else:
+        # DataFrame vuoto con tutte le colonne necessarie
         df_journal = pd.DataFrame(columns=['id', 'time', 'pair', 'dir', 'price', 'rsi_val', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'check_75s', 'check_120s', 'pnl_numeric'])
 
     df_journal['pnl_numeric'] = pd.to_numeric(df_journal.get('pnl_numeric', 0.0), errors='coerce').fillna(0.0)
