@@ -315,9 +315,9 @@ with st.sidebar:
 
         # PUNTO 2: Parametri Dinamici Giorno/Notte
         st.session_state.dynamic_params = st.toggle(
-            "🌗 Auto-BB\n\nGiorno (2.0)/Notte (2.5)", 
+            "🌗 Auto-BB\n\nGiorno (2.2)/Notte (2.5)", 
             value=True, 
-            help="Usa BB 2.00 di notte (calmo) e BB 2.50 di giorno (mercati aperti e volatili)."
+            help="Usa BB 2.50 di notte (calmo) e BB 2.20 di giorno (mercati aperti e volatili)."
         )
         
         st.divider()
