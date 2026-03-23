@@ -270,7 +270,7 @@ with st.sidebar:
                 st.success("TAKE PROFIT RAGGIUNTO. Scanner spento.")
 
         st.divider()
-        st.subheader("🏛️ TIPO DI MERCATO")
+        st.subheader("🌍 TIPO DI MERCATO")
 
         #st.session_state.weekend_mode = st.toggle("🚀 FORZA MERCATO OTC", value=st.session_state.weekend_mode)
 
@@ -293,7 +293,7 @@ with st.sidebar:
         st.session_state.pause_overlap = st.toggle("🛑 **No Overlap**\n\n(14:30 - 17:30)", value=False, help="Disattiva lo scanner nel momento di massima turbolenza per evitare i falsi segnali.")
 
         st.divider()
-        st.subheader("🌍 SESSIONI DI MERCATO")
+        st.subheader("🏛️ SESSIONI DI MERCATO")
         for city, (start, end) in {"🇬🇧 LONDRA:": (time(9,0), time(18,0)), "🇺🇸 NEW YORK:": (time(14,0), time(23,0)), "🇦🇺 SYDNEY:": (time(0,0), time(8,0)), "🇯🇵 TOKYO:": (time(0,0), time(9,0))}.items():
             status = "Open 🟢" if not is_weekend_reale and start <= now_cet <= end else "Closed 🔴"
             st.write(f"{city} {status}")
