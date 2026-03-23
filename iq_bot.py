@@ -272,13 +272,13 @@ with st.sidebar:
         #st.session_state.weekend_mode = st.toggle("🚀 FORZA MERCATO OTC", value=st.session_state.weekend_mode)
 
         if st.session_state.weekend_mode:
-            st.success("🚨 **MERCATO OTC**\n\n🇪🇺🇺🇸 (R_50)\n\n🇺🇸🇯🇵 (R_75)\n\n🇦🇺🇺🇸 (R_100)\n\n🔍 **Setup:**\n\nBB 20/2.20 + RSI 20/80")
+            st.success("🚨 **OTC (Sab-Dom)**\n\n🇪🇺🇺🇸 (R_50)\n\n🇺🇸🇯🇵 (R_75)\n\n🇦🇺🇺🇸 (R_100)\n\n🔍 **Setup:**\n\nBB 20/2.20 + RSI 20/80")
             use_bb, use_rsi = True, True
             bb_period, bb_std = 20, 2.20
             custom_rsi_buy, custom_rsi_sell = 20, 80
 
         else:
-            st.success("🟢 **MERCATO LIVE**\n\n🔍 BB 20/2.20 + RSI 20/80")
+            st.success("🟢 **LIVE (Lun-Ven)**\n\n🔍 BB 20/2.20 + RSI 20/80")
             use_bb, use_rsi = True, True
             bb_period, bb_std = 20, 2.20
             custom_rsi_buy, custom_rsi_sell = 20, 80
