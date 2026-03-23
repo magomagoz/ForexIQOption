@@ -285,7 +285,9 @@ with st.sidebar:
             
         st.markdown("---")
         # UNICA IMPOSTAZIONE LIVE EXTRA: La Pausa Overlap
-        st.session_state.pause_overlap = st.toggle("🛑 **No Overlap EU+USA**\n\n(14:30 - 17:30)", value=True, help="Disattiva lo scanner nel momento di massima turbolenza per evitare i falsi segnali.")
+        st.subheader("💸 SOVRAPPOSIZIONE LONDRA-NY")
+        
+        st.session_state.pause_overlap = st.toggle("🛑 **No Overlap** (14:30 - 17:30)", value=False, help="Disattiva lo scanner nel momento di massima turbolenza per evitare i falsi segnali.")
 
         st.divider()
         st.subheader("🌍 SESSIONI DI MERCATO")
