@@ -251,8 +251,8 @@ with st.sidebar:
 
         st.divider()
         st.subheader("🛡️ PROTEZIONE ACCOUNT")
-        stop_loss_limit = st.number_input("Stop Loss Sessione (€)", value=50.0, step=10.0)
-        take_profit_limit = st.number_input("Take Profit Sessione (€)", value=200.0, step=10.0)
+        stop_loss_limit = st.number_input("Stop Loss Sessione (€)", value=400.0, step=10.0)
+        take_profit_limit = st.number_input("Take Profit Sessione (€)", value=400.0, step=10.0)
         
         if st.session_state.scanner_on:
             # Controllo automatico: se la perdita supera il limite, spegne tutto
@@ -298,7 +298,7 @@ with st.sidebar:
         
         st.divider()
         st.subheader("🛠️ PARAMETRI TRADING")
-        st.session_state.stake = st.number_input("💶 INVESTIMENTO (€)", value=10.0)
+        st.session_state.stake = st.number_input("💶 INVESTIMENTO (€)", value=100.0)
         timeframe = st.selectbox("⏱️ TIMEFRAME (s)", [60, 120], index=0)
 
         st.divider()
