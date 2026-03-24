@@ -424,16 +424,23 @@ if st.session_state.connected:
                 bb = ta.bbands(df['close'], length=b_period, std=b_std)
 
                 if bb is None or bb.empty: continue
-                price, curr_rsi = df['close'].iloc[-1], df['RSI'].iloc[-1]
-                curr_bb_low = float(bb.filter(like='BBL').iloc[-1].iloc[0])
-                curr_bb_up = float(bb.filter(like='BBU').iloc[-1].iloc[0])
+
+                                # Prezzo attuale per registrare l'ingresso a mercato
+                price = df['close'].iloc[-1] 
+                
+                # Indicatori basati sull'ultima candela CHIUSA (evita il repainting!)
+                curr_rsi = df['RSI'].iloc[-2]
+                curr_bb_low = float(bb.filter(like='BBL').iloc[-2].iloc[0])
+                curr_bb_up = float(bb.filter(like='BBU').iloc[-2].iloc[0])
+                chiusura_prec = df['close'].iloc[-2]
                 
                 cond_rsi_buy = (curr_rsi < r_buy) if use_rsi else True
-                cond_bb_buy = (price <= curr_bb_low) if use_bb else True
+                cond_bb_buy = (chiusura_prec <= curr_bb_low) if use_bb else True
                 cond_rsi_sell = (curr_rsi > r_sell) if use_rsi else True
-                cond_bb_sell = (price >= curr_bb_up) if use_bb else True
+                cond_bb_sell = (chiusura_prec >= curr_bb_up) if use_bb else True
                 
-                is_consecutive = check_consecutive_candles(df, count=3)
+                # Escludi l'ultima candela in corso dal conteggio delle consecutive
+                is_consecutive = check_consecutive_candles(df.iloc[:-1], count=3)
                 
                 is_buy = (cond_rsi_buy and cond_bb_buy) and (use_rsi or use_bb) and not is_consecutive
                 is_sell = (cond_rsi_sell and cond_bb_sell) and (use_rsi or use_bb) and not is_consecutive
@@ -573,18 +580,23 @@ if st.session_state.connected:
     trades_pendenti = list(st.session_state.active_trades.items())
 
     for pair, trade in trades_pendenti:
-        scadenza = trade['entry_time'] + timeframe + 125
+        # Aspettiamo il timeframe esatto + 5 secondi di tolleranza per la chiusura della candela
+        scadenza = trade['entry_time'] + timeframe + 5 
+        
         if current_ts >= scadenza:
             try:
-                res, _ = get_candles(pair, timeframe, 2)
-                if res and len(res) > 0:
-                    exit_price, exit_price_120 = res[-2]['close'], res[-1]['close']
-                    entry_price, price_75 = trade['entry_price'], float(res[-2]['close'])
+                # Scarichiamo 4 candele per assicurarci di avere lo storico completo
+                res, _ = get_candles(pair, timeframe, 4)
+                if res and len(res) >= 3:
+                    # res[-1] = nuova candela in formazione
+                    # res[-2] = candela appena chiusa (il nostro esito esatto a 60s o 120s)
+                    
+                    entry_price = trade['entry_price']
+                    exit_price = res[-2]['close']
+                    
                     dir_trade, t_id = trade['direction'], trade['id']
                     
                     win = (exit_price > entry_price) if dir_trade == "BUY" else (exit_price < entry_price)
-                    win_75 = (price_75 > entry_price) if dir_trade == "BUY" else (price_75 < entry_price)
-                    win_120 = (exit_price_120 > entry_price) if dir_trade == "BUY" else (exit_price_120 < entry_price)
 
                     res_status = "WIN" if win else "LOSS"
                     icona_esito = "✅" if win else "❌"
@@ -594,31 +606,29 @@ if st.session_state.connected:
                     st.session_state.local_balance += profit
                     st.session_state.session_pnl += profit
 
-
-                    # --- Dentro il ciclo della verifica esiti (Sezione 6) ---
+                    # Aggiornamento accurato del Journal
                     rsi_ingresso = "-"
                     for s in st.session_state.signal_history:
                         if s.get('id') == t_id: 
-                            rsi_ingresso = s.get('rsi_val', "-") # Recupera il valore salvato prima
+                            rsi_ingresso = s.get('rsi_val', "-") 
                             s.update({
                                 'result': f"{icona_esito} {res_status}", 
-                                'check_75s': "✅" if win_75 else "❌", 
-                                'check_120s': "✅" if win_120 else "❌", 
+                                'check_75s': "N/A",  # Rimosso perché non calcolabile su candele a 60s
+                                'check_120s': "N/A", # Richiederebbe uno scarico dedicato
                                 'pnl_numeric': float(profit)
                             })
                             break
                     
                     mapping_nomi = {"EURUSD": "V50", "USDJPY": "V75", "AUDUSD": "V100"}
                     nome_reale = mapping_nomi.get(pair, pair)
+                    tipo_mercato = "OTC" if st.session_state.weekend_mode else "LIVE"
                     
                     msg = (f"🏁 *ESITO* {'💰' if win else '💀'} {res_status}\n"
                            f"🆔 ID: `{t_id}`\n"
                            f"💱 Asset: {nome_reale}\n"
                            f"🌍 Market: {tipo_mercato}\n"
-                           f"📈 RSI Ingresso: `{rsi_ingresso}`\n" # <--- AGGIUNTO NEL MESSAGGIO
-                           f"📉 Esito 60s: {icona_esito} {res_status}\n"
-                           f"⏱️ Esito 75s: {'✅' if win_75 else '❌'}\n"
-                           f"⏱️ Esito 120s: {'✅' if win_120 else '❌'}\n"
+                           f"📈 RSI Ingresso: `{rsi_ingresso}`\n"
+                           f"📉 Esito ({timeframe}s): {icona_esito} {res_status}\n"
                            f"💵 P&L: `{profit:.2f} €`\n"
                            f"📅 P&L Sessione: `{st.session_state.session_pnl:.2f}€` ")
                     invia_telegram(msg)
