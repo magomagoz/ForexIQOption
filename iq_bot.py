@@ -727,37 +727,62 @@ if st.session_state.connected:
         except Exception: pass 
 
     total_trades = len(df_filtered)
-    best_pairs_str, wins, losses, total_pnl, wins_75, losses_75, wins_120, losses_120 = "", 0, 0, 0.0, 0, 0, 0, 0
+    
+    best_pairs_str, best_pairs_str_120 = "-", "-"
+    wins, losses, wins_120, losses_120 = 0, 0, 0, 0
     total_pnl_60, total_pnl_120 = 0.0, 0.0
+    
     if total_trades > 0:
-        # Conta i WIN/LOSS basandosi sulle stringhe salvate, non ricalcolando i prezzi
+        # Conta i WIN/LOSS basandosi sulle stringhe salvate
         wins = df_filtered['result'].astype(str).str.contains("WIN").sum()
         losses = df_filtered['result'].astype(str).str.contains("LOSS").sum()
         wins_120 = df_filtered['check_120s'].astype(str).str.contains("✅").sum()
         losses_120 = df_filtered['check_120s'].astype(str).str.contains("❌").sum()
         
-        # PNL Reale (quello registrato al momento della chiusura)
+        # PNL Reale 60s
         total_pnl_60 = df_filtered['pnl_numeric'].sum()
         
-        # PNL Teorico a 120s (calcolato sugli esiti fissati)
         stake_rif = float(st.session_state.stake)
+        # PNL Totale 120s (Payout 90%)
         total_pnl_120 = (wins_120 * (stake_rif * 0.90)) - (losses_120 * stake_rif)
 
+        # Calcolo Profitto Asset 60s
         profit_by_pair = df_filtered.groupby('pair')['pnl_numeric'].sum()
-        best_pairs_str = ", ".join(profit_by_pair[profit_by_pair == profit_by_pair.max()].index.tolist()) if not profit_by_pair.empty else "-"
+        
+        # CREIAMO IL PNL PER SINGOLO ASSET A 120s
+        def calc_pnl_120(row):
+            val = str(row['check_120s'])
+            if "✅" in val: return stake_rif * 0.90
+            if "❌" in val: return -stake_rif
+            return 0.0
+            
+        df_filtered['pnl_120_tmp'] = df_filtered.apply(calc_pnl_120, axis=1)
+        profit_by_pair_120 = df_filtered.groupby('pair')['pnl_120_tmp'].sum()
+        
+        # Estrapolazione Top Asset (Aggiunto controllo > 0 per evitare di premiare asset in perdita)
+        best_pairs_str = ", ".join(profit_by_pair[profit_by_pair == profit_by_pair.max()].index.tolist()) if not profit_by_pair.empty and profit_by_pair.max() > 0 else "-"
+        best_pairs_str_120 = ", ".join(profit_by_pair_120[profit_by_pair_120 == profit_by_pair_120.max()].index.tolist()) if not profit_by_pair_120.empty and profit_by_pair_120.max() > 0 else "-"
 
     win_rate_60 = (wins / (wins + losses) * 100) if (wins + losses) > 0 else 0.0
     win_rate_120 = (wins_120 / (wins_120 + losses_120) * 100) if (wins_120 + losses_120) > 0 else 0.0
     
-    c1, c2, c3, c4, c5, c6 = st.columns(6)
+    # --- RIGA 1: Metriche 60s ---
+    c1, c2, c3, c4 = st.columns(4)
     c1.metric("🎯 W/L 60s", f"{wins}W - {losses}L")
     c2.metric("💰 P&L 60s", f"{total_pnl_60:.2f} €")
     c3.metric("🏁 Win Rate 60s", f"{win_rate_60:.1f}%")
-    c4.metric("🎯 W/L 120s", f"{wins_120}W - {losses_120}L")
-    c5.metric("💰 P&L 120s", f"{total_pnl_120:.2f} €")
-    c6.metric("🏁 Win Rate 120s", f"{win_rate_120:.1f}%")
-    #c6.metric("🏆 Top Asset", best_pairs_str)
-    
+    c4.metric("🏆 Top Asset 60s", best_pairs_str)
+
+    st.markdown("<hr style='border:1px dashed #555; margin: 10px 0; opacity: 0.5;'>", unsafe_allow_html=True)
+
+    # --- RIGA 2: Metriche 120s ---
+    d1, d2, d3, d4 = st.columns(4) # Importante chiamarle in modo diverso (es. d1, d2...)
+    d1.metric("🎯 W/L 120s", f"{wins_120}W - {losses_120}L")
+    d2.metric("💰 P&L 120s", f"{total_pnl_120:.2f} €")
+    d3.metric("🏁 Win Rate 120s", f"{win_rate_120:.1f}%")
+    d4.metric("🏆 Top Asset 120s", best_pairs_str_120)
+
+   
     if not df_filtered.empty:
         rename_map = {'id': '🆔 ID', 'time': '⏰ DATA', 'pair': '💱 VALUTE', 'dir': '🚀 TIPO', 'price': '💰 PRICE', 'rsi_val': '📈 RSI IN', 'stake': '💶 STAKE', 'params_bb': '↔️ BB', 'params_rsi': '📉 RSI', 'mercato': '🌍 MARKET', 'result': '🎯 60s', 'check_120s': '⏱️ 120s', 'pnl_numeric': '📈 P&L'}
 
