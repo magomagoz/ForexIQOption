@@ -125,10 +125,10 @@ def get_market_status():
     if new_york[0] <= now_time <= new_york[1]: 
         return "🇺🇸 **SESSIONE NEW YORK**"
     if tokyo[0] <= now_time <= tokyo[1]: 
-        return "🐌 **MERCATO LENTO (TOKYO)**"
+        return "🐌 **MERCATO LENTO (TOKYO+SIDNEY)**"
     
     # Se non è nessuna delle precedenti (es. tra le 23:00 e le 00:00)
-    return "💤 **MERCATI CHIUSI / PAUSA**"
+    return "💤 **MERCATI CHIUSI**"
 
 def draw_market_map_inverted(trading_autorizzato):
     fig = go.Figure()
