@@ -511,6 +511,8 @@ if st.session_state.connected:
     st.subheader("📈 Analisi Tecnica Principale")
     pair_display = st.selectbox("Seleziona asset per grafico", CURRENT_PAIRS)
     
+    df_final = pd.DataFrame()
+    
     try:
         candles_ta, src_ta = get_candles(pair_display, timeframe, 160)
             
@@ -673,7 +675,7 @@ if st.session_state.connected:
                             # Pulizia e Refresh
                             if pair in st.session_state.active_trades:
                                 del st.session_state.active_trades[pair]
-                            st.rerun()
+                            #st.rerun()
             except Exception as e:
                 continue
                     
