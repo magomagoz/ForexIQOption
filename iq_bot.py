@@ -222,6 +222,8 @@ if 'local_balance' not in st.session_state: st.session_state.local_balance = 100
 if 'scanner_on' not in st.session_state: st.session_state.scanner_on = False
 if 'weekend_mode' not in st.session_state: st.session_state.weekend_mode = is_weekend_reale 
 if 'session_pnl' not in st.session_state: st.session_state.session_pnl = 0.0
+if 'last_trade_time' not in st.session_state: st.session_state.last_trade_time = 0
+if 'cooldown_minutes' not in st.session_state: st.session_state.cooldown_minutes = 5
 
 # --- 3. SIDEBAR ---
 with st.sidebar:
@@ -252,6 +254,17 @@ with st.sidebar:
             st.rerun()
         if st.session_state.scanner_on:
             st.caption(f"🔄 Scanner attivo...  \nUltimo check: {now_roma.time().strftime('%H:%M:%S')}")
+
+        # --- MONITOR COOLDOWN ---
+        if st.session_state.scanner_on:
+            current_time = time_module.time()
+            elapsed = (current_time - st.session_state.last_trade_time) / 60
+            remaining = max(0.0, st.session_state.cooldown_minutes - elapsed)
+            
+            if remaining > 0:
+                st.warning(f"⏳ Pausa Sicurezza: {remaining:.1f} min")
+            else:
+                st.success("✅ Sistema pronto per segnali")
 
         #st.divider()
         #st.subheader("🛡️ PROTEZIONE ACCOUNT")
@@ -442,34 +455,54 @@ if st.session_state.connected:
                 
                 # Escludi l'ultima candela in corso dal conteggio delle consecutive
                 is_consecutive = check_consecutive_candles(df.iloc[:-1], count=3)
-                
+
                 is_buy = (cond_rsi_buy and cond_bb_buy) and (use_rsi or use_bb) and not is_consecutive
                 is_sell = (cond_rsi_sell and cond_bb_sell) and (use_rsi or use_bb) and not is_consecutive
-                
+
+                # --- PROTEZIONI ANTI-RAFFICA ---
+                current_time = time_module.time()
+                trade_attivi_ora = len(st.session_state.active_trades)
+                minuti_passati = (current_time - st.session_state.last_trade_time) / 60
+
                 if (is_buy or is_sell) and pair not in st.session_state.active_trades:
+                    
+                    # FILTRO 1: Massimo 2 trade aperti insieme
+                    if trade_attivi_ora >= 2:
+                        continue 
+
+                    # FILTRO 2: Almeno 5 minuti tra un'apertura e l'altra
+                    if minuti_passati < st.session_state.cooldown_minutes:
+                        continue
+
+                    # SE PASSA I FILTRI, PROCEDI
                     direction = "BUY" if is_buy else "SELL"
                     t_id = genera_trade_id()
                     tipo_mercato = "OTC" if st.session_state.weekend_mode else "LIVE"
+                    
+                    # AGGIORNA IL MOMENTO DELL'ULTIMO TRADE
+                    st.session_state.last_trade_time = current_time
                 
                     st.session_state.active_trades[pair] = {
-                        'id': t_id, 'entry_price': float(price), 'entry_time': time_module.time(), 
+                        'id': t_id, 'entry_price': float(price), 'entry_time': current_time, 
                         'direction': direction, 'stake_num': float(st.session_state.stake)
                     }
                     
+                    # REGISTRAZIONE NEL JOURNAL
                     st.session_state.signal_history.append({
                         'id': t_id, 'time': datetime.now(fuso_roma).strftime("%Y-%m-%d %H:%M:%S"),
                         'pair': pair, 'dir': direction, 'price': float(price), 
-                        'rsi_val': f"{curr_rsi:.1f}", # <--- AGGIUNGI QUESTA RIGA
+                        'rsi_val': f"{curr_rsi:.1f}",
                         'stake': f"{st.session_state.stake:.0f}€",                         
                         'params_bb': f"{b_period}/{b_std}" if use_bb else "OFF", 
                         'params_rsi': f"{r_buy}/{r_sell}", 
                         'mercato': tipo_mercato, 'result': "⏳ In corso...",
-                        'check_75s': "-", 'check_120s': "-", 'pnl_numeric': 0.0
+                        'check_120s': "-", 'pnl_numeric': 0.0
                     })
 
                     save_journal(st.session_state.signal_history)
                     send_telegram_signal(direction, pair, price, curr_rsi, t_id, st.session_state.stake, tipo_mercato)
                     play_trade_sound("buy")
+
             except Exception as e:
                 continue
     
