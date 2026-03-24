@@ -611,37 +611,27 @@ if st.session_state.connected:
                             
                             # FIRMA IL TRADE: Una volta salvato, non verrà più ricalcolato
                             save_journal(st.session_state.signal_history)
-                            
-                            # Notifica e pulizia
-                            invia_telegram(f"🏁 ESITO: {res_status} su {pair} | P&L: {profit:.2f}€")
+
+                        mapping_nomi = {"EURUSD": "V50", "USDJPY": "V75", "AUDUSD": "V100"}
+                        nome_reale = mapping_nomi.get(pair, pair)
+                        tipo_mercato = "OTC" if st.session_state.weekend_mode else "LIVE"
+                        
+                        msg = (f"🏁 *ESITO* {'💰' if win else '💀'} {res_status}\n"
+                               f"🆔 ID: `{t_id}`\n"
+                               f"💱 Asset: {pair}\n"
+                               f"🌍 Market: {tipo_mercato}\n"
+                               f"📈 RSI Ingresso: `{rsi_ingresso}`\n"
+                               f"📉 Esito ({timeframe}s): {icona_esito} {res_status}\n"
+                               f"💵 P&L: `{profit:.2f} €`\n"
+                               f"📅 P&L Sessione: `{st.session_state.session_pnl:.2f}€` ")
+                        invia_telegram(msg)
+
                             if res_status == "WIN": play_trade_sound("win")
                             del st.session_state.active_trades[pair]
                             st.rerun()
             except Exception as e:
                 continue
                     
-                    mapping_nomi = {"EURUSD": "V50", "USDJPY": "V75", "AUDUSD": "V100"}
-                    nome_reale = mapping_nomi.get(pair, pair)
-                    tipo_mercato = "OTC" if st.session_state.weekend_mode else "LIVE"
-                    
-                    msg = (f"🏁 *ESITO* {'💰' if win else '💀'} {res_status}\n"
-                           f"🆔 ID: `{t_id}`\n"
-                           f"💱 Asset: {pair}\n"
-                           f"🌍 Market: {tipo_mercato}\n"
-                           f"📈 RSI Ingresso: `{rsi_ingresso}`\n"
-                           f"📉 Esito ({timeframe}s): {icona_esito} {res_status}\n"
-                           f"💵 P&L: `{profit:.2f} €`\n"
-                           f"📅 P&L Sessione: `{st.session_state.session_pnl:.2f}€` ")
-                    invia_telegram(msg)
-
-                    if win: play_trade_sound("win")
-                        
-                    del st.session_state.active_trades[pair]
-                    save_journal(st.session_state.signal_history)
-                    st.rerun()
-            except Exception as e:
-                continue
-
     st.divider()
     # --- 7. TABELLA JOURNAL E FILTRI DINAMICI ---
     st.subheader("📋 Trading Journal & Performance Hub")
