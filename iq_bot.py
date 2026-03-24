@@ -700,25 +700,26 @@ if st.session_state.connected:
         st.info("⏳ Avvia lo Scanner e attendi il primo segnale...")
     
     # --- 8. TRI CHART MONITOR (R_50, R_75, R_100) ---
-    st.markdown("---")
-    st.subheader("🖥️ Monitor Asset Globali (OTC)")
-    m_cols = st.columns(3)
-    
-    # FIX: Usiamo le coppie fittizie, così get_candles capisce in automatico che deve scaricare R_50, R_75 e R_100
-    indices = [("Volatility 50", "EURUSD"), ("Volatility 75", "USDJPY"), ("Volatility 100", "AUDUSD")]
-    
-    for i, (name, pair) in enumerate(indices):
-        with m_cols[i]:
-            st.caption(f"📈 {name}")
-            # Usiamo i WebSocket di Deriv invece di MT5
-            candles, _ = get_candles(pair, 60, 40)
-            if candles:
-                df = pd.DataFrame(candles)
-                fig = go.Figure(data=[go.Candlestick(x=df['time'], open=df['open'], high=df['max'], low=df['min'], close=df['close'])])
-                fig.update_layout(height=200, margin=dict(l=0,r=0,t=0,b=0), xaxis_rangeslider_visible=False, template="plotly_dark")
-                st.plotly_chart(fig, use_container_width=True, key=f"mini_{pair}")
-            else:
-                st.warning("In attesa di dati...")
+    if if st.session_state.weekend_mode:
+        st.markdown("---")
+        st.subheader("🖥️ Monitor Asset Globali (OTC)")
+        m_cols = st.columns(3)
+        
+        # FIX: Usiamo le coppie fittizie, così get_candles capisce in automatico che deve scaricare R_50, R_75 e R_100
+        indices = [("Volatility 50", "EURUSD"), ("Volatility 75", "USDJPY"), ("Volatility 100", "AUDUSD")]
+        
+        for i, (name, pair) in enumerate(indices):
+            with m_cols[i]:
+                st.caption(f"📈 {name}")
+                # Usiamo i WebSocket di Deriv invece di MT5
+                candles, _ = get_candles(pair, 60, 40)
+                if candles:
+                    df = pd.DataFrame(candles)
+                    fig = go.Figure(data=[go.Candlestick(x=df['time'], open=df['open'], high=df['max'], low=df['min'], close=df['close'])])
+                    fig.update_layout(height=200, margin=dict(l=0,r=0,t=0,b=0), xaxis_rangeslider_visible=False, template="plotly_dark")
+                    st.plotly_chart(fig, use_container_width=True, key=f"mini_{pair}")
+                else:
+                    st.warning("In attesa di dati...")
     
     if st.session_state.scanner_on:
         time_module.sleep(5) 
