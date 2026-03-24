@@ -741,7 +741,7 @@ if st.session_state.connected:
         
         # PNL Teorico a 120s (calcolato sugli esiti fissati)
         stake_rif = float(st.session_state.stake)
-        total_pnl_120 = (wins_120 * (stake_rif * 0.85)) - (losses_120 * stake_rif)
+        total_pnl_120 = (wins_120 * (stake_rif * 0.90)) - (losses_120 * stake_rif)
 
         profit_by_pair = df_filtered.groupby('pair')['pnl_numeric'].sum()
         best_pairs_str = ", ".join(profit_by_pair[profit_by_pair == profit_by_pair.max()].index.tolist()) if not profit_by_pair.empty else "-"
