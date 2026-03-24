@@ -694,22 +694,33 @@ if st.session_state.connected:
 
     total_trades = len(df_filtered)
     best_pairs_str, wins, losses, total_pnl, wins_75, losses_75, wins_120, losses_120 = "", 0, 0, 0.0, 0, 0, 0, 0
+    total_pnl_60, total_pnl_120 = 0.0, 0.0
     if total_trades > 0:
         wins, losses = df_filtered['result'].astype(str).str.contains("WIN").sum(), df_filtered['result'].astype(str).str.contains("LOSS").sum()
         wins_120, losses_120 = df_filtered['check_120s'].astype(str).str.contains("✅").sum(), df_filtered['check_120s'].astype(str).str.contains("❌").sum()
-        total_pnl = df_filtered['pnl_numeric'].sum()
+        
+        # Il PNL a 60s rimane quello reale salvato (che gestisce anche size diverse)
+        total_pnl_60 = df_filtered['pnl_numeric'].sum()
+        
+        # Calcoliamo il PNL teorico a 120s usando lo stake base attuale
+        # (Se usi stake diversi nel tempo, il calcolo teorico si basa sullo stake attuale)
+        stake_attuale = float(st.session_state.stake)
+        total_pnl_120 = (wins_120 * (stake_attuale * 0.85)) - (losses_120 * stake_attuale)
+
         profit_by_pair = df_filtered.groupby('pair')['pnl_numeric'].sum()
         if not profit_by_pair.empty and profit_by_pair.max() > 0: best_pairs_str = ", ".join(profit_by_pair[profit_by_pair == profit_by_pair.max()].index.tolist())
 
     win_rate = (wins / (wins + losses) * 100) if (wins + losses) > 0 else 0.0
     win_rate_120 = (wins_120 / (wins_120 + losses_120) * 100) if (wins_120 + losses_120) > 0 else 0.0
     
-    c1, c2, c3, c4, c5 = st.columns(5)
-    c1.metric("💰 Profitto 60s", f"{total_pnl:.2f} €")
-    c2.metric("🎯 Win/Loss 60s", f"{wins}W - {losses}L")
-    c3.metric("🏁 Win Rate 60s", f"{win_rate:.1f}%")
-    c4.metric("🏁 Win Rate 120s", f"{win_rate_120:.1f}%")
-    c5.metric("🏆 Top Asset", best_pairs_str if best_pairs_str else "-")
+    # Adattiamo le colonne per ospitare il nuovo dato
+    c1, c2, c3, c4, c5, c6 = st.columns(6)
+    c1.metric("💰 PNL Reale", f"{total_pnl_60:.2f} €")
+    c2.metric("🎯 W/L Reali", f"{wins}W - {losses}L")
+    c3.metric("🏁 Win Rate", f"{win_rate:.1f}%")
+    c4.metric("📊 PNL Teorico 120s", f"{total_pnl_120:.2f} €")
+    c5.metric("🏁 Win Rate 120s", f"{win_rate_120:.1f}%")
+    c6.metric("🏆 Top Asset", best_pairs_str if best_pairs_str else "-")
     
     if not df_filtered.empty:
         rename_map = {'id': '🆔 ID', 'time': '⏰ DATA', 'pair': '💱 VALUTE', 'dir': '🚀 TIPO', 'price': '💰 PRICE', 'rsi_val': '📈 RSI IN', 'stake': '💶 STAKE', 'params_bb': '↔️ BB', 'params_rsi': '📉 RSI', 'mercato': '🌍 MARKET', 'result': '🎯 60s', 'check_120s': '⏱️ 120s', 'pnl_numeric': '📈 P&L'}
