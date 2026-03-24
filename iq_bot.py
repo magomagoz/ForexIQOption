@@ -269,7 +269,7 @@ with st.sidebar:
                 #st.session_state.scanner_on = False
                 #invia_telegram(f"💰 **TAKE PROFIT RAGGIUNTO!**\nProfitto: {st.session_state.session_pnl:.2f}€\nOttima sessione!")
                 #st.success("TAKE PROFIT RAGGIUNTO. Scanner spento.")
-
+        
         st.divider()
         st.subheader("🌍 TIPO DI MERCATO")
 
@@ -282,11 +282,14 @@ with st.sidebar:
             custom_rsi_buy, custom_rsi_sell = 20, 80
 
         else:
-            st.success("🟢 **LIVE (Lun-Ven)**\n\n🔍 BB 20/2.50 + RSI 20/80")
+            st.success("🟢 **LIVE (Lun-Ven)**\n\n🔍 RSI 20/80")
             use_bb, use_rsi = True, True
-            bb_period, bb_std = 20, 2.50
+            bb_period = 20
             custom_rsi_buy, custom_rsi_sell = 20, 80
             
+            st.markdown("🔍 **Setup Personalizzato:**")
+            bb_std = st.selectbox("📏 Deviazione BB (Test)", [2.20, 2.30, 2.35, 2.40, 2.50], index=1, help="2.20 = Molti segnali, 2.50 = Quasi zero segnali. 2.30 è un buon compromesso.")
+
         st.markdown("---")
         # UNICA IMPOSTAZIONE LIVE EXTRA: La Pausa Overlap
         st.subheader("💸 OVERLAP LONDRA-NY")
