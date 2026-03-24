@@ -25,8 +25,8 @@ TELEGRAM_CHAT_ID = st.secrets.get("TELEGRAM_CHAT_ID", "IL_TUO_CHAT_ID_QUI")
 DERIV_TOKEN = st.secrets.get("DERIV_TOKEN", "") 
 DERIV_APP_ID = "71759" 
 
-ALL_PAIRS = ["EURGBP", "USDCHF", "USDJPY", "EURUSD", "GBPUSD", "AUDUSD", "USDCAD", "NZDUSD", "EURJPY", "GBPJPY"]
-icons = {"EURGBP": "🇪🇺🇬🇧", "USDCHF": "🇺🇸🇨🇭", "USDJPY": "🇺🇸🇯🇵","EURUSD": "🇪🇺🇺🇸", "GBPUSD": "🇬🇧🇺🇸", "AUDUSD": "🇦🇺🇺🇸", "USDCAD": "🇺🇸🇨🇦", "NZDUSD": "🇳🇿🇺🇸", "EURJPY": "🇪🇺🇯🇵", "GBPJPY": "🇬🇧🇯🇵"}
+ALL_PAIRS = ["EURUSD", "AUDUSD", "USDCAD", "USDCHF"]
+icons = {"EURUSD": "🇪🇺🇺🇸", "AUDUSD": "🇦🇺🇺🇸", "USDCAD": "🇺🇸🇨🇦", "USDCHF": "🇺🇸🇨🇭"}
 
 fuso_roma = pytz.timezone('Europe/Rome')
 now_roma = datetime.now(fuso_roma)
@@ -379,7 +379,7 @@ if st.session_state.connected:
     else:
         # LIVE: Solo le 4 valute super liquide per evitare il caos di Sterlina e Yen
         #CURRENT_PAIRS = ["EURUSD", "AUDUSD", "NZDUSD", "USDCAD", "EURGBP", "USDCHF", "USDJPY", "GBPUSD", "EURJPY", "GBPJPY"] 
-        CURRENT_PAIRS = ["EURUSD", "AUDUSD", "NZDUSD", "USDCAD"]
+        CURRENT_PAIRS = ["EURUSD", "AUDUSD", "USDCHF", "USDCAD"]
         
     window_1 = (time(0, 0), time(12, 0))
     window_2 = (time(12, 0), time(23, 0))
