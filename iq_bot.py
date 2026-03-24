@@ -106,18 +106,29 @@ def genera_trade_id():
 def get_market_status():
     fuso_roma = pytz.timezone('Europe/Rome')
     now_time = datetime.now(fuso_roma).time()
+    
+    # Definiamo i range
     tokyo = (time(0,0), time(9,0))
     londra = (time(9,0), time(18,0))
     new_york = (time(14,0), time(23,0))
-    chiuso = (time(23,0), time(0,0))
     
-    if is_weekend_reale: return "⚠️ **WEEKEND OTC**"
-    if londra[0] <= now_time <= londra[1] and new_york[0] <= now_time <= new_york[1]:
+    if is_weekend_reale: 
+        return "⚠️ **WEEKEND OTC**"
+    
+    # Controllo Overlap (Alta Volatilità)
+    if (londra[0] <= now_time <= londra[1]) and (new_york[0] <= now_time <= new_york[1]):
         return "🔥 **OVERLAP EU+USA**\n\nAlta Volatilità"
-    if londra[0] <= now_time <= londra[1]: return "🇪🇺 **SESSIONE LONDRA**"
-    if new_york[0] <= now_time <= new_york[1]: return "🇺🇸 **SESSIONE NEW YORK**"
-    if chiuso[0] <= now_time <= chiuso[1]: return "💤 **MERCATI CHIUSI**"
-    if tokyo[0] <= now_time <= tokyo[1]: return "🐌 **MERCATO LENTO**"
+    
+    # Sessioni Singole
+    if londra[0] <= now_time <= londra[1]: 
+        return "🇪🇺 **SESSIONE LONDRA**"
+    if new_york[0] <= now_time <= new_york[1]: 
+        return "🇺🇸 **SESSIONE NEW YORK**"
+    if tokyo[0] <= now_time <= tokyo[1]: 
+        return "🐌 **MERCATO LENTO (TOKYO)**"
+    
+    # Se non è nessuna delle precedenti (es. tra le 23:00 e le 00:00)
+    return "💤 **MERCATI CHIUSI / PAUSA**"
 
 def draw_market_map_inverted(trading_autorizzato):
     fig = go.Figure()
@@ -315,7 +326,11 @@ with st.sidebar:
             status = "Open 🟢" if not is_weekend_reale and start <= now_cet <= end else "Closed 🔴"
             st.write(f"{city} {status}")
             
-        st.info(get_market_status())
+        #st.info(get_market_status())
+        # Nella sidebar
+        status_testo = get_market_status()
+        st.info(status_testo if status_testo else "Recupero informazioni mercato...")
+
         
         st.divider()
         st.subheader("🛠️ PARAMETRI TRADING")
