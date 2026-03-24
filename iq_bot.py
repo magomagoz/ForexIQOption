@@ -753,9 +753,10 @@ if st.session_state.connected:
     c1.metric("🎯 W/L 60s", f"{wins}W - {losses}L")
     c2.metric("💰 P&L 60s", f"{total_pnl_60:.2f} €")
     c3.metric("🏁 Win Rate 60s", f"{win_rate_60:.1f}%")
-    c4.metric("💰 P&L 120s", f"{total_pnl_120:.2f} €")
-    c5.metric("🏁 Win Rate 120s", f"{win_rate_120:.1f}%")
-    c6.metric("🏆 Top Asset", best_pairs_str)
+    c4.metric("🎯 W/L 120s", f"{wins_120}W - {losses_120}L")
+    c5.metric("💰 P&L 120s", f"{total_pnl_120:.2f} €")
+    c6.metric("🏁 Win Rate 120s", f"{win_rate_120:.1f}%")
+    #c6.metric("🏆 Top Asset", best_pairs_str)
     
     if not df_filtered.empty:
         rename_map = {'id': '🆔 ID', 'time': '⏰ DATA', 'pair': '💱 VALUTE', 'dir': '🚀 TIPO', 'price': '💰 PRICE', 'rsi_val': '📈 RSI IN', 'stake': '💶 STAKE', 'params_bb': '↔️ BB', 'params_rsi': '📉 RSI', 'mercato': '🌍 MARKET', 'result': '🎯 60s', 'check_120s': '⏱️ 120s', 'pnl_numeric': '📈 P&L'}
