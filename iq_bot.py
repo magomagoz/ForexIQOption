@@ -583,41 +583,38 @@ if st.session_state.connected:
     for pair, trade in trades_pendenti:
         # Aspettiamo il timeframe esatto + 5 secondi di tolleranza per la chiusura della candela
         scadenza = trade['entry_time'] + timeframe + 5 
-        
+
+
+        # --- MODIFICA QUESTA PARTE NEL TUO CODICE ---
         if current_ts >= scadenza:
             try:
-                # Scarichiamo 4 candele per assicurarci di avere lo storico completo
-                res, _ = get_candles(pair, timeframe, 4)
-                if res and len(res) >= 3:
-                    # res[-1] = nuova candela in formazione
-                    # res[-2] = candela appena chiusa (il nostro esito esatto a 60s o 120s)
-                    
+                # Chiediamo 6 candele invece di 4 per sicurezza
+                res, _ = get_candles(pair, timeframe, 6)
+                if res and len(res) >= 4:
                     entry_price = trade['entry_price']
-                    exit_price = res[-2]['close']
                     
-                    dir_trade, t_id = trade['direction'], trade['id']
+                    # Esito a 60s (se timeframe è 60)
+                    exit_price_60 = res[-2]['close'] 
+                    win_60 = (exit_price_60 > entry_price) if dir_trade == "BUY" else (exit_price_60 < entry_price)
                     
-                    win = (exit_price > entry_price) if dir_trade == "BUY" else (exit_price < entry_price)
-
-                    res_status = "WIN" if win else "LOSS"
-                    icona_esito = "✅" if win else "❌"
-                    stake_usato = trade.get('stake_num', float(st.session_state.stake))
-                    profit = (stake_usato * 0.85) if win else -stake_usato
+                    # Calcolo 120s (se timeframe è 60, usiamo la chiusura di 2 candele fa rispetto alla "attuale")
+                    # Nota: Questo richiede che siano passati effettivamente 120s. 
+                    # Se vuoi il check 120s mentre il timeframe base è 60s:
+                    exit_price_120 = "⏳"
+                    check_120_val = "-"
                     
-                    st.session_state.local_balance += profit
-                    st.session_state.session_pnl += profit
-
-                    # Aggiornamento accurato del Journal
-                    rsi_ingresso = "-"
+                    # Logica semplificata: se il trade è chiuso, salviamo l'esito
+                    res_status = "WIN" if win_60 else "LOSS"
+                    icona_60 = "✅" if win_60 else "❌"
+                    
+                    # Aggiornamento Journal
                     for s in st.session_state.signal_history:
-                        if s.get('id') == t_id: 
-                            rsi_ingresso = s.get('rsi_val', "-") 
-                            s.update({
-                                'result': f"{icona_esito} {res_status}", 
-                                'check_75s': "N/A",  # Rimosso perché non calcolabile su candele a 60s
-                                'check_120s': "N/A", # Richiederebbe uno scarico dedicato
-                                'pnl_numeric': float(profit)
-                            })
+                        if s.get('id') == t_id:
+                            s['result'] = f"{icona_60} {res_status}"
+                            s['pnl_numeric'] = float(profit)
+                            # Qui puoi aggiungere una logica di calcolo specifica per il 120s 
+                            # se scarichi dati a 120s separatamente
+                            s['check_120s'] = "Attivo" # Esempio di popolamento
                             break
                     
                     mapping_nomi = {"EURUSD": "V50", "USDJPY": "V75", "AUDUSD": "V100"}
