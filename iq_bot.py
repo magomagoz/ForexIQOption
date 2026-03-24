@@ -704,12 +704,12 @@ if st.session_state.connected:
     win_rate = (wins / (wins + losses) * 100) if (wins + losses) > 0 else 0.0
     win_rate_120 = (wins_120 / (wins_120 + losses_120) * 100) if (wins_120 + losses_120) > 0 else 0.0
     
-    c1, c2, c3, c4, c5, c6 = st.columns(6)
+    c1, c2, c3, c4, c5 = st.columns(5)
     c1.metric("💰 Profitto 60s", f"{total_pnl:.2f} €")
     c2.metric("🎯 Win/Loss 60s", f"{wins}W - {losses}L")
     c3.metric("🏁 Win Rate 60s", f"{win_rate:.1f}%")
-    c5.metric("🏁 Win Rate 120s", f"{win_rate_120:.1f}%")
-    c6.metric("🏆 Top Asset", best_pairs_str if best_pairs_str else "-")
+    c4.metric("🏁 Win Rate 120s", f"{win_rate_120:.1f}%")
+    c5.metric("🏆 Top Asset", best_pairs_str if best_pairs_str else "-")
     
     if not df_filtered.empty:
         rename_map = {'id': '🆔 ID', 'time': '⏰ DATA', 'pair': '💱 VALUTE', 'dir': '🚀 TIPO', 'price': '💰 PRICE', 'rsi_val': '📈 RSI IN', 'stake': '💶 STAKE', 'params_bb': '↔️ BB', 'params_rsi': '📉 RSI', 'mercato': '🌍 MARKET', 'result': '🎯 60s', 'check_120s': '⏱️ 120s', 'pnl_numeric': '📈 P&L'}
