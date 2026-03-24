@@ -626,9 +626,9 @@ if st.session_state.connected:
                                f"📅 P&L Sessione: `{st.session_state.session_pnl:.2f}€` ")
                         invia_telegram(msg)
 
-                            if res_status == "WIN": play_trade_sound("win")
-                            del st.session_state.active_trades[pair]
-                            st.rerun()
+                        if res_status == "WIN": play_trade_sound("win")
+                        del st.session_state.active_trades[pair]
+                        st.rerun()
             except Exception as e:
                 continue
                     
