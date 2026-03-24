@@ -700,7 +700,7 @@ if st.session_state.connected:
         st.info("⏳ Avvia lo Scanner e attendi il primo segnale...")
     
     # --- 8. TRI CHART MONITOR (R_50, R_75, R_100) ---
-    if if st.session_state.weekend_mode:
+    if st.session_state.weekend_mode:
         st.markdown("---")
         st.subheader("🖥️ Monitor Asset Globali (OTC)")
         m_cols = st.columns(3)
