@@ -626,7 +626,7 @@ if st.session_state.connected:
                     
                     msg = (f"🏁 *ESITO* {'💰' if win else '💀'} {res_status}\n"
                            f"🆔 ID: `{t_id}`\n"
-                           f"💱 Asset: {nome_reale}\n"
+                           f"💱 Asset: {pair}\n"
                            f"🌍 Market: {tipo_mercato}\n"
                            f"📈 RSI Ingresso: `{rsi_ingresso}`\n"
                            f"📉 Esito ({timeframe}s): {icona_esito} {res_status}\n"
@@ -649,7 +649,7 @@ if st.session_state.connected:
     if st.session_state.signal_history:
         df_journal = pd.DataFrame(st.session_state.signal_history)
         # Assicura che queste colonne esistano sempre nel DataFrame
-        for col in ['check_75s', 'check_120s', 'rsi_val']:
+        for col in ['check_120s', 'rsi_val']:
             if col not in df_journal.columns:
                 df_journal[col] = "-"
     else:
@@ -700,7 +700,7 @@ if st.session_state.connected:
         rename_map = {'id': '🆔 ID', 'time': '⏰ DATA', 'pair': '💱 VALUTE', 'dir': '🚀 TIPO', 'price': '💰 PRICE', 'rsi_val': '📈 RSI IN', 'stake': '💶 STAKE', 'params_bb': '↔️ BB', 'params_rsi': '📉 RSI', 'mercato': '🌍 MARKET', 'result': '🎯 60s', 'check_120s': '⏱️ 120s', 'pnl_numeric': '📈 P&L'}
 
         # Lista colonne aggiornata con rsi_val
-        cols_to_use = ['id', 'time', 'pair', 'dir', 'price', 'rsi_val', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'check_75s', 'check_120s', 'pnl_numeric']
+        cols_to_use = ['id', 'time', 'pair', 'dir', 'price', 'rsi_val', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'check_120s', 'pnl_numeric']
         
         df_display = df_filtered.iloc[::-1].copy()[[c for c in cols_to_use if c in df_filtered.columns]].rename(columns=rename_map)
         
