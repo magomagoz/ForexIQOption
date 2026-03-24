@@ -253,22 +253,22 @@ with st.sidebar:
         if st.session_state.scanner_on:
             st.caption(f"🔄 Scanner attivo...  \nUltimo check: {now_roma.time().strftime('%H:%M:%S')}")
 
-        st.divider()
-        st.subheader("🛡️ PROTEZIONE ACCOUNT")
-        stop_loss_limit = st.number_input("Stop Loss Sessione (€)", value=400.0, step=10.0)
-        take_profit_limit = st.number_input("Take Profit Sessione (€)", value=1000.0, step=10.0)
+        #st.divider()
+        #st.subheader("🛡️ PROTEZIONE ACCOUNT")
+        #stop_loss_limit = st.number_input("Stop Loss Sessione (€)", value=400.0, step=10.0)
+        #take_profit_limit = st.number_input("Take Profit Sessione (€)", value=1000.0, step=10.0)
         
-        if st.session_state.scanner_on:
+        #if st.session_state.scanner_on:
             # Controllo automatico: se la perdita supera il limite, spegne tutto
-            if st.session_state.session_pnl <= -stop_loss_limit:
-                st.session_state.scanner_on = False
-                invia_telegram(f"⚠️ **STOP LOSS RAGGIUNTO!**\nPerdita: {st.session_state.session_pnl:.2f}€\nScanner disattivato per sicurezza.")
-                st.error("STOP LOSS RAGGIUNTO. Scanner spento.")
+            #if st.session_state.session_pnl <= -stop_loss_limit:
+                #st.session_state.scanner_on = False
+                #invia_telegram(f"⚠️ **STOP LOSS RAGGIUNTO!**\nPerdita: {st.session_state.session_pnl:.2f}€\nScanner disattivato per sicurezza.")
+                #st.error("STOP LOSS RAGGIUNTO. Scanner spento.")
             
-            if st.session_state.session_pnl >= take_profit_limit:
-                st.session_state.scanner_on = False
-                invia_telegram(f"💰 **TAKE PROFIT RAGGIUNTO!**\nProfitto: {st.session_state.session_pnl:.2f}€\nOttima sessione!")
-                st.success("TAKE PROFIT RAGGIUNTO. Scanner spento.")
+            #if st.session_state.session_pnl >= take_profit_limit:
+                #st.session_state.scanner_on = False
+                #invia_telegram(f"💰 **TAKE PROFIT RAGGIUNTO!**\nProfitto: {st.session_state.session_pnl:.2f}€\nOttima sessione!")
+                #st.success("TAKE PROFIT RAGGIUNTO. Scanner spento.")
 
         st.divider()
         st.subheader("🌍 TIPO DI MERCATO")
