@@ -378,8 +378,8 @@ if st.session_state.connected:
         CURRENT_PAIRS = ["EURUSD", "USDJPY", "AUDUSD"] # Mappati su V50, V75, V100
     else:
         # LIVE: Solo le 4 valute super liquide per evitare il caos di Sterlina e Yen
-        CURRENT_PAIRS = ["EURUSD", "AUDUSD", "NZDUSD", "USDCAD", "EURGBP", "USDCHF", "USDJPY", "GBPUSD", "EURJPY", "GBPJPY"] 
-        #CURRENT_PAIRS = ["EURUSD", "AUDUSD", "NZDUSD", "USDCAD"]
+        #CURRENT_PAIRS = ["EURUSD", "AUDUSD", "NZDUSD", "USDCAD", "EURGBP", "USDCHF", "USDJPY", "GBPUSD", "EURJPY", "GBPJPY"] 
+        CURRENT_PAIRS = ["EURUSD", "AUDUSD", "NZDUSD", "USDCAD"]
         
     window_1 = (time(0, 0), time(12, 0))
     window_2 = (time(12, 0), time(23, 0))
