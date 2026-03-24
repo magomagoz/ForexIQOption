@@ -608,7 +608,7 @@ if st.session_state.connected:
         tot_vinti = wins_buy + wins_sell
         tot_persi = totale_segnali - tot_vinti
         accuracy = (tot_vinti / totale_segnali * 100) if totale_segnali > 0 else 0
-        bilancio_netto = (tot_vinti * (st.session_state.stake * 0.85)) - (tot_persi * st.session_state.stake)
+        bilancio_netto = (tot_vinti * (st.session_state.stake * 0.90)) - (tot_persi * st.session_state.stake)
 
         c1, c2, c3 = st.columns(3)
         c1.metric("🟢 BUY VINCENTI", f"{wins_buy} / {n_buy}")
@@ -653,7 +653,7 @@ if st.session_state.connected:
                     win = win_60 if timeframe == 60 else win_120 
                     res_status = "WIN" if win else "LOSS"
                     icona_esito = "✅" if win else "❌"
-                    profit = (trade['stake_num'] * 0.85) if (res_status == "WIN") else -trade['stake_num']
+                    profit = (trade['stake_num'] * 0.90) if (res_status == "WIN") else -trade['stake_num']
 
                     # AGGIORNAMENTO STORICO
                     for s in st.session_state.signal_history:
