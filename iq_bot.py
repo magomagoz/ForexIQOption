@@ -581,62 +581,44 @@ if st.session_state.connected:
     trades_pendenti = list(st.session_state.active_trades.items())
 
     for pair, trade in trades_pendenti:
-        # Aspettiamo il timeframe esatto + 5 secondi di tolleranza per la chiusura della candela
-        
         attesa_reale = max(timeframe, 120) 
-        scadenza = trade['entry_time'] + attesa_reale + 5 
+        scadenza = trade['entry_time'] + attesa_reale + 2 # 2 secondi di buffer
 
-
-        # --- MODIFICA QUESTA PARTE NEL TUO CODICE ---
         if current_ts >= scadenza:
             try:
-                # Chiediamo 6 candele invece di 4 per sicurezza
                 res, _ = get_candles(pair, timeframe, 6)
                 if res and len(res) >= 4:
                     entry_price = trade['entry_price']
                     dir_trade, t_id = trade['direction'], trade['id']
                     
-                    # ATTENZIONE AL TIMEFRAME SELEZIONATO
-                    if timeframe == 60:
-                        # Se il timeframe base è 60s, abbiamo bisogno di 2 candele per il 120s
-                        exit_price_60 = res[-3]['close'] if len(res) > 3 else res[-2]['close'] # Chiusura prima candela
-                        exit_price_120 = res[-2]['close'] # Chiusura seconda candela (120s totali)
-                        
-                        win_60 = (exit_price_60 > entry_price) if dir_trade == "BUY" else (exit_price_60 < entry_price)
-                        win_120 = (exit_price_120 > entry_price) if dir_trade == "BUY" else (exit_price_120 < entry_price)
-                        
-                        icona_60 = "✅" if win_60 else "❌"
-                        icona_120 = "✅" if win_120 else "❌"
-                        
-                        res_status = "WIN" if win_60 else "LOSS"
-                        # Il profitto reale si basa sul timeframe selezionato (in questo caso 60s)
-                        win_reale = win_60
-                        
-                    elif timeframe == 120:
-                         # Se il timeframe base è già 120s, la candela res[-2] rappresenta 120s
-                        exit_price_120 = res[-2]['close']
-                        win_120 = (exit_price_120 > entry_price) if dir_trade == "BUY" else (exit_price_120 < entry_price)
-                        
-                        icona_120 = "✅" if win_120 else "❌"
-                        icona_60 = "-" # Non calcolabile se scendiamo solo candele da 120s
-                        
-                        res_status = "WIN" if win_120 else "LOSS"
-                        win_reale = win_120
-
-                    stake_usato = trade.get('stake_num', float(st.session_state.stake))
-                    profit = (stake_usato * 0.85) if win_reale else -stake_usato
+                    # Calcolo prezzi di uscita
+                    exit_60 = res[-3]['close'] if timeframe == 60 else res[-2]['close']
+                    exit_120 = res[-2]['close']
                     
-                    st.session_state.local_balance += profit
-                    st.session_state.session_pnl += profit
+                    # Calcolo esiti
+                    win_60 = (exit_60 > entry_price) if dir_trade == "BUY" else (exit_60 < entry_price)
+                    win_120 = (exit_120 > entry_price) if dir_trade == "BUY" else (exit_120 < entry_price)
+                    
+                    res_status = "WIN" if (win_60 if timeframe == 60 else win_120) else "LOSS"
+                    profit = (trade['stake_num'] * 0.85) if (res_status == "WIN") else -trade['stake_num']
 
-                    rsi_ingresso = "-"
+                    # AGGIORNAMENTO STORICO: Solo se il trade è ancora marchiato come "In corso"
                     for s in st.session_state.signal_history:
-                        if s.get('id') == t_id:
-                            rsi_ingresso = s.get('rsi_val', "-")
-                            s['result'] = f"{icona_60} {res_status}" if timeframe == 60 else f"{icona_120} {res_status}"
+                        if s.get('id') == t_id and s.get('result') == "⏳ In corso...":
+                            s['result'] = f"{'✅' if win_60 else '❌'} {res_status}"
+                            s['check_120s'] = f"{'✅' if win_120 else '❌'} {'WIN' if win_120 else 'LOSS'}"
                             s['pnl_numeric'] = float(profit)
-                            s['check_120s'] = f"{icona_120} {'WIN' if win_120 else 'LOSS'}" 
-                            break
+                            
+                            # FIRMA IL TRADE: Una volta salvato, non verrà più ricalcolato
+                            save_journal(st.session_state.signal_history)
+                            
+                            # Notifica e pulizia
+                            invia_telegram(f"🏁 ESITO: {res_status} su {pair} | P&L: {profit:.2f}€")
+                            if res_status == "WIN": play_trade_sound("win")
+                            del st.session_state.active_trades[pair]
+                            st.rerun()
+            except Exception as e:
+                continue
                     
                     mapping_nomi = {"EURUSD": "V50", "USDJPY": "V75", "AUDUSD": "V100"}
                     nome_reale = mapping_nomi.get(pair, pair)
@@ -696,31 +678,32 @@ if st.session_state.connected:
     best_pairs_str, wins, losses, total_pnl, wins_75, losses_75, wins_120, losses_120 = "", 0, 0, 0.0, 0, 0, 0, 0
     total_pnl_60, total_pnl_120 = 0.0, 0.0
     if total_trades > 0:
-        wins, losses = df_filtered['result'].astype(str).str.contains("WIN").sum(), df_filtered['result'].astype(str).str.contains("LOSS").sum()
-        wins_120, losses_120 = df_filtered['check_120s'].astype(str).str.contains("✅").sum(), df_filtered['check_120s'].astype(str).str.contains("❌").sum()
+        # Conta i WIN/LOSS basandosi sulle stringhe salvate, non ricalcolando i prezzi
+        wins = df_filtered['result'].astype(str).str.contains("WIN").sum()
+        losses = df_filtered['result'].astype(str).str.contains("LOSS").sum()
+        wins_120 = df_filtered['check_120s'].astype(str).str.contains("✅").sum()
+        losses_120 = df_filtered['check_120s'].astype(str).str.contains("❌").sum()
         
-        # Il PNL a 60s rimane quello reale salvato (che gestisce anche size diverse)
+        # PNL Reale (quello registrato al momento della chiusura)
         total_pnl_60 = df_filtered['pnl_numeric'].sum()
         
-        # Calcoliamo il PNL teorico a 120s usando lo stake base attuale
-        # (Se usi stake diversi nel tempo, il calcolo teorico si basa sullo stake attuale)
-        stake_attuale = float(st.session_state.stake)
-        total_pnl_120 = (wins_120 * (stake_attuale * 0.85)) - (losses_120 * stake_attuale)
+        # PNL Teorico a 120s (calcolato sugli esiti fissati)
+        stake_rif = float(st.session_state.stake)
+        total_pnl_120 = (wins_120 * (stake_rif * 0.85)) - (losses_120 * stake_rif)
 
         profit_by_pair = df_filtered.groupby('pair')['pnl_numeric'].sum()
-        if not profit_by_pair.empty and profit_by_pair.max() > 0: best_pairs_str = ", ".join(profit_by_pair[profit_by_pair == profit_by_pair.max()].index.tolist())
+        best_pairs_str = ", ".join(profit_by_pair[profit_by_pair == profit_by_pair.max()].index.tolist()) if not profit_by_pair.empty else "-"
 
-    win_rate = (wins / (wins + losses) * 100) if (wins + losses) > 0 else 0.0
+    win_rate_60 = (wins / (wins + losses) * 100) if (wins + losses) > 0 else 0.0
     win_rate_120 = (wins_120 / (wins_120 + losses_120) * 100) if (wins_120 + losses_120) > 0 else 0.0
     
-    # Adattiamo le colonne per ospitare il nuovo dato
     c1, c2, c3, c4, c5, c6 = st.columns(6)
-    c1.metric("💰 PNL Reale", f"{total_pnl_60:.2f} €")
-    c2.metric("🎯 W/L Reali", f"{wins}W - {losses}L")
-    c3.metric("🏁 Win Rate", f"{win_rate:.1f}%")
-    c4.metric("📊 PNL Teorico 120s", f"{total_pnl_120:.2f} €")
+    c1.metric("🎯 W/L 60s", f"{wins}W - {losses}L")
+    c2.metric("💰 P&L 60s", f"{total_pnl_60:.2f} €")
+    c3.metric("🏁 Win Rate 60s", f"{win_rate_60:.1f}%")
+    c4.metric("💰 P&L 120s (Test)", f"{total_pnl_120:.2f} €")
     c5.metric("🏁 Win Rate 120s", f"{win_rate_120:.1f}%")
-    c6.metric("🏆 Top Asset", best_pairs_str if best_pairs_str else "-")
+    c6.metric("🏆 Top Asset", best_pairs_str)
     
     if not df_filtered.empty:
         rename_map = {'id': '🆔 ID', 'time': '⏰ DATA', 'pair': '💱 VALUTE', 'dir': '🚀 TIPO', 'price': '💰 PRICE', 'rsi_val': '📈 RSI IN', 'stake': '💶 STAKE', 'params_bb': '↔️ BB', 'params_rsi': '📉 RSI', 'mercato': '🌍 MARKET', 'result': '🎯 60s', 'check_120s': '⏱️ 120s', 'pnl_numeric': '📈 P&L'}
