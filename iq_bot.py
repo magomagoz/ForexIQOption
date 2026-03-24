@@ -599,36 +599,48 @@ if st.session_state.connected:
                     win_60 = (exit_60 > entry_price) if dir_trade == "BUY" else (exit_60 < entry_price)
                     win_120 = (exit_120 > entry_price) if dir_trade == "BUY" else (exit_120 < entry_price)
                     
-                    res_status = "WIN" if (win_60 if timeframe == 60 else win_120) else "LOSS"
+                    # Definiamo le variabili mancanti per il tuo messaggio Telegram
+                    win = win_60 if timeframe == 60 else win_120 
+                    res_status = "WIN" if win else "LOSS"
+                    icona_esito = "✅" if win else "❌"
                     profit = (trade['stake_num'] * 0.85) if (res_status == "WIN") else -trade['stake_num']
 
-                    # AGGIORNAMENTO STORICO: Solo se il trade è ancora marchiato come "In corso"
+                    # AGGIORNAMENTO STORICO
                     for s in st.session_state.signal_history:
                         if s.get('id') == t_id and s.get('result') == "⏳ In corso...":
                             s['result'] = f"{'✅' if win_60 else '❌'} {res_status}"
                             s['check_120s'] = f"{'✅' if win_120 else '❌'} {'WIN' if win_120 else 'LOSS'}"
                             s['pnl_numeric'] = float(profit)
                             
-                            # FIRMA IL TRADE: Una volta salvato, non verrà più ricalcolato
+                            # Definiamo rsi_ingresso prendendolo dallo storico salvato
+                            rsi_ingresso = s.get('rsi_val', 'N/D')
+                            
+                            # Aggiorniamo il PNL di sessione
+                            st.session_state.session_pnl += profit
+                            
                             save_journal(st.session_state.signal_history)
 
-                        mapping_nomi = {"EURUSD": "V50", "USDJPY": "V75", "AUDUSD": "V100"}
-                        nome_reale = mapping_nomi.get(pair, pair)
-                        tipo_mercato = "OTC" if st.session_state.weekend_mode else "LIVE"
-                        
-                        msg = (f"🏁 *ESITO* {'💰' if win else '💀'} {res_status}\n"
-                               f"🆔 ID: `{t_id}`\n"
-                               f"💱 Asset: {pair}\n"
-                               f"🌍 Market: {tipo_mercato}\n"
-                               f"📈 RSI Ingresso: `{rsi_ingresso}`\n"
-                               f"📉 Esito ({timeframe}s): {icona_esito} {res_status}\n"
-                               f"💵 P&L: `{profit:.2f} €`\n"
-                               f"📅 P&L Sessione: `{st.session_state.session_pnl:.2f}€` ")
-                        invia_telegram(msg)
+                            # Il tuo messaggio Telegram originale (ora con le variabili popolate)
+                            mapping_nomi = {"EURUSD": "V50", "USDJPY": "V75", "AUDUSD": "V100"}
+                            nome_reale = mapping_nomi.get(pair, pair)
+                            tipo_mercato = "OTC" if st.session_state.weekend_mode else "LIVE"
+                            
+                            msg = (f"🏁 *ESITO* {'💰' if win else '💀'} {res_status}\n"
+                                   f"🆔 ID: `{t_id}`\n"
+                                   f"💱 Asset: {pair}\n"
+                                   f"🌍 Market: {tipo_mercato}\n"
+                                   f"📈 RSI Ingresso: `{rsi_ingresso}`\n"
+                                   f"📉 Esito ({timeframe}s): {icona_esito} {res_status}\n"
+                                   f"💵 P&L: `{profit:.2f} €`\n"
+                                   f"📅 P&L Sessione: `{st.session_state.session_pnl:.2f}€` ")
+                            invia_telegram(msg)
 
-                        if res_status == "WIN": play_trade_sound("win")
-                        del st.session_state.active_trades[pair]
-                        st.rerun()
+                            if res_status == "WIN": play_trade_sound("win")
+                            
+                            # Pulizia e Refresh
+                            if pair in st.session_state.active_trades:
+                                del st.session_state.active_trades[pair]
+                            st.rerun()
             except Exception as e:
                 continue
                     
