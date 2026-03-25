@@ -149,6 +149,27 @@ def draw_market_map_inverted(trading_autorizzato):
     fig.update_layout(xaxis=dict(range=[24, 0], showgrid=False, visible=False, fixedrange=True), yaxis=dict(range=[0, 4.5], showgrid=False, visible=False, fixedrange=True), template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", margin=dict(l=0, r=0, t=0, b=0), height=350)
     return fig
 
+def get_daily_economic_alerts():
+    """Restituisce avvisi basati sulle finestre di rilascio dati macro standard"""
+    now = datetime.now(fuso_roma)
+    ora_min = now.strftime("%H:%M")
+    
+    alerts = []
+    
+    # Esempi di orari standard per news ad alto impatto (Red Flags)
+    # In un'evoluzione futura, qui leggeremo un file JSON o un'API
+    news_events = [
+        {"ora": "14:30", "evento": "🇺🇸 Non-Farm Payrolls / CPI (USA)", "impatto": "ALTO"},
+        {"ora": "16:00", "evento": "🇺🇸 Indici ISM / Fiducia Consumatori", "impatto": "MEDIO"},
+        {"ora": "20:00", "evento": "🇺🇸 FOMC / Decisioni Tassi FED", "impatto": "CRITICO"}
+    ]
+    
+    for event in news_events:
+        # Se l'evento è previsto per oggi
+        alerts.append(f"⚠️ **Ore {event['ora']}**: {event['evento']} - Impatto: {event['impatto']}")
+    
+    return alerts
+
 def invia_telegram(messaggio):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     try: requests.post(url, data={"chat_id": TELEGRAM_CHAT_ID, "text": messaggio, "parse_mode": "Markdown"}, timeout=5)
@@ -284,25 +305,35 @@ with st.sidebar:
                 #invia_telegram(f"💰 **TAKE PROFIT RAGGIUNTO!**\nProfitto: {st.session_state.session_pnl:.2f}€\nOttima sessione!")
                 #st.success("TAKE PROFIT RAGGIUNTO. Scanner spento.")
         
+
+        
         st.divider()
         st.subheader("🌍 TIPO DI MERCATO")
 
-        #st.session_state.weekend_mode = st.toggle("🚀 FORZA MERCATO OTC", value=st.session_state.weekend_mode)
+        # Verifica se siamo in orario Overlap (14:30 - 17:30)
+        ora_attuale_time = now_roma.time()
+        is_overlap_time = time(14, 30) <= ora_attuale_time <= time(17, 30) and not st.session_state.weekend_mode
 
         if st.session_state.weekend_mode:
-            st.success("🚨 **OTC (Sab-Dom)**\n\n🇪🇺🇺🇸 (R_50)\n\n🇺🇸🇯🇵 (R_75)\n\n🇦🇺🇺🇸 (R_100)\n\n🔍 **Setup:**\n\nBB 20/2.20 + RSI 20/80")
+            st.success("🚨 **OTC (Sab-Dom)**")
             use_bb, use_rsi = True, True
             bb_period, bb_std = 20, 2.20
             custom_rsi_buy, custom_rsi_sell = 20, 80
-
+        
+        elif is_overlap_time:
+            # --- PARAMETRI AUTOMATICI OVERLAP ---
+            st.warning("⚠️ **LIVE OVERLAP ATTIVA (Lun-Ven)**\n\nParametri di sicurezza inseriti automaticamente.")
+            st.info("📏 BB: 20 / 2.50\n📉 RSI: 15 / 85")
+            use_bb, use_rsi = True, True
+            bb_period, bb_std = 20, 2.50
+            custom_rsi_buy, custom_rsi_sell = 15, 85
+        
         else:
-            st.success("🟢 **LIVE (Lun-Ven)**\n\n🔍 RSI 20/80")
+            st.success("🟢 **LIVE (Lun-Ven)**")
             use_bb, use_rsi = True, True
             bb_period = 20
             custom_rsi_buy, custom_rsi_sell = 20, 80
-            
-            st.markdown("🔍 **Setup Personalizzato:**")
-            bb_std = st.selectbox("📏 Deviazione BB (Test)", [2.20, 2.30, 2.35, 2.40, 2.50], index=1, help="2.20 = Molti segnali, 2.50 = Quasi zero segnali. 2.30 è un buon compromesso.")
+            bb_std = st.selectbox("📏 Deviazione BB", [2.20, 2.30, 2.35, 2.40, 2.50], index=1)
 
         st.divider()
         st.subheader("🏛️ SESSIONI DI MERCATO")
@@ -316,11 +347,15 @@ with st.sidebar:
         st.info(status_testo if status_testo else "Recupero informazioni mercato...")
 
         st.markdown("---")
-        # UNICA IMPOSTAZIONE LIVE EXTRA: La Pausa Overlap
-        st.subheader("💸 OVERLAP LONDRA-NY")
+        st.subheader("💸 PROTEZIONE OVERLAP LONDRA-NY")
+        # Il toggle rimane per fermare tutto manualmente se non ti fidi della volatilità
+        pausa_manuale_overlap = st.toggle("🛑 **Stop Totale Overlap**", value=False, help="Spegne lo scanner dalle 14:30 alle 17:30")
         
-        st.session_state.pause_overlap = st.toggle("🛑 **No Overlap**\n\n(14:30 - 17:30)", value=False, help="Disattiva lo scanner nel momento di massima turbolenza per evitare i falsi segnali.")
-        
+        # Logica di autorizzazione trading
+        trading_autorizzato = True
+        if is_overlap_time and pausa_manuale_overlap:
+            trading_autorizzato = False
+
         st.divider()
         st.subheader("🛠️ PARAMETRI TRADING")
         st.session_state.stake = st.number_input("💶 INVESTIMENTO (€)", value=100.0)
@@ -398,6 +433,16 @@ if st.session_state.connected:
             trading_autorizzato = False
             in_pausa_overlap = True
 
+    # --- Nella Main Dashboard, subito dopo il banner ---
+    if st.session_state.scanner_on:
+        daily_news = get_daily_economic_alerts()
+        if daily_news:
+            with st.expander("📅 NOTIZIE ECONOMICHE DEL GIORNO", expanded=True):
+                for alert in daily_news:
+                    st.write(alert)
+                st.caption("Consiglio: Spegnere lo scanner 15 minuti prima e riaccendere 15 minuti dopo questi orari.")
+
+    st.divider()
     st.subheader("🌍 Live Market Flow 24h")
     
     if st.session_state.weekend_mode or is_weekend_reale:
