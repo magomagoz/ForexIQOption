@@ -170,6 +170,42 @@ def get_daily_economic_alerts():
     
     return alerts
 
+def send_morning_report():
+    history = load_journal()
+    if not history:
+        return "Buongiorno! ☕️ Nessun trade registrato ieri."
+
+    df = pd.DataFrame(history)
+    # Convertiamo la colonna tempo per filtrare i dati di "ieri"
+    df['time'] = pd.to_datetime(df['time'])
+    ieri = (datetime.now(fuso_roma) - timedelta(days=1)).date()
+    df_ieri = df[df['time'].dt.date == ieri]
+
+    if df_ieri.empty:
+        msg = f"☀️ **MORNING REPORT ({ieri})**\n\nIeri non sono stati eseguiti trade. Lo scanner era spento o i parametri troppo stretti."
+    else:
+        wins = df_ieri['result'].astype(str).str.contains("WIN").sum()
+        losses = df_ieri['result'].astype(str).str.contains("LOSS").sum()
+        pnl = df_ieri['pnl_numeric'].sum()
+        wr = (wins / (wins + losses) * 100) if (wins + losses) > 0 else 0
+        
+        msg = (
+            f"☀️ **MORNING REPORT ({ieri})**\n\n"
+            f"📊 **Performance di Ieri:**\n"
+            f"✅ Win: {wins} | ❌ Loss: {losses}\n"
+            f"🏁 Win Rate: {wr:.1f}%\n"
+            f"💰 P&L Totale: {pnl:.2f}€\n\n"
+            f"📅 **News Critiche di Oggi:**\n"
+        )
+        
+        # Aggiungiamo le news della funzione precedente
+        news = get_daily_economic_alerts()
+        for n in news:
+            msg += f"{n}\n"
+            
+    msg += "\n🚀 *Sistema pronto. Avviare lo scanner dalla dashboard?*"
+    invia_telegram(msg)
+
 def invia_telegram(messaggio):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     try: requests.post(url, data={"chat_id": TELEGRAM_CHAT_ID, "text": messaggio, "parse_mode": "Markdown"}, timeout=5)
