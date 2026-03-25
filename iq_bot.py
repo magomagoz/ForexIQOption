@@ -304,12 +304,6 @@ with st.sidebar:
             st.markdown("🔍 **Setup Personalizzato:**")
             bb_std = st.selectbox("📏 Deviazione BB (Test)", [2.20, 2.30, 2.35, 2.40, 2.50], index=1, help="2.20 = Molti segnali, 2.50 = Quasi zero segnali. 2.30 è un buon compromesso.")
 
-        st.markdown("---")
-        # UNICA IMPOSTAZIONE LIVE EXTRA: La Pausa Overlap
-        st.subheader("💸 OVERLAP LONDRA-NY")
-        
-        st.session_state.pause_overlap = st.toggle("🛑 **No Overlap**\n\n(14:30 - 17:30)", value=False, help="Disattiva lo scanner nel momento di massima turbolenza per evitare i falsi segnali.")
-
         st.divider()
         st.subheader("🏛️ SESSIONI DI MERCATO")
         for city, (start, end) in {"🇬🇧 LONDRA:": (time(9,0), time(18,0)), "🇺🇸 NEW YORK:": (time(14,0), time(23,0)), "🇦🇺 SYDNEY:": (time(0,0), time(8,0)), "🇯🇵 TOKYO:": (time(0,0), time(9,0))}.items():
@@ -321,6 +315,11 @@ with st.sidebar:
         status_testo = get_market_status()
         st.info(status_testo if status_testo else "Recupero informazioni mercato...")
 
+        st.markdown("---")
+        # UNICA IMPOSTAZIONE LIVE EXTRA: La Pausa Overlap
+        st.subheader("💸 OVERLAP LONDRA-NY")
+        
+        st.session_state.pause_overlap = st.toggle("🛑 **No Overlap**\n\n(14:30 - 17:30)", value=False, help="Disattiva lo scanner nel momento di massima turbolenza per evitare i falsi segnali.")
         
         st.divider()
         st.subheader("🛠️ PARAMETRI TRADING")
