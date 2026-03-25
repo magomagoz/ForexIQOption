@@ -714,7 +714,7 @@ if st.session_state.connected:
         st.success("✅ Sistema pronto per segnali")
 
     if st.session_state.scanner_on:
-        st.caption(f"🔄 Scanner attivo...  \nUltimo check: {now_roma.time().strftime('%H:%M:%S')}")
+        st.caption(f"🔄 Scanner attivo... Ultimo check: {now_roma.time().strftime('%H:%M:%S')}")
 
     f1, f2, f3, f4 = st.columns(4)
     with f1: filtro_mercato = st.selectbox("🌍 Mercato:", ["TUTTI", "OTC", "LIVE"], index=0)
