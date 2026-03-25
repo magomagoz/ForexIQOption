@@ -266,17 +266,6 @@ with st.sidebar:
         if st.session_state.scanner_on:
             st.caption(f"🔄 Scanner attivo...  \nUltimo check: {now_roma.time().strftime('%H:%M:%S')}")
 
-        # --- MONITOR COOLDOWN ---
-        if st.session_state.scanner_on:
-            current_time = time_module.time()
-            elapsed = (current_time - st.session_state.last_trade_time) / 60
-            remaining = max(0.0, st.session_state.cooldown_minutes - elapsed)
-            
-            if remaining > 0:
-                st.warning(f"⏳ Pausa Sicurezza: {remaining:.1f} min")
-            else:
-                st.success("✅ Sistema pronto per segnali")
-
         #st.divider()
         #st.subheader("🛡️ PROTEZIONE ACCOUNT")
         #stop_loss_limit = st.number_input("Stop Loss Sessione (€)", value=400.0, step=10.0)
@@ -711,6 +700,20 @@ if st.session_state.connected:
         df_journal = pd.DataFrame(columns=['id', 'time', 'pair', 'dir', 'price', 'rsi_val', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'check_120s', 'pnl_numeric'])
 
     df_journal['pnl_numeric'] = pd.to_numeric(df_journal.get('pnl_numeric', 0.0), errors='coerce').fillna(0.0)
+
+            if st.session_state.scanner_on:
+            st.caption(f"🔄 Scanner attivo...  \nUltimo check: {now_roma.time().strftime('%H:%M:%S')}")
+
+    # --- MONITOR COOLDOWN ---
+    if st.session_state.scanner_on:
+        current_time = time_module.time()
+        elapsed = (current_time - st.session_state.last_trade_time) / 60
+        remaining = max(0.0, st.session_state.cooldown_minutes - elapsed)
+        
+        if remaining > 0:
+            st.warning(f"⏳ Pausa Sicurezza: {remaining:.1f} min")
+        else:
+            st.success("✅ Sistema pronto per segnali")
 
     f1, f2, f3, f4 = st.columns(4)
     with f1: filtro_mercato = st.selectbox("🌍 Mercato:", ["TUTTI", "OTC", "LIVE"], index=0)
