@@ -684,6 +684,7 @@ if st.session_state.connected:
                 continue
                     
     st.divider()
+
     # --- 7. TABELLA JOURNAL E FILTRI DINAMICI ---
     st.subheader("📋 Trading Journal & Performance Hub")
 
@@ -700,6 +701,9 @@ if st.session_state.connected:
         df_journal = pd.DataFrame(columns=['id', 'time', 'pair', 'dir', 'price', 'rsi_val', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'check_120s', 'pnl_numeric'])
 
     df_journal['pnl_numeric'] = pd.to_numeric(df_journal.get('pnl_numeric', 0.0), errors='coerce').fillna(0.0)
+
+    # Inizializza 'remaining' a 0 per evitare l'errore alla riga 710
+    remaining = 0.0 
 
     # --- MONITOR COOLDOWN ---
     if st.session_state.scanner_on:
