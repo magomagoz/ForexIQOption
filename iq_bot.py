@@ -701,8 +701,8 @@ if st.session_state.connected:
 
     df_journal['pnl_numeric'] = pd.to_numeric(df_journal.get('pnl_numeric', 0.0), errors='coerce').fillna(0.0)
 
-            if st.session_state.scanner_on:
-            st.caption(f"🔄 Scanner attivo...  \nUltimo check: {now_roma.time().strftime('%H:%M:%S')}")
+    if st.session_state.scanner_on:
+    st.caption(f"🔄 Scanner attivo...  \nUltimo check: {now_roma.time().strftime('%H:%M:%S')}")
 
     # --- MONITOR COOLDOWN ---
     if st.session_state.scanner_on:
