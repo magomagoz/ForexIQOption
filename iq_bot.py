@@ -716,6 +716,8 @@ if st.session_state.connected:
     if st.session_state.scanner_on:
         st.caption(f"🔄 Scanner attivo... Ultimo check: {now_roma.time().strftime('%H:%M:%S')}")
 
+    st.markdown("<hr style='border:1px dashed #555; margin: 10px 0; opacity: 0.5;'>", unsafe_allow_html=True)
+
     f1, f2, f3, f4 = st.columns(4)
     with f1: filtro_mercato = st.selectbox("🌍 Mercato:", ["TUTTI", "OTC", "LIVE"], index=0)
     with f2: filtro_coppia = st.selectbox("💱 Coppia di valute:", ["TUTTE"] + ALL_PAIRS, index=0)
