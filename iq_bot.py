@@ -703,7 +703,7 @@ if st.session_state.connected:
     df_journal['pnl_numeric'] = pd.to_numeric(df_journal.get('pnl_numeric', 0.0), errors='coerce').fillna(0.0)
 
     # Inizializza 'remaining' a 0 per evitare l'errore alla riga 710
-    #remaining = 0.0 
+    remaining = 0.0 
 
     # --- MONITOR COOLDOWN ---
     if st.session_state.scanner_on:
