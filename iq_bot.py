@@ -700,10 +700,12 @@ if st.session_state.connected:
 
     if st.session_state.signal_history:
         df_journal = pd.DataFrame(st.session_state.signal_history)
-        # Assicura che queste colonne esistano sempre nel DataFrame
-        for col in ['check_120s', 'rsi_val']:
+        # Assicura che TUTTE le colonne critiche esistano sempre nel DataFrame
+        colonne_critiche = ['result', 'check_120s', 'rsi_val', 'pnl_numeric']
+        for col in colonne_critiche:
             if col not in df_journal.columns:
-                df_journal[col] = "-"
+                # Imposta 0.0 per il PNL numerico, "-" per le stringhe
+                df_journal[col] = 0.0 if col == 'pnl_numeric' else "-"
     else:
         # DataFrame vuoto con tutte le colonne necessarie
         df_journal = pd.DataFrame(columns=['id', 'time', 'pair', 'dir', 'price', 'rsi_val', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'check_120s', 'pnl_numeric'])
