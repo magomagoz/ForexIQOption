@@ -125,7 +125,7 @@ def get_market_status():
     if new_york[0] <= now_time <= new_york[1]: 
         return "🇺🇸 **SESSIONE NEW YORK**"
     if tokyo[0] <= now_time <= tokyo[1]: 
-        return "🐌 **MERCATO LENTO (TOKYO+SIDNEY)**"
+        return "🐌 **SESSIONE ASIATICA (TOKYO+SIDNEY)**"
     
     # Se non è nessuna delle precedenti (es. tra le 23:00 e le 00:00)
     return "💤 **MERCATI CHIUSI**"
@@ -761,9 +761,11 @@ if st.session_state.connected:
                                    f"💱 Asset: {pair}\n"
                                    f"🌍 Market: {tipo_mercato}\n"
                                    f"📈 RSI Ingresso: `{rsi_ingresso}`\n"
-                                   f"📉 Esito ({timeframe}s): {icona_esito} {res_status}\n"
-                                   f"💵 P&L: `{profit:.2f} €`\n"
-                                   f"📅 P&L Sessione: `{st.session_state.session_pnl:.2f}€` ")
+                                   f"📉 Esito 60s: {icona_esito} {res_status}\n"
+                                   f"💵 P&L 60s: `{profit} €`\n"
+                                   f"📉 Esito 120s: {icona_esito} {check_120s}\n"
+                                   f"💵 P&L 120s: `{pnl_numeric} €`\n"
+                                   f"📅 P&L Sessione 60s: `{st.session_state.session_pnl:.2f}€` ")
                             invia_telegram(msg)
 
                             if res_status == "WIN": play_trade_sound("win")
