@@ -25,8 +25,8 @@ TELEGRAM_CHAT_ID = st.secrets.get("TELEGRAM_CHAT_ID", "IL_TUO_CHAT_ID_QUI")
 DERIV_TOKEN = st.secrets.get("DERIV_TOKEN", "") 
 DERIV_APP_ID = "71759" 
 
-ALL_PAIRS = ["EURUSD", "AUDUSD", "USDCAD", "USDCHF"]
-icons = {"EURUSD": "🇪🇺🇺🇸", "AUDUSD": "🇦🇺🇺🇸", "USDCAD": "🇺🇸🇨🇦", "USDCHF": "🇺🇸🇨🇭"}
+ALL_PAIRS = ["EURUSD", "AUDUSD", "USDCAD", "USDCHF", "USDJPY"]
+icons = {"EURUSD": "🇪🇺🇺🇸", "AUDUSD": "🇦🇺🇺🇸", "USDCAD": "🇺🇸🇨🇦", "USDCHF": "🇺🇸🇨🇭", "USDJPY": "🇺🇸🇯🇵"}
 
 fuso_roma = pytz.timezone('Europe/Rome')
 now_roma = datetime.now(fuso_roma)
@@ -448,23 +448,31 @@ with st.sidebar:
 
 # --- 4. MAIN DASHBOARD ---
 if st.session_state.connected:
-    # Applica i due set di valute "spietati"
+    ora_attuale_time = now_roma.time()
+    
+    # 🌙 Definizione Orario Notturno (00:00 - 07:00)
+    is_night_session = time(0, 0) <= ora_attuale_time < time(7, 0)
+
+    # Applica i set di valute in base a orario e giorno
     if st.session_state.weekend_mode:
         CURRENT_PAIRS = ["EURUSD", "USDJPY", "AUDUSD"] # Mappati su V50, V75, V100
     else:
-        # LIVE: Solo le 4 valute super liquide per evitare il caos di Sterlina e Yen
-        #CURRENT_PAIRS = ["EURUSD", "AUDUSD", "NZDUSD", "USDCAD", "EURGBP", "USDCHF", "USDJPY", "GBPUSD", "EURJPY", "GBPJPY"] 
-        CURRENT_PAIRS = ["EURUSD", "AUDUSD", "USDCHF", "USDCAD"]
+        if is_night_session:
+            # NOTTE: Solo le valute attive in Asia/Oceania per evitare derive senza volumi
+            CURRENT_PAIRS = ["AUDUSD", "USDJPY"]
+        else:
+            # GIORNO LIVE: Le 4 valute super liquide standard
+            CURRENT_PAIRS = ["EURUSD", "AUDUSD", "USDCHF", "USDCAD"]
         
     window_1 = (time(0, 0), time(12, 0))
     window_2 = (time(12, 0), time(23, 0))
-    is_trading_time = (window_1[0] <= now_cet <= window_1[1]) or (window_2[0] <= now_cet <= window_2[1])
+    # Il trading è sempre autorizzato di notte ora che abbiamo filtrato le valute sicure
+    is_trading_time = (window_1[0] <= now_cet <= window_1[1]) or (window_2[0] <= now_cet <= window_2[1]) or is_night_session
     trading_autorizzato = is_trading_time or stress_test
 
     # VERIFICA DELLA PAUSA OVERLAP
     in_pausa_overlap = False
     if not st.session_state.weekend_mode and st.session_state.get('pause_overlap', True):
-        ora_attuale_time = now_roma.time()
         if time(14, 30) <= ora_attuale_time <= time(17, 30):
             trading_autorizzato = False
             in_pausa_overlap = True
@@ -495,6 +503,9 @@ if st.session_state.connected:
                 st.warning("🛑 PAUSA OVERLAP ATTIVA: Scanner in attesa. Riprenderà da solo alle 17:30.")
             elif not trading_autorizzato:
                 st.warning("🛡️ PROTEZIONE ATTIVA: Mercato fuori orario. Scanner in pausa.")
+            elif is_night_session:
+                # NUOVO AVVISO NOTTURNO
+                st.info("🌙 **MODALITÀ NOTTURNA (00:00 - 07:00)**\n\nScanner limitato a JPY e AUD per sicurezza.")
             else:
                 st.success("SISTEMA LIVE IN SCANSIONE ATTIVA 🔥", icon="📡")
         
