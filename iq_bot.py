@@ -385,7 +385,7 @@ with st.sidebar:
         st.markdown("---")
         st.subheader("💸 PROTEZIONE OVERLAP LONDRA-NY")
         # Il toggle rimane per fermare tutto manualmente se non ti fidi della volatilità
-        pausa_manuale_overlap = st.toggle("🛑 **Stop Totale Overlap**", value=False, help="Spegne lo scanner dalle 14:30 alle 17:30")
+        pausa_overlap = st.toggle("🛑 **Stop Totale Overlap**", value=False, help="Spegne lo scanner dalle 14:30 alle 17:30")
         
         # Logica di autorizzazione trading
         trading_autorizzato = True
@@ -748,10 +748,12 @@ if st.session_state.connected:
                             
                             # Aggiorniamo il PNL di sessione
                             st.session_state.session_pnl += profit
-                            
+
                             save_journal(st.session_state.signal_history)
 
-                            # Il tuo messaggio Telegram originale (ora con le variabili popolate)
+                            # Creiamo la stringa formattata per l'esito a 120s
+                            esito_120s = f"{'✅' if win_120 else '❌'} {'WIN' if win_120 else 'LOSS'}"
+                            
                             mapping_nomi = {"EURUSD": "V50", "USDJPY": "V75", "AUDUSD": "V100"}
                             nome_reale = mapping_nomi.get(pair, pair)
                             tipo_mercato = "OTC" if st.session_state.weekend_mode else "LIVE"
@@ -763,7 +765,7 @@ if st.session_state.connected:
                                    f"📈 RSI Ingresso: `{rsi_ingresso}`\n"
                                    f"📉 Esito 60s: {icona_esito} {res_status}\n"
                                    f"💵 P&L 60s: `{profit:.2f}€`\n"
-                                   f"📉 Esito 120s: {icona_esito} {check_120s}\n"
+                                   f"📉 Esito 120s: {esito_120s}\n"
                                    f"📅 P&L Sessione 60s: `{st.session_state.session_pnl:.2f}€` ")
                             invia_telegram(msg)
 
