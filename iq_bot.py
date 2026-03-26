@@ -635,38 +635,34 @@ if st.session_state.connected:
                 r_buy_graf, r_sell_graf, b_period_graf, b_std_graf = custom_rsi_buy, custom_rsi_sell, bb_period, bb_std
 
             bb_ta = ta.bbands(df_raw['close'], length=b_period_graf, std=b_std_graf)
-            
+
             if bb_ta is not None and not bb_ta.empty:
                 bb_ta.columns = ['BBL', 'BBM', 'BBU', 'BBB', 'BBP'] 
                 df_final = pd.concat([df_raw, bb_ta[['BBL', 'BBM', 'BBU']]], axis=1).tail(100)
 
+                # --- FIX SICUREZZA: Inizializza le colonne come vuote (NaN) ---
                 df_final['buy_sig'] = float('nan')
                 df_final['sell_sig'] = float('nan')
                 df_final['is_consecutive'] = False
-                
-                # --- FIX 1: CALCOLO CANDELE CONSECUTIVE IN PANDAS ---
-                # Identifica le candele verdi e rosse
+
+                # Calcolo candele consecutive
                 is_green = df_final['close'] > df_final['open']
                 is_red = df_final['close'] < df_final['open']
-                
-                # Somma mobile a 3 periodi (se è 3, significa che le ultime 3 sono dello stesso colore)
-                tre_verdi = is_green.rolling(3).sum() == 3
-                tre_rosse = is_red.rolling(3).sum() == 3
-                df_final['is_consecutive'] = tre_verdi | tre_rosse
+                df_final['is_consecutive'] = (is_green.rolling(3).sum() == 3) | (is_red.rolling(3).sum() == 3)
 
-                # Gestione sicura dei triangolini sul grafico (ora usa la stessa identica logica del bot)
+                # Calcolo segnali con lambda (più robusto)
                 df_final['buy_sig'] = df_final.apply(lambda x: (x['close'] * 0.9998) if (
                     ((x['RSI'] < r_buy_graf) if use_rsi else True) and 
                     ((x['close'] <= x['BBL']) if use_bb else True) and
-                    not x['is_consecutive'] # Il filtro salvavita!
+                    not x['is_consecutive']
                 ) else float('nan'), axis=1)
                 
                 df_final['sell_sig'] = df_final.apply(lambda x: (x['close'] * 1.0002) if (
                     ((x['RSI'] > r_sell_graf) if use_rsi else True) and 
                     ((x['close'] >= x['BBU']) if use_bb else True) and
-                    not x['is_consecutive'] # Il filtro salvavita!
+                    not x['is_consecutive']
                 ) else float('nan'), axis=1)
-             
+           
                 asse_x = df_final['time']
                 fig = make_subplots(rows=2, cols=1, shared_xaxes=True, row_heights=[0.5, 0.25], vertical_spacing=0.07, subplot_titles=("📊 Prezzo & Volatilità", "📉 Oscillatore RSI"))
                 fig.add_trace(go.Candlestick(x=asse_x, open=df_final['open'], high=df_final['max'], low=df_final['min'], close=df_final['close'], name="Prezzo"), row=1, col=1)
