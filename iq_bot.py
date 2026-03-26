@@ -640,6 +640,10 @@ if st.session_state.connected:
                 bb_ta.columns = ['BBL', 'BBM', 'BBU', 'BBB', 'BBP'] 
                 df_final = pd.concat([df_raw, bb_ta[['BBL', 'BBM', 'BBU']]], axis=1).tail(100)
 
+                df_final['buy_sig'] = float('nan')
+                df_final['sell_sig'] = float('nan')
+                df_final['is_consecutive'] = False
+                
                 # --- FIX 1: CALCOLO CANDELE CONSECUTIVE IN PANDAS ---
                 # Identifica le candele verdi e rosse
                 is_green = df_final['close'] > df_final['open']
