@@ -292,6 +292,13 @@ if 'weekend_mode' not in st.session_state: st.session_state.weekend_mode = is_we
 if 'session_pnl' not in st.session_state: st.session_state.session_pnl = 0.0
 if 'last_trade_time' not in st.session_state: st.session_state.last_trade_time = 0
 if 'cooldown_minutes' not in st.session_state: st.session_state.cooldown_minutes = 5
+if 'report_sent' not in st.session_state: st.session_state.report_sent = False
+
+# Trigger per il Morning Report (viene eseguito la prima volta che apri la dashboard tra le 08:30 e le 09:30)
+ora_attuale_report = now_roma.time()
+if time(8, 30) <= ora_attuale_report <= time(9, 30) and not st.session_state.report_sent:
+    send_morning_report()
+    st.session_state.report_sent = True
 
 # --- 3. SIDEBAR ---
 with st.sidebar:
