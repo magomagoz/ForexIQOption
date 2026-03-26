@@ -762,9 +762,8 @@ if st.session_state.connected:
                                    f"🌍 Market: {tipo_mercato}\n"
                                    f"📈 RSI Ingresso: `{rsi_ingresso}`\n"
                                    f"📉 Esito 60s: {icona_esito} {res_status}\n"
-                                   f"💵 P&L 60s: `{profit} €`\n"
+                                   f"💵 P&L 60s: `{profit:.2f}€`\n"
                                    f"📉 Esito 120s: {icona_esito} {check_120s}\n"
-                                   f"💵 P&L 120s: `{pnl_numeric} €`\n"
                                    f"📅 P&L Sessione 60s: `{st.session_state.session_pnl:.2f}€` ")
                             invia_telegram(msg)
 
