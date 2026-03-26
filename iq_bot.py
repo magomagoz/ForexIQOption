@@ -662,7 +662,9 @@ if st.session_state.connected:
                     ((x['close'] >= x['BBU']) if use_bb else True) and
                     not x['is_consecutive']
                 ) else float('nan'), axis=1)
-           
+
+                st.write(df_final.columns.tolist())
+                
                 asse_x = df_final['time']
                 fig = make_subplots(rows=2, cols=1, shared_xaxes=True, row_heights=[0.5, 0.25], vertical_spacing=0.07, subplot_titles=("📊 Prezzo & Volatilità", "📉 Oscillatore RSI"))
                 fig.add_trace(go.Candlestick(x=asse_x, open=df_final['open'], high=df_final['max'], low=df_final['min'], close=df_final['close'], name="Prezzo"), row=1, col=1)
