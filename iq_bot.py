@@ -391,12 +391,12 @@ with st.sidebar:
 
         st.markdown("---")
         st.subheader("💸 PROTEZIONE OVERLAP LONDRA-NY")
-        # FIX: Aggiunta la key="pause_overlap" e uniformato il nome della variabile
-        pausa_overlap = st.toggle("🛑 **Stop Totale Overlap**", value=False, key="pause_overlap", help="Spegne lo scanner dalle 14:30 alle 17:30")
+        # Il toggle rimane per fermare tutto manualmente se non ti fidi della volatilità
+        pausa_overlap = st.toggle("🛑 **Stop Totale Overlap**", value=False, help="Spegne lo scanner dalle 14:30 alle 17:30")
         
         # Logica di autorizzazione trading
         trading_autorizzato = True
-        if is_overlap_time and pausa_overlap:
+        if is_overlap_time and pausa_manuale_overlap:
             trading_autorizzato = False
 
         st.divider()
@@ -414,12 +414,10 @@ with st.sidebar:
 
         if st.button("🗑️ **PULISCI SEGNALI**", use_container_width=True):
             st.session_state.signal_history = []
-            st.session_state.session_pnl = 0.0  
-            st.session_state.local_balance = 10000.0 
-            st.session_state.active_trades = {}  # <--- FIX: Svuota i trade fantasma
-            st.session_state.last_trade_time = 0 # <--- FIX: Azzera il timer del cooldown
+            st.session_state.session_pnl = 0.0  # <--- AGGIUNGI QUESTA RIGA
+            st.session_state.local_balance = 10000.0 # <--- RESETTA IL BILANCIO VIRTUALE
             save_journal([]) 
-            st.success("Memoria pulita, PNL e Cooldown resettati!")
+            st.success("Memoria pulita e PNL resettato!")
             time_module.sleep(1)
             st.rerun()
 
@@ -487,13 +485,13 @@ if st.session_state.connected:
             in_pausa_overlap = True
 
     # --- Nella Main Dashboard, subito dopo il banner ---
-    #if st.session_state.scanner_on:
-        #daily_news = get_daily_economic_alerts()
-        #if daily_news:
-            #with st.expander("📅 NOTIZIE ECONOMICHE DEL GIORNO", expanded=True):
-                #for alert in daily_news:
-                    #st.write(alert)
-                #st.caption("Consiglio: Spegnere lo scanner 15 minuti prima e riaccendere 15 minuti dopo questi orari.")
+    if st.session_state.scanner_on:
+        daily_news = get_daily_economic_alerts()
+        if daily_news:
+            with st.expander("📅 NOTIZIE ECONOMICHE DEL GIORNO", expanded=True):
+                for alert in daily_news:
+                    st.write(alert)
+                st.caption("Consiglio: Spegnere lo scanner 15 minuti prima e riaccendere 15 minuti dopo questi orari.")
 
     st.divider()
     st.subheader("🌍 Live Market Flow 24h")
@@ -518,10 +516,7 @@ if st.session_state.connected:
             else:
                 st.success("SISTEMA LIVE IN SCANSIONE ATTIVA 🔥", icon="📡")
         
-    st.divider()
-    
-    # FIX: Esegue la scansione SOLO se non siamo in pausa overlap o a mercati chiusi
-    if trading_autorizzato:
+        st.divider()
         st.subheader("🕵️ Coppie di valute osservate")
         cols = st.columns(5)
         for i, pair in enumerate(CURRENT_PAIRS):
@@ -533,14 +528,6 @@ if st.session_state.connected:
                 if not candles or len(candles) < 20: continue
                 
                 df = pd.DataFrame(candles)
-                
-                # --- FIX SICUREZZA: Evita il KeyError ---
-                df.columns = df.columns.str.lower()
-                if 'close' not in df.columns: 
-                    continue 
-                
-                df['RSI'] = ta.rsi(df['close'], length=7)
-                bb = ta.bbands(df['close'], length=b_period, std=b_std)
 
                 if st.session_state.weekend_mode and not stress_test:
                     r_buy, r_sell, b_period, b_std = 20, 80, 20, 2.20
@@ -696,7 +683,39 @@ if st.session_state.connected:
     except Exception as e:
         st.error(f"Errore generazione grafico: {e}")
 
-        
+    st.write("---")
+    st.subheader(f"📊 Analisi Performance ({timeframe}s)")
+    n_buy, n_sell = df_final['buy_sig'].notnull().sum(), df_final['sell_sig'].notnull().sum()
+    totale_segnali = n_buy + n_sell
+
+    # --- FIX 2: ETICHETTA BOTTONE DINAMICA ---
+    if st.button(f"🔍 **VERIFICA ESITO ({timeframe}s)**", use_container_width=True, type="primary"):
+        wins_buy, wins_sell = 0, 0
+        for i in range(len(df_final) - 1):
+            if pd.notnull(df_final['buy_sig'].iloc[i]) and df_final['close'].iloc[i+1] > df_final['close'].iloc[i]: wins_buy += 1
+            if pd.notnull(df_final['sell_sig'].iloc[i]) and df_final['close'].iloc[i+1] < df_final['close'].iloc[i]: wins_sell += 1
+
+        tot_vinti = wins_buy + wins_sell
+        tot_persi = totale_segnali - tot_vinti
+        accuracy = (tot_vinti / totale_segnali * 100) if totale_segnali > 0 else 0
+        bilancio_netto = (tot_vinti * (st.session_state.stake * 0.90)) - (tot_persi * st.session_state.stake)
+
+        c1, c2, c3 = st.columns(3)
+        c1.metric("🟢 BUY VINCENTI", f"{wins_buy} / {n_buy}")
+        c2.metric("🔴 SELL VINCENTI", f"{wins_sell} / {n_sell}")
+        c3.metric("🎯 ACCURACY", f"{accuracy:.1f}%")
+        colore_box = "green" if bilancio_netto > 0 else "red"
+        st.markdown(f"""
+        <div style="padding:20px; border-radius:10px; border: 2px solid {colore_box}; background-color: rgba(0,0,0,0.1);">
+            <h3 style="margin-top:0;">💰 Risultato Economico Stimato</h3>
+            <p>Segnali Totali: <b>{totale_segnali}</b> (Vinti: <span style="color:#00ff88;">{tot_vinti}</span> | Persi: <span style="color:#ff3333;">{tot_persi}</span>)</p>
+            <h2 style="color:{colore_box}; margin-bottom:0;">Profitto Netto: {bilancio_netto:.2f} €</h2>
+            <small>Basato su investimento di {st.session_state.stake}€ e payout 85%</small>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.info("Regola i parametri e verifica il profitto")
+    
     # --- 6. VERIFICA ESITI TRADE CON DERIV ---
     current_ts = time_module.time() 
     trades_pendenti = list(st.session_state.active_trades.items())
