@@ -23,7 +23,7 @@ except ImportError:
 TELEGRAM_TOKEN = st.secrets.get("TELEGRAM_TOKEN", "IL_TUO_TOKEN_QUI")
 TELEGRAM_CHAT_ID = st.secrets.get("TELEGRAM_CHAT_ID", "IL_TUO_CHAT_ID_QUI")
 DERIV_TOKEN = st.secrets.get("DERIV_TOKEN", "") 
-DERIV_APP_ID = "71759" 
+DERIV_APP_ID = "1089" 
 
 ALL_PAIRS = ["EURUSD", "AUDUSD", "USDCAD", "USDCHF", "USDJPY"]
 icons = {"EURUSD": "🇪🇺🇺🇸", "AUDUSD": "🇦🇺🇺🇸", "USDCAD": "🇺🇸🇨🇦", "USDCHF": "🇺🇸🇨🇭", "USDJPY": "🇺🇸🇯🇵"}
