@@ -430,10 +430,10 @@ if st.session_state.connected:
     st.divider()
     st.subheader("🕵️ Coppie di valute osservate")
     cols = st.columns(5)
-    for i, pair in enumerate(CURRENT_PAIRS):
+    for i, pair in enumerate(ALL_PAIRS):
         with cols[i % 5]: st.code(f"{icons.get(pair, '🔍')} {pair}")
 
-    for pair in CURRENT_PAIRS:
+    for pair ALL_PAIRS:
         try:
             candles, source = get_candles(pair, timeframe, 100) 
             if not candles or len(candles) < 20: continue
