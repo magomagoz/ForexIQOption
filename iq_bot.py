@@ -9,6 +9,8 @@ import websocket
 
 # --- 1. CONFIGURAZIONI GLOBALI ---
 DERIV_APP_ID = "1089"
+DERIV_TOKEN = st.secrets.get("DERIV_TOKEN", "") 
+
 ALL_PAIRS = ["R_50", "R_75", "R_100", "1HZ50V", "1HZ75V", "1HZ100V"]
 
 st.set_page_config(page_title="Sentinel AI - Synthetic Pro", layout="wide")
@@ -71,7 +73,7 @@ def check_signal(df, rsi_b, rsi_s, bb_std):
 # --- 4. INTERFACCIA E SIDEBAR ---
 with st.sidebar:
     st.header("🔑 Connessione API")
-    token_input = st.text_input("Deriv API Token", type="password", help="Token con permessi 'Trading Control'")
+    token_input = st.text_input("Deriv API Token", value = "DERIV_TOKEN", type="password", help="Token con permessi 'Trading Control'")
     
     # Tasto per Test Connessione
     if st.button("🧪 Test Connessione", use_container_width=True):
