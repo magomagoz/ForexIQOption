@@ -15,7 +15,7 @@ from datetime import datetime
 DERIV_APP_ID = "1089"
 INITIAL_STAKE = 100.0
 
-DERIV_TOKEN = st.sidebar.text_input("🔑 Deriv API Token", type="password")
+DERIV_TOKEN = st.sidebar.text_input("🔑 Deriv API Token", value = "FfHFQiTimFwP7mi", type="password")
 
 ALL_PAIRS = ["R_50", "R_75", "R_100", "1HZ50V", "1HZ75V", "1HZ100V"]
 icons = {p: "📊" for p in ALL_PAIRS}
