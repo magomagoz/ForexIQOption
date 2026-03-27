@@ -11,11 +11,53 @@ import os
 import websocket
 from datetime import datetime
 
+st.title("🔌 Deriv Connection Test")
+token = st.text_input("Inserisci il tuo Token API (Trading Control)", type="password")
+
+
+
+
+
+
+
+
+
+
+
+
+
 # --- 1. CONFIGURAZIONI E ASSET ---
 DERIV_APP_ID = "1089"
 INITIAL_STAKE = 100.0
 
 DERIV_TOKEN = st.sidebar.text_input("🔑 Deriv API Token", value = "FfHFQiTimFwP7mi", type="password")
+
+if st.button("Esegui Test Connessione"):
+    if not token:
+        st.error("Inserisci un token!")
+    else:
+        try:
+            ws = websocket.create_connection(f"wss://ws.binaryws.com/websockets/v3?app_id={APP_ID}")
+            
+            # 1. Test Autenticazione
+            ws.send(json.dumps({"authorize": token}))
+            auth_res = json.loads(ws.recv())
+            
+            if "error" in auth_res:
+                st.error(f"❌ Errore Token: {auth_res['error']['message']}")
+            else:
+                st.success(f"✅ Autenticato come: {auth_res['authorize']['fullname']}")
+                
+                # 2. Test Lettura Bilancio
+                ws.send(json.dumps({"balance": 1}))
+                bal_res = json.loads(ws.recv())
+                st.info(f"💰 Bilancio Attuale: {bal_res['balance']['balance']} {bal_res['balance']['currency']}")
+                
+            ws.close()
+        except Exception as e:
+            st.error(f"❌ Errore di connessione: {e}")
+
+
 
 ALL_PAIRS = ["R_50", "R_75", "R_100", "1HZ50V", "1HZ75V", "1HZ100V"]
 icons = {p: "📊" for p in ALL_PAIRS}
@@ -65,25 +107,36 @@ def send_deriv_request(request):
         st.error(f"Errore connessione: {e}")
         return None
 
-def execute_trade(symbol, direction, amount, multiplier, sl, tp):
-    req = {
+def execute_trade(pair, direction, amount, multiplier, sl, tp, token):
+    """
+    Invia l'ordine di acquisto a Deriv usando il contratto Multiplier.
+    """
+    ws = websocket.create_connection(f"wss://ws.binaryws.com/websockets/v3?app_id={APP_ID}")
+    ws.send(json.dumps({"authorize": token}))
+    ws.recv() # Salta la risposta di auth
+    
+    trade_request = {
         "buy": 1,
-        "price": amount,
+        "price": float(amount),
         "parameters": {
-            "amount": amount,
+            "amount": float(amount),
             "basis": "stake",
             "contract_type": "MULTUP" if direction == "BUY" else "MULTDOWN",
             "currency": "USD",
-            "multiplier": multiplier,
-            "symbol": symbol,
+            "multiplier": int(multiplier),
+            "symbol": pair,
             "limit_order": {
-                "stop_loss": sl,
-                "take_profit": tp
+                "stop_loss": float(sl), 
+                "take_profit": float(tp)
             }
         }
     }
-    return send_deriv_request(req)
-
+    
+    ws.send(json.dumps(trade_request))
+    result = json.loads(ws.recv())
+    ws.close()
+    return result
+    
 # --- LOGICA SEGNALE (TRIPLA CONVERGENZA) ---
 def check_signal(df, rsi_buy, rsi_sell, bb_std):
     df['EMA_20'] = ta.ema(df['close'], length=20)
@@ -125,6 +178,20 @@ def get_signals(df):
     elif last['close'] < last['EMA_50'] and last['close'] > last['BB_Upper'] and last['RSI'] > 70:
         return "SELL"
     return "WAIT"
+
+def close_trade_manually(contract_id, token):
+    """
+    Chiude immediatamente una posizione aperta usando il suo ID contratto.
+    """
+    ws = websocket.create_connection(f"wss://ws.binaryws.com/websockets/v3?app_id={APP_ID}")
+    ws.send(json.dumps({"authorize": token}))
+    ws.recv()
+    
+    # Il comando 'sell' con price 0 vende al prezzo di mercato attuale
+    ws.send(json.dumps({"sell": contract_id, "price": 0}))
+    res = json.loads(ws.recv())
+    ws.close()
+    return res
 
 # --- 3. CONNESSIONE DATI ---
 def get_candles(pair, timeframe_sec, count):
