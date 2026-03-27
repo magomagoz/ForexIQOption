@@ -692,39 +692,7 @@ if st.session_state.connected:
     except Exception as e:
         st.error(f"Errore generazione grafico: {e}")
 
-    st.write("---")
-    st.subheader(f"📊 Analisi Performance ({timeframe}s)")
-    n_buy, n_sell = df_final['buy_sig'].notnull().sum(), df_final['sell_sig'].notnull().sum()
-    totale_segnali = n_buy + n_sell
-
-    # --- FIX 2: ETICHETTA BOTTONE DINAMICA ---
-    if st.button(f"🔍 **VERIFICA ESITO ({timeframe}s)**", use_container_width=True, type="primary"):
-        wins_buy, wins_sell = 0, 0
-        for i in range(len(df_final) - 1):
-            if pd.notnull(df_final['buy_sig'].iloc[i]) and df_final['close'].iloc[i+1] > df_final['close'].iloc[i]: wins_buy += 1
-            if pd.notnull(df_final['sell_sig'].iloc[i]) and df_final['close'].iloc[i+1] < df_final['close'].iloc[i]: wins_sell += 1
-
-        tot_vinti = wins_buy + wins_sell
-        tot_persi = totale_segnali - tot_vinti
-        accuracy = (tot_vinti / totale_segnali * 100) if totale_segnali > 0 else 0
-        bilancio_netto = (tot_vinti * (st.session_state.stake * 0.90)) - (tot_persi * st.session_state.stake)
-
-        c1, c2, c3 = st.columns(3)
-        c1.metric("🟢 BUY VINCENTI", f"{wins_buy} / {n_buy}")
-        c2.metric("🔴 SELL VINCENTI", f"{wins_sell} / {n_sell}")
-        c3.metric("🎯 ACCURACY", f"{accuracy:.1f}%")
-        colore_box = "green" if bilancio_netto > 0 else "red"
-        st.markdown(f"""
-        <div style="padding:20px; border-radius:10px; border: 2px solid {colore_box}; background-color: rgba(0,0,0,0.1);">
-            <h3 style="margin-top:0;">💰 Risultato Economico Stimato</h3>
-            <p>Segnali Totali: <b>{totale_segnali}</b> (Vinti: <span style="color:#00ff88;">{tot_vinti}</span> | Persi: <span style="color:#ff3333;">{tot_persi}</span>)</p>
-            <h2 style="color:{colore_box}; margin-bottom:0;">Profitto Netto: {bilancio_netto:.2f} €</h2>
-            <small>Basato su investimento di {st.session_state.stake}€ e payout 85%</small>
-        </div>
-        """, unsafe_allow_html=True)
-    else:
-        st.info("Regola i parametri e verifica il profitto")
-    
+        
     # --- 6. VERIFICA ESITI TRADE CON DERIV ---
     current_ts = time_module.time() 
     trades_pendenti = list(st.session_state.active_trades.items())
