@@ -156,8 +156,6 @@ def get_daily_economic_alerts():
     
     alerts = []
     
-    # Esempi di orari standard per news ad alto impatto (Red Flags)
-    # In un'evoluzione futura, qui leggeremo un file JSON o un'API
     news_events = [
         {"ora": "14:30", "evento": "🇺🇸 Non-Farm Payrolls / CPI (USA)", "impatto": "ALTO"},
         {"ora": "16:00", "evento": "🇺🇸 Indici ISM / Fiducia Consumatori", "impatto": "MEDIO"},
@@ -330,25 +328,6 @@ with st.sidebar:
             
         if st.session_state.scanner_on:
             st.caption(f"🔄 Scanner attivo...  \nUltimo check: {now_roma.time().strftime('%H:%M:%S')}")
-
-        #st.divider()
-        #st.subheader("🛡️ PROTEZIONE ACCOUNT")
-        #stop_loss_limit = st.number_input("Stop Loss Sessione (€)", value=400.0, step=10.0)
-        #take_profit_limit = st.number_input("Take Profit Sessione (€)", value=1000.0, step=10.0)
-        
-        #if st.session_state.scanner_on:
-            # Controllo automatico: se la perdita supera il limite, spegne tutto
-            #if st.session_state.session_pnl <= -stop_loss_limit:
-                #st.session_state.scanner_on = False
-                #invia_telegram(f"⚠️ **STOP LOSS RAGGIUNTO!**\nPerdita: {st.session_state.session_pnl:.2f}€\nScanner disattivato per sicurezza.")
-                #st.error("STOP LOSS RAGGIUNTO. Scanner spento.")
-            
-            #if st.session_state.session_pnl >= take_profit_limit:
-                #st.session_state.scanner_on = False
-                #invia_telegram(f"💰 **TAKE PROFIT RAGGIUNTO!**\nProfitto: {st.session_state.session_pnl:.2f}€\nOttima sessione!")
-                #st.success("TAKE PROFIT RAGGIUNTO. Scanner spento.")
-        
-
         
         st.divider()
         st.subheader("🌍 TIPO DI MERCATO")
@@ -484,15 +463,6 @@ if st.session_state.connected:
             trading_autorizzato = False
             in_pausa_overlap = True
 
-    # --- Nella Main Dashboard, subito dopo il banner ---
-    #if st.session_state.scanner_on:
-        #daily_news = get_daily_economic_alerts()
-        #if daily_news:
-            #with st.expander("📅 NOTIZIE ECONOMICHE DEL GIORNO", expanded=True):
-                #for alert in daily_news:
-                    #st.write(alert)
-                #st.caption("Consiglio: Spegnere lo scanner 15 minuti prima e riaccendere 15 minuti dopo questi orari.")
-
     st.divider()
     st.subheader("🌍 Live Market Flow 24h")
     
@@ -542,7 +512,7 @@ if st.session_state.connected:
 
                 if bb is None or bb.empty: continue
 
-                                # Prezzo attuale per registrare l'ingresso a mercato
+                # Prezzo attuale per registrare l'ingresso a mercato
                 price = df['close'].iloc[-1] 
                 
                 # Indicatori basati sull'ultima candela CHIUSA (evita il repainting!)
@@ -682,40 +652,7 @@ if st.session_state.connected:
 
     except Exception as e:
         st.error(f"Errore generazione grafico: {e}")
-
-    #st.write("---")
-    #st.subheader(f"📊 Analisi Performance ({timeframe}s)")
-    #n_buy, n_sell = df_final['buy_sig'].notnull().sum(), df_final['sell_sig'].notnull().sum()
-    #totale_segnali = n_buy + n_sell
-
-    # --- FIX 2: ETICHETTA BOTTONE DINAMICA ---
-    #if st.button(f"🔍 **VERIFICA ESITO ({timeframe}s)**", use_container_width=True, type="primary"):
-        #wins_buy, wins_sell = 0, 0
-        #for i in range(len(df_final) - 1):
-            #if pd.notnull(df_final['buy_sig'].iloc[i]) and df_final['close'].iloc[i+1] > df_final['close'].iloc[i]: wins_buy += 1
-            #if pd.notnull(df_final['sell_sig'].iloc[i]) and df_final['close'].iloc[i+1] < df_final['close'].iloc[i]: wins_sell += 1
-
-        tot_vinti = wins_buy + wins_sell
-        tot_persi = totale_segnali - tot_vinti
-        accuracy = (tot_vinti / totale_segnali * 100) if totale_segnali > 0 else 0
-        bilancio_netto = (tot_vinti * (st.session_state.stake * 0.90)) - (tot_persi * st.session_state.stake)
-
-        c1, c2, c3 = st.columns(3)
-        c1.metric("🟢 BUY VINCENTI", f"{wins_buy} / {n_buy}")
-        c2.metric("🔴 SELL VINCENTI", f"{wins_sell} / {n_sell}")
-        c3.metric("🎯 ACCURACY", f"{accuracy:.1f}%")
-        colore_box = "green" if bilancio_netto > 0 else "red"
-        st.markdown(f"""
-        <div style="padding:20px; border-radius:10px; border: 2px solid {colore_box}; background-color: rgba(0,0,0,0.1);">
-            <h3 style="margin-top:0;">💰 Risultato Economico Stimato</h3>
-            <p>Segnali Totali: <b>{totale_segnali}</b> (Vinti: <span style="color:#00ff88;">{tot_vinti}</span> | Persi: <span style="color:#ff3333;">{tot_persi}</span>)</p>
-            <h2 style="color:{colore_box}; margin-bottom:0;">Profitto Netto: {bilancio_netto:.2f} €</h2>
-            <small>Basato su investimento di {st.session_state.stake}€ e payout 85%</small>
-        </div>
-        """, unsafe_allow_html=True)
-    else:
-        st.info("Regola i parametri e verifica il profitto")
-    
+ 
     # --- 6. VERIFICA ESITI TRADE CON DERIV ---
     current_ts = time_module.time() 
     trades_pendenti = list(st.session_state.active_trades.items())
