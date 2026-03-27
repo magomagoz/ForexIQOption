@@ -395,6 +395,8 @@ with st.sidebar:
             time_module.sleep(1)
             st.rerun()
 
+        trading_autorizzato = True
+
         stress_test = st.toggle("🚀 **STRESS MODE**", value=False)
         if stress_test:
             st.warning("⚠️ **Modalità TEST:**\n\nno BB - RSI (45/55)")
