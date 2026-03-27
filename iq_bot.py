@@ -433,7 +433,7 @@ if st.session_state.connected:
     for i, pair in enumerate(ALL_PAIRS):
         with cols[i % 5]: st.code(f"{icons.get(pair, '🔍')} {pair}")
 
-    for pair ALL_PAIRS:
+    for pair:
         try:
             candles, source = get_candles(pair, timeframe, 100) 
             if not candles or len(candles) < 20: continue
