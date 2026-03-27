@@ -97,8 +97,8 @@ with st.sidebar:
     st.subheader("💰 Gestione Rischio")
     stake = st.number_input("Stake ($)", value=10.0, step=1.0)
     multiplier = st.selectbox("Moltiplicatore", [10, 20, 30, 50, 100], index=2)
-    tp_val = st.slider("Take Profit ($)", 1.0, 50.0, 5.0)
-    sl_val = st.slider("Stop Loss ($)", 1.0, 10.0, 5.0)
+    tp_val = st.slider("Take Profit ($)", 1.0, 50.0, 5.0, STEP = 1.0)
+    sl_val = st.slider("Stop Loss ($)", 1.0, 10.0, 5.0, STEP = 1.0)
     
     st.divider()
     st.subheader("📈 Sensibilità Algoritmo")
