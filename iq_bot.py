@@ -528,6 +528,15 @@ if st.session_state.connected:
                 if not candles or len(candles) < 20: continue
                 
                 df = pd.DataFrame(candles)
+                
+                # --- FIX SICUREZZA: Evita il KeyError ---
+                df.columns = df.columns.str.lower() # Forza tutte le colonne in minuscolo (es. 'Close' diventa 'close')
+                if 'close' not in df.columns: 
+                    continue # Se l'API ha mandato dati corrotti senza prezzi, salta questo giro senza crashare
+                # ----------------------------------------
+                
+                df['RSI'] = ta.rsi(df['close'], length=7)
+                bb = ta.bbands(df['close'], length=b_period, std=b_std)
 
                 if st.session_state.weekend_mode and not stress_test:
                     r_buy, r_sell, b_period, b_std = 20, 80, 20, 2.20
