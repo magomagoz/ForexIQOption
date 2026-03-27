@@ -79,18 +79,30 @@ def get_candles(pair, timeframe_sec, count):
         return None, f"Errore: {str(e)}"
 
 def get_deriv_balance(token):
+    if not token: return None
     try:
         ws = websocket.create_connection(f"wss://ws.binaryws.com/websockets/v3?app_id={DERIV_APP_ID}", timeout=10)
+        
+        # 1. Autentichiamo la sessione
         ws.send(json.dumps({"authorize": token}))
-        res = json.loads(ws.recv())
-        if "error" in res:
+        auth_res = json.loads(ws.recv())
+        
+        if "error" in auth_res:
             ws.close()
             return None
-        ws.send(json.dumps({"balance": 1}))
-        res_bal = json.loads(ws.recv())
+            
+        # 2. Chiediamo il saldo esplicitamente per l'account autorizzato
+        ws.send(json.dumps({"balance": 1, "subscribe": 0})) 
+        bal_res = json.loads(ws.recv())
+        
         ws.close()
-        return res_bal['balance']['balance']
-    except:
+        
+        # 3. Estraiamo il valore (gestendo eventuali ritardi nella risposta)
+        if "balance" in bal_res:
+            return float(bal_res['balance']['balance'])
+        return None
+    except Exception as e:
+        print(f"Errore recupero saldo: {e}")
         return None
 
 def check_consecutive_candles(df, count=3):
