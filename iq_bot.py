@@ -389,15 +389,15 @@ with st.sidebar:
         status_testo = get_market_status()
         st.info(status_testo if status_testo else "Recupero informazioni mercato...")
 
-        st.markdown("---")
-        st.subheader("💸 PROTEZIONE OVERLAP LONDRA-NY")
+        #st.markdown("---")
+        #st.subheader("💸 PROTEZIONE OVERLAP LONDRA-NY")
         # Il toggle rimane per fermare tutto manualmente se non ti fidi della volatilità
-        pausa_overlap = st.toggle("🛑 **Stop Totale Overlap**", value=False, help="Spegne lo scanner dalle 14:30 alle 17:30")
+        #pausa_overlap = st.toggle("🛑 **Stop Totale Overlap**", value=False, help="Spegne lo scanner dalle 14:30 alle 17:30")
         
         # Logica di autorizzazione trading
-        trading_autorizzato = True
-        if is_overlap_time and pausa_manuale_overlap:
-            trading_autorizzato = False
+        #trading_autorizzato = True
+        #if is_overlap_time and pausa_manuale_overlap:
+            #trading_autorizzato = False
 
         st.divider()
         st.subheader("🛠️ PARAMETRI TRADING")
