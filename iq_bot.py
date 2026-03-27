@@ -23,10 +23,30 @@ except ImportError:
 TELEGRAM_TOKEN = st.secrets.get("TELEGRAM_TOKEN", "IL_TUO_TOKEN_QUI")
 TELEGRAM_CHAT_ID = st.secrets.get("TELEGRAM_CHAT_ID", "IL_TUO_CHAT_ID_QUI")
 DERIV_TOKEN = st.secrets.get("DERIV_TOKEN", "") 
-DERIV_APP_ID = "1089" 
 
-ALL_PAIRS = ["EURUSD", "AUDUSD", "USDCAD", "USDCHF", "USDJPY"]
-icons = {"EURUSD": "🇪🇺🇺🇸", "AUDUSD": "🇦🇺🇺🇸", "USDCAD": "🇺🇸🇨🇦", "USDCHF": "🇺🇸🇨🇭", "USDJPY": "🇺🇸🇯🇵"}
+# --- 1. CONFIGURAZIONI AGGIORNATE PER SINTETICI ---
+DERIV_APP_ID = "1089" # Usiamo l'ID universale visto che il custom è bloccato in EU
+
+# Partiamo da R_50 come richiesto
+ALL_PAIRS = ["V50", "V75", "V100", "V75 (1s)", "V100 (1s)"]
+icons = {
+    "V50": "🔥", 
+    "V75": "🚀", 
+    "V100": "⚡", 
+    "V75 (1s)": "🕒", 
+    "V100 (1s)": "📈"
+}
+
+def to_deriv_symbol(pair):
+    """Mappa i nomi della dashboard ai codici API ufficiali di Deriv"""
+    mapping = {
+        "V50": "R_50",
+        "V75": "R_75",
+        "V100": "R_100",
+        "V75 (1s)": "1HZ75V",
+        "V100 (1s)": "1HZ100V"
+    }
+    return mapping.get(pair, pair)
 
 fuso_roma = pytz.timezone('Europe/Rome')
 now_roma = datetime.now(fuso_roma)
@@ -139,47 +159,45 @@ def get_market_status():
     return "💤 **MERCATI CHIUSI**"
 
 def execute_deriv_trade(token, symbol, stake, direction, duration_sec):
-    """Piazza un ordine reale su Deriv.com (Call/Put)"""
-    if not token: return False, "Token non inserito"
+    """Piazza un ordine Call/Put sui Sintetici"""
+    if not token: return False, "Token mancante"
     try:
         ws = websocket.create_connection(f"wss://ws.binaryws.com/websockets/v3?app_id={DERIV_APP_ID}", timeout=10)
         
-        # 1. Autenticazione
+        # Autenticazione
         ws.send(json.dumps({"authorize": token}))
         res = json.loads(ws.recv())
         if "error" in res:
             ws.close()
-            return False, f"Errore Auth: {res['error']['message']}"
+            return False, f"Auth Error: {res['error']['message']}"
         
-        # 2. Preparazione Ordine
         deriv_symbol = to_deriv_symbol(symbol)
-        contract_type = "CALL" if direction == "BUY" else "PUT"
         
+        # Parametri per Call/Put su Sintetici
         req = {
             "buy": 1,
-            "price": stake,
+            "price": float(stake),
             "parameters": {
-                "amount": stake,
+                "amount": float(stake),
                 "basis": "stake",
-                "contract_type": contract_type,
-                "currency": "USD", # Cambia in EUR se il tuo conto demo è in Euro
-                "duration": duration_sec,
+                "contract_type": "CALL" if direction == "BUY" else "PUT",
+                "currency": "USD", # I conti sintetici sono solitamente in USD
+                "duration": int(duration_sec),
                 "duration_unit": "s",
                 "symbol": deriv_symbol
             }
         }
         
-        # 3. Invio Ordine
         ws.send(json.dumps(req))
         buy_res = json.loads(ws.recv())
         ws.close()
         
         if "error" in buy_res:
-            return False, f"Errore Ordine: {buy_res['error']['message']}"
+            return False, buy_res["error"]["message"]
         
         return True, buy_res["buy"]["transaction_id"]
     except Exception as e:
-        return False, f"Errore di sistema: {str(e)}"
+        return False, str(e)
 
 def draw_market_map_inverted(trading_autorizzato):
     fig = go.Figure()
