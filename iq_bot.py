@@ -73,7 +73,7 @@ def check_signal(df, rsi_b, rsi_s, bb_std):
 # --- 4. INTERFACCIA E SIDEBAR ---
 with st.sidebar:
     st.header("🔑 Connessione API")
-    token_input = st.text_input("Deriv API Token", value = "DERIV_TOKEN", type="password", help="Token con permessi 'Trading Control'")
+    token_input = st.text_input("Deriv API Token", value = "FfHFQiTimFwP7mi", type="password", help="Token con permessi 'Trading Control'")
     
     # Tasto per Test Connessione
     if st.button("🧪 Test Connessione", use_container_width=True):
