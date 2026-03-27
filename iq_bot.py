@@ -23,30 +23,10 @@ except ImportError:
 TELEGRAM_TOKEN = st.secrets.get("TELEGRAM_TOKEN", "IL_TUO_TOKEN_QUI")
 TELEGRAM_CHAT_ID = st.secrets.get("TELEGRAM_CHAT_ID", "IL_TUO_CHAT_ID_QUI")
 DERIV_TOKEN = st.secrets.get("DERIV_TOKEN", "") 
+DERIV_APP_ID = "71759" 
 
-# --- 1. CONFIGURAZIONI AGGIORNATE PER SINTETICI ---
-DERIV_APP_ID = "1089" # Usiamo l'ID universale visto che il custom è bloccato in EU
-
-# Partiamo da R_50 come richiesto
-ALL_PAIRS = ["V50", "V75", "V100", "V75 (1s)", "V100 (1s)"]
-icons = {
-    "V50": "🔥", 
-    "V75": "🚀", 
-    "V100": "⚡", 
-    "V75 (1s)": "🕒", 
-    "V100 (1s)": "📈"
-}
-
-def to_deriv_symbol(pair):
-    """Mappa i nomi della dashboard ai codici API ufficiali di Deriv"""
-    mapping = {
-        "V50": "R_50",
-        "V75": "R_75",
-        "V100": "R_100",
-        "V75 (1s)": "1HZ75V",
-        "V100 (1s)": "1HZ100V"
-    }
-    return mapping.get(pair, pair)
+ALL_PAIRS = ["EURUSD", "AUDUSD", "USDCAD", "USDCHF", "USDJPY"]
+icons = {"EURUSD": "🇪🇺🇺🇸", "AUDUSD": "🇦🇺🇺🇸", "USDCAD": "🇺🇸🇨🇦", "USDCHF": "🇺🇸🇨🇭", "USDJPY": "🇺🇸🇯🇵"}
 
 fuso_roma = pytz.timezone('Europe/Rome')
 now_roma = datetime.now(fuso_roma)
@@ -99,26 +79,18 @@ def get_candles(pair, timeframe_sec, count):
         return None, f"Errore: {str(e)}"
 
 def get_deriv_balance(token):
-    if not token: return None
     try:
-        # Usiamo 1089 forzatamente
-        ws = websocket.create_connection(f"wss://ws.binaryws.com/websockets/v3?app_id=1089", timeout=10)
-        
-        # 1. Autorizzazione
+        ws = websocket.create_connection(f"wss://ws.binaryws.com/websockets/v3?app_id={DERIV_APP_ID}", timeout=10)
         ws.send(json.dumps({"authorize": token}))
-        auth_res = json.loads(ws.recv())
-        
-        # 2. Se l'autorizzazione passa, chiediamo il saldo IMMEDIATAMENTE
-        if "authorize" in auth_res:
-            ws.send(json.dumps({"balance": 1}))
-            bal_res = json.loads(ws.recv())
+        res = json.loads(ws.recv())
+        if "error" in res:
             ws.close()
-            if "balance" in bal_res:
-                return float(bal_res['balance']['balance'])
-        
+            return None
+        ws.send(json.dumps({"balance": 1}))
+        res_bal = json.loads(ws.recv())
         ws.close()
-        return None
-    except Exception as e:
+        return res_bal['balance']['balance']
+    except:
         return None
 
 def check_consecutive_candles(df, count=3):
@@ -157,47 +129,6 @@ def get_market_status():
     
     # Se non è nessuna delle precedenti (es. tra le 23:00 e le 00:00)
     return "💤 **MERCATI CHIUSI**"
-
-def execute_deriv_trade(token, symbol, stake, direction, duration_sec):
-    """Piazza un ordine Call/Put sui Sintetici"""
-    if not token: return False, "Token mancante"
-    try:
-        ws = websocket.create_connection(f"wss://ws.binaryws.com/websockets/v3?app_id={DERIV_APP_ID}", timeout=10)
-        
-        # Autenticazione
-        ws.send(json.dumps({"authorize": token}))
-        res = json.loads(ws.recv())
-        if "error" in res:
-            ws.close()
-            return False, f"Auth Error: {res['error']['message']}"
-        
-        deriv_symbol = to_deriv_symbol(symbol)
-        
-        # Parametri per Call/Put su Sintetici
-        req = {
-            "buy": 1,
-            "price": float(stake),
-            "parameters": {
-                "amount": float(stake),
-                "basis": "stake",
-                "contract_type": "CALL" if direction == "BUY" else "PUT",
-                "currency": "USD", # I conti sintetici sono solitamente in USD
-                "duration": int(duration_sec),
-                "duration_unit": "s",
-                "symbol": deriv_symbol
-            }
-        }
-        
-        ws.send(json.dumps(req))
-        buy_res = json.loads(ws.recv())
-        ws.close()
-        
-        if "error" in buy_res:
-            return False, buy_res["error"]["message"]
-        
-        return True, buy_res["buy"]["transaction_id"]
-    except Exception as e:
-        return False, str(e)
 
 def draw_market_map_inverted(trading_autorizzato):
     fig = go.Figure()
@@ -385,18 +316,6 @@ with st.sidebar:
                 else: st.error("Nessuna sorgente dati disponibile.")
     else:
         st.success(f"Connesso a: **DERIV.COM 🔵**")
-        
-        # --- LETTURA BALANCE REALE ---
-        if DERIV_TOKEN:
-            with st.spinner("Lettura conto..."):
-                real_balance = get_deriv_balance(DERIV_TOKEN)
-            if real_balance is not None:
-                st.metric("💰 Balance Deriv (Live/Demo)", f"{real_balance:,.2f} $")
-            else:
-                st.warning("⚠️ Token API non valido o permessi 'Read' mancanti.")
-        else:
-            st.info("ℹ️ Nessun Token API inserito. Modalità Paper Trading.")
-      
         if st.button("🔴 DISCONNETTI", use_container_width=True):
             st.session_state.connected = False
             st.session_state.scanner_on = False
@@ -477,7 +396,7 @@ with st.sidebar:
         
         # Logica di autorizzazione trading
         trading_autorizzato = True
-        if is_overlap_time and pausa_overlap:
+        if is_overlap_time and pausa_manuale_overlap:
             trading_autorizzato = False
 
         st.divider()
@@ -566,13 +485,13 @@ if st.session_state.connected:
             in_pausa_overlap = True
 
     # --- Nella Main Dashboard, subito dopo il banner ---
-    #if st.session_state.scanner_on:
-        #daily_news = get_daily_economic_alerts()
-        #if daily_news:
-            #with st.expander("📅 NOTIZIE ECONOMICHE DEL GIORNO", expanded=True):
-                #for alert in daily_news:
-                    #st.write(alert)
-                #st.caption("Consiglio: Spegnere lo scanner 15 minuti prima e riaccendere 15 minuti dopo questi orari.")
+    if st.session_state.scanner_on:
+        daily_news = get_daily_economic_alerts()
+        if daily_news:
+            with st.expander("📅 NOTIZIE ECONOMICHE DEL GIORNO", expanded=True):
+                for alert in daily_news:
+                    st.write(alert)
+                st.caption("Consiglio: Spegnere lo scanner 15 minuti prima e riaccendere 15 minuti dopo questi orari.")
 
     st.divider()
     st.subheader("🌍 Live Market Flow 24h")
@@ -660,22 +579,9 @@ if st.session_state.connected:
 
                     # SE PASSA I FILTRI, PROCEDI
                     direction = "BUY" if is_buy else "SELL"
+                    t_id = genera_trade_id()
                     tipo_mercato = "OTC" if st.session_state.weekend_mode else "LIVE"
                     
-                    # --- ESECUZIONE REALE SU DERIV ---
-                    if DERIV_TOKEN:
-                        success, trade_msg = execute_deriv_trade(DERIV_TOKEN, pair, st.session_state.stake, direction, timeframe)
-                        
-                        if success:
-                            t_id = str(trade_msg) # Usiamo l'ID reale della transazione Deriv
-                            st.toast(f"✅ Ordine Eseguito! ID: {t_id}")
-                        else:
-                            st.error(f"❌ Errore Deriv su {pair}: {trade_msg}")
-                            invia_telegram(f"⚠️ *ERRORE ESECUZIONE DERIV*\nAsset: {pair}\nMotivo: `{trade_msg}`")
-                            continue # Blocca l'esecuzione e salta questo trade
-                    else:
-                        t_id = genera_trade_id() # Modalità finta (Paper Trading) se non c'è token
-
                     # AGGIORNA IL MOMENTO DELL'ULTIMO TRADE
                     st.session_state.last_trade_time = current_time
                 
@@ -777,17 +683,17 @@ if st.session_state.connected:
     except Exception as e:
         st.error(f"Errore generazione grafico: {e}")
 
-    #st.write("---")
-    #st.subheader(f"📊 Analisi Performance ({timeframe}s)")
-    #n_buy, n_sell = df_final['buy_sig'].notnull().sum(), df_final['sell_sig'].notnull().sum()
-    #totale_segnali = n_buy + n_sell
+    st.write("---")
+    st.subheader(f"📊 Analisi Performance ({timeframe}s)")
+    n_buy, n_sell = df_final['buy_sig'].notnull().sum(), df_final['sell_sig'].notnull().sum()
+    totale_segnali = n_buy + n_sell
 
     # --- FIX 2: ETICHETTA BOTTONE DINAMICA ---
-    #if st.button(f"🔍 **VERIFICA ESITO ({timeframe}s)**", use_container_width=True, type="primary"):
-        #wins_buy, wins_sell = 0, 0
-        #for i in range(len(df_final) - 1):
-            #if pd.notnull(df_final['buy_sig'].iloc[i]) and df_final['close'].iloc[i+1] > df_final['close'].iloc[i]: wins_buy += 1
-            #if pd.notnull(df_final['sell_sig'].iloc[i]) and df_final['close'].iloc[i+1] < df_final['close'].iloc[i]: wins_sell += 1
+    if st.button(f"🔍 **VERIFICA ESITO ({timeframe}s)**", use_container_width=True, type="primary"):
+        wins_buy, wins_sell = 0, 0
+        for i in range(len(df_final) - 1):
+            if pd.notnull(df_final['buy_sig'].iloc[i]) and df_final['close'].iloc[i+1] > df_final['close'].iloc[i]: wins_buy += 1
+            if pd.notnull(df_final['sell_sig'].iloc[i]) and df_final['close'].iloc[i+1] < df_final['close'].iloc[i]: wins_sell += 1
 
         tot_vinti = wins_buy + wins_sell
         tot_persi = totale_segnali - tot_vinti
