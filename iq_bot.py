@@ -477,7 +477,7 @@ with st.sidebar:
         
         # Logica di autorizzazione trading
         trading_autorizzato = True
-        if is_overlap_time and pausa_manuale_overlap:
+        if is_overlap_time and pausa_overlap:
             trading_autorizzato = False
 
         st.divider()
