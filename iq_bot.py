@@ -433,7 +433,7 @@ if st.session_state.connected:
     for i, pair in enumerate(ALL_PAIRS):
         with cols[i % 5]: st.code(f"{icons.get(pair, '🔍')} {pair}")
 
-    for pair:
+    for pair ALL_PAIRS:
         try:
             candles, source = get_candles(pair, timeframe, 100) 
             if not candles or len(candles) < 20: continue
@@ -519,7 +519,7 @@ if st.session_state.connected:
     # --- 5. ANALISI TECNICA GRAFICA ---
     st.divider()
     st.subheader("📈 Analisi Tecnica Principale")
-    pair_display = st.selectbox("Seleziona asset per grafico", CURRENT_PAIRS)
+    pair_display = st.selectbox("Seleziona asset per grafico", ALL_PAIRS)
     
     df_final = pd.DataFrame()
     
