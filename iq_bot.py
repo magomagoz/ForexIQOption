@@ -683,17 +683,17 @@ if st.session_state.connected:
     except Exception as e:
         st.error(f"Errore generazione grafico: {e}")
 
-    st.write("---")
-    st.subheader(f"📊 Analisi Performance ({timeframe}s)")
-    n_buy, n_sell = df_final['buy_sig'].notnull().sum(), df_final['sell_sig'].notnull().sum()
-    totale_segnali = n_buy + n_sell
+    #st.write("---")
+    #st.subheader(f"📊 Analisi Performance ({timeframe}s)")
+    #n_buy, n_sell = df_final['buy_sig'].notnull().sum(), df_final['sell_sig'].notnull().sum()
+    #totale_segnali = n_buy + n_sell
 
     # --- FIX 2: ETICHETTA BOTTONE DINAMICA ---
-    if st.button(f"🔍 **VERIFICA ESITO ({timeframe}s)**", use_container_width=True, type="primary"):
-        wins_buy, wins_sell = 0, 0
-        for i in range(len(df_final) - 1):
-            if pd.notnull(df_final['buy_sig'].iloc[i]) and df_final['close'].iloc[i+1] > df_final['close'].iloc[i]: wins_buy += 1
-            if pd.notnull(df_final['sell_sig'].iloc[i]) and df_final['close'].iloc[i+1] < df_final['close'].iloc[i]: wins_sell += 1
+    #if st.button(f"🔍 **VERIFICA ESITO ({timeframe}s)**", use_container_width=True, type="primary"):
+        #wins_buy, wins_sell = 0, 0
+        #for i in range(len(df_final) - 1):
+            #if pd.notnull(df_final['buy_sig'].iloc[i]) and df_final['close'].iloc[i+1] > df_final['close'].iloc[i]: wins_buy += 1
+            #if pd.notnull(df_final['sell_sig'].iloc[i]) and df_final['close'].iloc[i+1] < df_final['close'].iloc[i]: wins_sell += 1
 
         tot_vinti = wins_buy + wins_sell
         tot_persi = totale_segnali - tot_vinti
