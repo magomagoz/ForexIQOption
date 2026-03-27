@@ -36,12 +36,8 @@ now_cet = now_roma.time()
 ora_attuale = now_roma.hour
 
 def to_deriv_symbol(pair):
-    # Se passiamo già un simbolo R_, non lo modifichiamo
     if pair.startswith("R_"): return pair 
-    
-    # Controlla l'interruttore manuale della dashboard (se non c'è, usa il calendario)
     is_otc = st.session_state.get('weekend_mode', is_weekend_reale)
-    
     if is_otc:
         if pair == "EURUSD": return "R_50"
         if pair == "USDJPY": return "R_75"
@@ -49,7 +45,6 @@ def to_deriv_symbol(pair):
         return "R_50" 
     return f"frx{pair}"
 
-# Funzione resa 100% sicura: restituisce SEMPRE due valori (dati, sorgente)
 def get_candles(pair, timeframe_sec, count):
     try:
         ws = websocket.create_connection(f"wss://ws.binaryws.com/websockets/v3?app_id={DERIV_APP_ID}", timeout=5)
@@ -106,28 +101,20 @@ def genera_trade_id():
 def get_market_status():
     fuso_roma = pytz.timezone('Europe/Rome')
     now_time = datetime.now(fuso_roma).time()
-    
-    # Definiamo i range
     tokyo = (time(0,0), time(9,0))
     londra = (time(9,0), time(18,0))
     new_york = (time(14,0), time(23,0))
     
     if is_weekend_reale: 
         return "⚠️ **WEEKEND OTC**"
-    
-    # Controllo Overlap (Alta Volatilità)
     if (londra[0] <= now_time <= londra[1]) and (new_york[0] <= now_time <= new_york[1]):
         return "🔥 **OVERLAP EU+USA**\n\nAlta Volatilità"
-    
-    # Sessioni Singole
     if londra[0] <= now_time <= londra[1]: 
         return "🇪🇺 **SESSIONE LONDRA**"
     if new_york[0] <= now_time <= new_york[1]: 
         return "🇺🇸 **SESSIONE NEW YORK**"
     if tokyo[0] <= now_time <= tokyo[1]: 
         return "🐌 **SESSIONE ASIATICA (TOKYO+SIDNEY)**"
-    
-    # Se non è nessuna delle precedenti (es. tra le 23:00 e le 00:00)
     return "💤 **MERCATI CHIUSI**"
 
 def draw_market_map_inverted(trading_autorizzato):
@@ -150,22 +137,15 @@ def draw_market_map_inverted(trading_autorizzato):
     return fig
 
 def get_daily_economic_alerts():
-    """Restituisce avvisi basati sulle finestre di rilascio dati macro standard"""
     now = datetime.now(fuso_roma)
-    ora_min = now.strftime("%H:%M")
-    
     alerts = []
-    
     news_events = [
         {"ora": "14:30", "evento": "🇺🇸 Non-Farm Payrolls / CPI (USA)", "impatto": "ALTO"},
         {"ora": "16:00", "evento": "🇺🇸 Indici ISM / Fiducia Consumatori", "impatto": "MEDIO"},
         {"ora": "20:00", "evento": "🇺🇸 FOMC / Decisioni Tassi FED", "impatto": "CRITICO"}
     ]
-    
     for event in news_events:
-        # Se l'evento è previsto per oggi
         alerts.append(f"⚠️ **Ore {event['ora']}**: {event['evento']} - Impatto: {event['impatto']}")
-    
     return alerts
 
 def send_morning_report():
@@ -174,7 +154,6 @@ def send_morning_report():
         return "Buongiorno! ☕️ Nessun trade registrato ieri."
 
     df = pd.DataFrame(history)
-    # Convertiamo la colonna tempo per filtrare i dati di "ieri"
     df['time'] = pd.to_datetime(df['time'])
     ieri = (datetime.now(fuso_roma) - timedelta(days=1)).date()
     df_ieri = df[df['time'].dt.date == ieri]
@@ -195,8 +174,6 @@ def send_morning_report():
             f"💰 P&L Totale: {pnl:.2f}€\n\n"
             f"📅 **News Critiche di Oggi:**\n"
         )
-        
-        # Aggiungiamo le news della funzione precedente
         news = get_daily_economic_alerts()
         for n in news:
             msg += f"{n}\n"
@@ -211,8 +188,6 @@ def invia_telegram(messaggio):
 
 def send_telegram_signal(signal_type, pair, price, rsi, trade_id, stake, tipo_mercato): 
     timestamp = datetime.now(fuso_roma).strftime("%H:%M:%S")
-    
-    # Aggiungi questo piccolo dizionario di mappatura per il messaggio
     mapping_nomi = {"EURUSD": "V50", "USDJPY": "V75", "AUDUSD": "V100"}
     nome_reale = mapping_nomi.get(pair, pair)
 
@@ -260,19 +235,6 @@ def play_trade_sound(sound_type="buy"):
     except: pass
     placeholder.empty()
 
-def get_mini_chart_data(symbol, tf_id):
-    """Scarica dati assicurandosi di accedere correttamente al modulo mt5"""
-    if not MT5_AVAILABLE: return None
-    import MetaTrader5 as m5
-    if not m5.initialize(): return None
-    try:
-        rates = m5.copy_rates_from_pos(symbol, tf_id, 0, 50)
-        if rates is None or len(rates) == 0: return None
-        df = pd.DataFrame(rates)
-        df['time'] = pd.to_datetime(df['time'], unit='s')
-        return df
-    except: return None
-
 # --- 2. SETUP STREAMLIT E SESSIONE ---
 st.set_page_config(page_title="Sentinel AI", page_icon="🚀", layout="wide")
 st.markdown("""<style>[data-testid="stAppViewContainer"] * { transition: none !important; } div[data-testid="stVerticalBlock"] { opacity: 1 !important; }</style>""", unsafe_allow_html=True)
@@ -292,7 +254,6 @@ if 'last_trade_time' not in st.session_state: st.session_state.last_trade_time =
 if 'cooldown_minutes' not in st.session_state: st.session_state.cooldown_minutes = 5
 if 'report_sent' not in st.session_state: st.session_state.report_sent = False
 
-# Trigger per il Morning Report (viene eseguito la prima volta che apri la dashboard tra le 08:30 e le 09:30)
 ora_attuale_report = now_roma.time()
 if time(8, 30) <= ora_attuale_report <= time(9, 30) and not st.session_state.report_sent:
     send_morning_report()
@@ -305,7 +266,6 @@ with st.sidebar:
     if not st.session_state.connected:
         if st.button("🔌 CONNETTI SISTEMA", use_container_width=True, type="primary"):
             with st.spinner("Ricerca connessione disponibile..."):
-                # FIX: Testiamo R_50 che è sempre aperto 24/7/365
                 test_data, source = get_candles("R_50", 60, 1) 
                 if test_data:
                     st.session_state.connected = True
@@ -332,7 +292,6 @@ with st.sidebar:
         st.divider()
         st.subheader("🌍 TIPO DI MERCATO")
 
-        # Verifica se siamo in orario Overlap (14:30 - 17:30)
         ora_attuale_time = now_roma.time()
         is_overlap_time = time(14, 30) <= ora_attuale_time <= time(17, 30) and not st.session_state.weekend_mode
 
@@ -343,7 +302,6 @@ with st.sidebar:
             custom_rsi_buy, custom_rsi_sell = 20, 80
         
         elif is_overlap_time:
-            # --- PARAMETRI AUTOMATICI OVERLAP ---
             st.warning("⚠️ **LIVE OVERLAP ATTIVA (Lun-Ven)**\n\nParametri di sicurezza inseriti automaticamente.")
             st.info("📏 BB: 20 / 2.50\n📉 RSI: 15 / 85")
             use_bb, use_rsi = True, True
@@ -363,17 +321,13 @@ with st.sidebar:
             status = "Open 🟢" if not is_weekend_reale and start <= now_cet <= end else "Closed 🔴"
             st.write(f"{city} {status}")
             
-        #st.info(get_market_status())
-        # Nella sidebar
         status_testo = get_market_status()
         st.info(status_testo if status_testo else "Recupero informazioni mercato...")
 
         st.markdown("---")
         st.subheader("💸 PROTEZIONE OVERLAP LONDRA-NY")
-        # Il toggle rimane per fermare tutto manualmente se non ti fidi della volatilità
-        pausa_overlap = st.toggle("🛑 **Stop Totale Overlap**", value=False, help="Spegne lo scanner dalle 14:30 alle 17:30")
+        pausa_manuale_overlap = st.toggle("🛑 **Stop Totale Overlap**", value=False, help="Spegne lo scanner dalle 14:30 alle 17:30")
         
-        # Logica di autorizzazione trading
         trading_autorizzato = True
         if is_overlap_time and pausa_manuale_overlap:
             trading_autorizzato = False
@@ -382,6 +336,12 @@ with st.sidebar:
         st.subheader("🛠️ PARAMETRI TRADING")
         st.session_state.stake = st.number_input("💶 INVESTIMENTO (€)", value=100.0)
         timeframe = st.selectbox("⏱️ TIMEFRAME (s)", [60, 120], index=0)
+
+        # --- NUOVA SEZIONE EMA ---
+        st.divider()
+        st.subheader("📈 FILTRO TREND (EMA)")
+        use_ema = st.toggle("Attiva Filtro Trend (EMA)", value=True, help="Evita di operare contro il trend principale")
+        ema_period = st.number_input("Periodo EMA", value=50, step=10)
 
         st.divider()
         st.subheader("🖥️ TEST DASHBOARD")
@@ -393,8 +353,8 @@ with st.sidebar:
 
         if st.button("🗑️ **PULISCI SEGNALI**", use_container_width=True):
             st.session_state.signal_history = []
-            st.session_state.session_pnl = 0.0  # <--- AGGIUNGI QUESTA RIGA
-            st.session_state.local_balance = 10000.0 # <--- RESETTA IL BILANCIO VIRTUALE
+            st.session_state.session_pnl = 0.0  
+            st.session_state.local_balance = 10000.0 
             save_journal([]) 
             st.success("Memoria pulita e PNL resettato!")
             time_module.sleep(1)
@@ -436,29 +396,23 @@ with st.sidebar:
 if st.session_state.connected:
     ora_attuale_time = now_roma.time()
     
-    # 🌙 Definizione Orario Notturno (00:00 - 07:00)
     is_night_session = time(0, 0) <= ora_attuale_time < time(7, 0)
 
-    # Applica i set di valute in base a orario e giorno
     if st.session_state.weekend_mode:
-        CURRENT_PAIRS = ["EURUSD", "USDJPY", "AUDUSD"] # Mappati su V50, V75, V100
+        CURRENT_PAIRS = ["EURUSD", "USDJPY", "AUDUSD"]
     else:
         if is_night_session:
-            # NOTTE: Solo le valute attive in Asia/Oceania per evitare derive senza volumi
             CURRENT_PAIRS = ["AUDUSD", "USDJPY"]
         else:
-            # GIORNO LIVE: Le 4 valute super liquide standard
             CURRENT_PAIRS = ["EURUSD", "AUDUSD", "USDCHF", "USDCAD"]
         
     window_1 = (time(0, 0), time(12, 0))
     window_2 = (time(12, 0), time(23, 0))
-    # Il trading è sempre autorizzato di notte ora che abbiamo filtrato le valute sicure
     is_trading_time = (window_1[0] <= now_cet <= window_1[1]) or (window_2[0] <= now_cet <= window_2[1]) or is_night_session
     trading_autorizzato = is_trading_time or stress_test
 
-    # VERIFICA DELLA PAUSA OVERLAP
     in_pausa_overlap = False
-    if not st.session_state.weekend_mode and st.session_state.get('pause_overlap', True):
+    if not st.session_state.weekend_mode and pausa_manuale_overlap:
         if time(14, 30) <= ora_attuale_time <= time(17, 30):
             trading_autorizzato = False
             in_pausa_overlap = True
@@ -481,7 +435,6 @@ if st.session_state.connected:
             elif not trading_autorizzato:
                 st.warning("🛡️ PROTEZIONE ATTIVA: Mercato fuori orario. Scanner in pausa.")
             elif is_night_session:
-                # NUOVO AVVISO NOTTURNO
                 st.info("🌙 **MODALITÀ NOTTURNA (00:00 - 07:00)**\n\nScanner limitato a JPY e AUD per sicurezza.")
             else:
                 st.success("SISTEMA LIVE IN SCANSIONE ATTIVA 🔥", icon="📡")
@@ -504,55 +457,57 @@ if st.session_state.connected:
                 elif stress_test:
                     r_buy, r_sell, b_period, b_std = 45, 55, 20, 2.20
                 else:
-                    # Mercato LIVE
                     r_buy, r_sell, b_period, b_std = custom_rsi_buy, custom_rsi_sell, bb_period, bb_std
 
                 df['RSI'] = ta.rsi(df['close'], length=7)
                 bb = ta.bbands(df['close'], length=b_period, std=b_std)
+                
+                # --- CALCOLO EMA ---
+                if use_ema:
+                    df['EMA'] = ta.ema(df['close'], length=ema_period)
 
                 if bb is None or bb.empty: continue
 
-                # Prezzo attuale per registrare l'ingresso a mercato
                 price = df['close'].iloc[-1] 
                 
-                # Indicatori basati sull'ultima candela CHIUSA (evita il repainting!)
                 curr_rsi = df['RSI'].iloc[-2]
                 curr_bb_low = float(bb.filter(like='BBL').iloc[-2].iloc[0])
                 curr_bb_up = float(bb.filter(like='BBU').iloc[-2].iloc[0])
                 chiusura_prec = df['close'].iloc[-2]
+
+                # --- CONDIZIONI EMA ---
+                if use_ema and 'EMA' in df.columns:
+                    curr_ema = df['EMA'].iloc[-2]
+                    cond_ema_buy = chiusura_prec > curr_ema 
+                    cond_ema_sell = chiusura_prec < curr_ema
+                else:
+                    cond_ema_buy, cond_ema_sell = True, True
                 
                 cond_rsi_buy = (curr_rsi < r_buy) if use_rsi else True
                 cond_bb_buy = (chiusura_prec <= curr_bb_low) if use_bb else True
                 cond_rsi_sell = (curr_rsi > r_sell) if use_rsi else True
                 cond_bb_sell = (chiusura_prec >= curr_bb_up) if use_bb else True
                 
-                # Escludi l'ultima candela in corso dal conteggio delle consecutive
                 is_consecutive = check_consecutive_candles(df.iloc[:-1], count=3)
 
-                is_buy = (cond_rsi_buy and cond_bb_buy) and (use_rsi or use_bb) and not is_consecutive
-                is_sell = (cond_rsi_sell and cond_bb_sell) and (use_rsi or use_bb) and not is_consecutive
+                # --- SEGNALI CONDIZIONATI ALL'EMA ---
+                is_buy = (cond_rsi_buy and cond_bb_buy and cond_ema_buy) and (use_rsi or use_bb) and not is_consecutive
+                is_sell = (cond_rsi_sell and cond_bb_sell and cond_ema_sell) and (use_rsi or use_bb) and not is_consecutive
 
-                # --- PROTEZIONI ANTI-RAFFICA ---
                 current_time = time_module.time()
                 trade_attivi_ora = len(st.session_state.active_trades)
                 minuti_passati = (current_time - st.session_state.last_trade_time) / 60
 
                 if (is_buy or is_sell) and pair not in st.session_state.active_trades:
-                    
-                    # FILTRO 1: Massimo 2 trade aperti insieme
                     if trade_attivi_ora >= 2:
                         continue 
-
-                    # FILTRO 2: Almeno 5 minuti tra un'apertura e l'altra
                     if minuti_passati < st.session_state.cooldown_minutes:
                         continue
 
-                    # SE PASSA I FILTRI, PROCEDI
                     direction = "BUY" if is_buy else "SELL"
                     t_id = genera_trade_id()
                     tipo_mercato = "OTC" if st.session_state.weekend_mode else "LIVE"
                     
-                    # AGGIORNA IL MOMENTO DELL'ULTIMO TRADE
                     st.session_state.last_trade_time = current_time
                 
                     st.session_state.active_trades[pair] = {
@@ -560,14 +515,15 @@ if st.session_state.connected:
                         'direction': direction, 'stake_num': float(st.session_state.stake)
                     }
                     
-                    # REGISTRAZIONE NEL JOURNAL
+                    # REGISTRAZIONE NEL JOURNAL - Aggiunta colonna params_ema
                     st.session_state.signal_history.append({
                         'id': t_id, 'time': datetime.now(fuso_roma).strftime("%Y-%m-%d %H:%M:%S"),
                         'pair': pair, 'dir': direction, 'price': float(price), 
                         'rsi_val': f"{curr_rsi:.1f}",
                         'stake': f"{st.session_state.stake:.0f}€",                         
                         'params_bb': f"{b_period}/{b_std}" if use_bb else "OFF", 
-                        'params_rsi': f"{r_buy}/{r_sell}", 
+                        'params_rsi': f"{r_buy}/{r_sell}",
+                        'params_ema': f"{ema_period}" if use_ema else "OFF", # Salvataggio EMA
                         'mercato': tipo_mercato, 'result': "⏳ In corso...",
                         'check_120s': "-", 'pnl_numeric': 0.0
                     })
@@ -595,45 +551,46 @@ if st.session_state.connected:
 
             df_raw['RSI'] = ta.rsi(df_raw['close'], length=7)
 
-            # Impostazione Base per il Grafico (Indipendente dallo scanner)
             if st.session_state.weekend_mode and not stress_test:
                 r_buy_graf, r_sell_graf, b_period_graf, b_std_graf = 20, 80, 20, 2.20
             elif stress_test:
                 r_buy_graf, r_sell_graf, b_period_graf, b_std_graf = 45, 55, 20, 2.20
             else:
-                # Usa i parametri dinamici della sidebar
                 r_buy_graf, r_sell_graf, b_period_graf, b_std_graf = custom_rsi_buy, custom_rsi_sell, bb_period, bb_std
 
             bb_ta = ta.bbands(df_raw['close'], length=b_period_graf, std=b_std_graf)
 
             if bb_ta is not None and not bb_ta.empty:
                 bb_ta.columns = ['BBL', 'BBM', 'BBU', 'BBB', 'BBP'] 
+                
+                # --- AGGIUNTA EMA AL GRAFICO ---
+                if use_ema:
+                    df_raw['EMA'] = ta.ema(df_raw['close'], length=ema_period)
+                
                 df_final = pd.concat([df_raw, bb_ta[['BBL', 'BBM', 'BBU']]], axis=1).tail(100)
 
-                # --- FIX SICUREZZA: Inizializza le colonne come vuote (NaN) ---
                 df_final['buy_sig'] = float('nan')
                 df_final['sell_sig'] = float('nan')
                 df_final['is_consecutive'] = False
 
-                # Calcolo candele consecutive
                 is_green = df_final['close'] > df_final['open']
                 is_red = df_final['close'] < df_final['open']
                 df_final['is_consecutive'] = (is_green.rolling(3).sum() == 3) | (is_red.rolling(3).sum() == 3)
 
-                # Calcolo segnali con lambda (più robusto)
+                # --- AGGIORNAMENTO LAMBDA CON EMA ---
                 df_final['buy_sig'] = df_final.apply(lambda x: (x['close'] * 0.9998) if (
                     ((x['RSI'] < r_buy_graf) if use_rsi else True) and 
                     ((x['close'] <= x['BBL']) if use_bb else True) and
+                    ((x['close'] > x['EMA']) if (use_ema and 'EMA' in x) else True) and
                     not x['is_consecutive']
                 ) else float('nan'), axis=1)
                 
                 df_final['sell_sig'] = df_final.apply(lambda x: (x['close'] * 1.0002) if (
                     ((x['RSI'] > r_sell_graf) if use_rsi else True) and 
                     ((x['close'] >= x['BBU']) if use_bb else True) and
+                    ((x['close'] < x['EMA']) if (use_ema and 'EMA' in x) else True) and
                     not x['is_consecutive']
                 ) else float('nan'), axis=1)
-
-                #st.write(df_final.columns.tolist())
                 
                 asse_x = df_final['time']
                 fig = make_subplots(rows=2, cols=1, shared_xaxes=True, row_heights=[0.5, 0.25], vertical_spacing=0.07, subplot_titles=("📊 Prezzo & Volatilità", "📉 Oscillatore RSI"))
@@ -641,6 +598,11 @@ if st.session_state.connected:
                 fig.add_trace(go.Scatter(x=asse_x, y=df_final['BBU'], line=dict(color='rgba(0,71,171,0.4)', width=1), name="BBU"), row=1, col=1)
                 fig.add_trace(go.Scatter(x=asse_x, y=df_final['BBM'], line=dict(color='rgba(170,170,170,0.3)', width=1), name="BBM"), row=1, col=1)
                 fig.add_trace(go.Scatter(x=asse_x, y=df_final['BBL'], line=dict(color='rgba(0,71,171,0.4)', width=1), fill='tonexty', fillcolor='rgba(100, 100, 255, 0.05)', name="BBL"), row=1, col=1)
+                
+                # --- DISEGNO EMA ---
+                if use_ema and 'EMA' in df_final.columns:
+                    fig.add_trace(go.Scatter(x=asse_x, y=df_final['EMA'], line=dict(color='#FFA500', width=2), name=f"EMA {ema_period}"), row=1, col=1)
+
                 fig.add_trace(go.Scatter(x=asse_x, y=df_final['RSI'], line=dict(color='#AB63FA'), name="RSI"), row=2, col=1)
                 fig.add_hline(y=r_buy_graf, line_color="green", row=2, col=1, line_dash="dash")
                 fig.add_hline(y=r_sell_graf, line_color="red", row=2, col=1, line_dash="dash")
@@ -659,7 +621,7 @@ if st.session_state.connected:
 
     for pair, trade in trades_pendenti:
         attesa_reale = max(timeframe, 120) 
-        scadenza = trade['entry_time'] + attesa_reale + 2 # 2 secondi di buffer
+        scadenza = trade['entry_time'] + attesa_reale + 2 
 
         if current_ts >= scadenza:
             try:
@@ -668,38 +630,29 @@ if st.session_state.connected:
                     entry_price = trade['entry_price']
                     dir_trade, t_id = trade['direction'], trade['id']
                     
-                    # Calcolo prezzi di uscita
                     exit_60 = res[-3]['close'] if timeframe == 60 else res[-2]['close']
                     exit_120 = res[-2]['close']
                     
-                    # Calcolo esiti
                     win_60 = (exit_60 > entry_price) if dir_trade == "BUY" else (exit_60 < entry_price)
                     win_120 = (exit_120 > entry_price) if dir_trade == "BUY" else (exit_120 < entry_price)
                     
-                    # Definiamo le variabili mancanti per il tuo messaggio Telegram
                     win = win_60 if timeframe == 60 else win_120 
                     res_status = "WIN" if win else "LOSS"
                     icona_esito = "✅" if win else "❌"
                     profit = (trade['stake_num'] * 0.90) if (res_status == "WIN") else -trade['stake_num']
 
-                    # AGGIORNAMENTO STORICO
                     for s in st.session_state.signal_history:
                         if s.get('id') == t_id and s.get('result') == "⏳ In corso...":
                             s['result'] = f"{'✅' if win_60 else '❌'} {res_status}"
                             s['check_120s'] = f"{'✅' if win_120 else '❌'} {'WIN' if win_120 else 'LOSS'}"
                             s['pnl_numeric'] = float(profit)
                             
-                            # Definiamo rsi_ingresso prendendolo dallo storico salvato
                             rsi_ingresso = s.get('rsi_val', 'N/D')
-                            
-                            # Aggiorniamo il PNL di sessione
                             st.session_state.session_pnl += profit
 
                             save_journal(st.session_state.signal_history)
 
-                            # Creiamo la stringa formattata per l'esito a 120s
                             esito_120s = f"{'✅' if win_120 else '❌'} {'WIN' if win_120 else 'LOSS'}"
-                            
                             mapping_nomi = {"EURUSD": "V50", "USDJPY": "V75", "AUDUSD": "V100"}
                             nome_reale = mapping_nomi.get(pair, pair)
                             tipo_mercato = "OTC" if st.session_state.weekend_mode else "LIVE"
@@ -712,15 +665,13 @@ if st.session_state.connected:
                                    f"📉 Esito 60s: {icona_esito} {res_status}\n"
                                    f"💵 P&L 60s: `{profit:.2f}€`\n"
                                    f"📉 Esito 120s: {esito_120s}\n"
-                                   f"📅 P&L Sessione 60s: `{st.session_state.session_pnl:.2f}€` ")
+                                   f"📅 P&L Sessione: `{st.session_state.session_pnl:.2f}€` ")
                             invia_telegram(msg)
 
                             if res_status == "WIN": play_trade_sound("win")
                             
-                            # Pulizia e Refresh
                             if pair in st.session_state.active_trades:
                                 del st.session_state.active_trades[pair]
-                            #st.rerun()
             except Exception as e:
                 continue
                     
@@ -731,22 +682,16 @@ if st.session_state.connected:
 
     if st.session_state.signal_history:
         df_journal = pd.DataFrame(st.session_state.signal_history)
-        # Assicura che TUTTE le colonne critiche esistano sempre nel DataFrame
-        colonne_critiche = ['result', 'check_120s', 'rsi_val', 'pnl_numeric']
+        colonne_critiche = ['result', 'check_120s', 'rsi_val', 'params_ema', 'pnl_numeric']
         for col in colonne_critiche:
             if col not in df_journal.columns:
-                # Imposta 0.0 per il PNL numerico, "-" per le stringhe
                 df_journal[col] = 0.0 if col == 'pnl_numeric' else "-"
     else:
-        # DataFrame vuoto con tutte le colonne necessarie
-        df_journal = pd.DataFrame(columns=['id', 'time', 'pair', 'dir', 'price', 'rsi_val', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'check_120s', 'pnl_numeric'])
+        df_journal = pd.DataFrame(columns=['id', 'time', 'pair', 'dir', 'price', 'rsi_val', 'stake', 'params_bb', 'params_rsi', 'params_ema', 'mercato', 'result', 'check_120s', 'pnl_numeric'])
 
     df_journal['pnl_numeric'] = pd.to_numeric(df_journal.get('pnl_numeric', 0.0), errors='coerce').fillna(0.0)
-
-    # Inizializza 'remaining' a 0 per evitare l'errore alla riga 710
     remaining = 0.0 
 
-    # --- MONITOR COOLDOWN ---
     if st.session_state.scanner_on:
         current_time = time_module.time()
         elapsed = (current_time - st.session_state.last_trade_time) / 60
@@ -779,29 +724,21 @@ if st.session_state.connected:
         except Exception: pass 
 
     total_trades = len(df_filtered)
-    
     best_pairs_str, best_pairs_str_120 = "-", "-"
     wins, losses, wins_120, losses_120 = 0, 0, 0, 0
     total_pnl_60, total_pnl_120 = 0.0, 0.0
     
     if total_trades > 0:
-        # Conta i WIN/LOSS basandosi sulle stringhe salvate
         wins = df_filtered['result'].astype(str).str.contains("WIN").sum()
         losses = df_filtered['result'].astype(str).str.contains("LOSS").sum()
         wins_120 = df_filtered['check_120s'].astype(str).str.contains("✅").sum()
         losses_120 = df_filtered['check_120s'].astype(str).str.contains("❌").sum()
-        
-        # PNL Reale 60s
         total_pnl_60 = df_filtered['pnl_numeric'].sum()
         
         stake_rif = float(st.session_state.stake)
-        # PNL Totale 120s (Payout 90%)
         total_pnl_120 = (wins_120 * (stake_rif * 0.90)) - (losses_120 * stake_rif)
-
-        # Calcolo Profitto Asset 60s
         profit_by_pair = df_filtered.groupby('pair')['pnl_numeric'].sum()
         
-        # CREIAMO IL PNL PER SINGOLO ASSET A 120s
         def calc_pnl_120(row):
             val = str(row['check_120s'])
             if "✅" in val: return stake_rif * 0.90
@@ -811,14 +748,12 @@ if st.session_state.connected:
         df_filtered['pnl_120_tmp'] = df_filtered.apply(calc_pnl_120, axis=1)
         profit_by_pair_120 = df_filtered.groupby('pair')['pnl_120_tmp'].sum()
         
-        # Estrapolazione Top Asset (Aggiunto controllo > 0 per evitare di premiare asset in perdita)
         best_pairs_str = ", ".join(profit_by_pair[profit_by_pair == profit_by_pair.max()].index.tolist()) if not profit_by_pair.empty and profit_by_pair.max() > 0 else "-"
         best_pairs_str_120 = ", ".join(profit_by_pair_120[profit_by_pair_120 == profit_by_pair_120.max()].index.tolist()) if not profit_by_pair_120.empty and profit_by_pair_120.max() > 0 else "-"
 
     win_rate_60 = (wins / (wins + losses) * 100) if (wins + losses) > 0 else 0.0
     win_rate_120 = (wins_120 / (wins_120 + losses_120) * 100) if (wins_120 + losses_120) > 0 else 0.0
     
-    # --- RIGA 1: Metriche 60s ---
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("🎯 W/L 60s", f"{wins}W - {losses}L")
     c2.metric("💰 P&L 60s", f"{total_pnl_60:.2f} €")
@@ -827,25 +762,23 @@ if st.session_state.connected:
 
     st.markdown("<hr style='border:1px dashed #555; margin: 10px 0; opacity: 0.5;'>", unsafe_allow_html=True)
 
-    # --- RIGA 2: Metriche 120s ---
-    d1, d2, d3, d4 = st.columns(4) # Importante chiamarle in modo diverso (es. d1, d2...)
+    d1, d2, d3, d4 = st.columns(4) 
     d1.metric("🎯 W/L 120s", f"{wins_120}W - {losses_120}L")
     d2.metric("💰 P&L 120s", f"{total_pnl_120:.2f} €")
     d3.metric("🏁 Win Rate 120s", f"{win_rate_120:.1f}%")
     d4.metric("🏆 Top Asset 120s", best_pairs_str_120)
 
-   
     if not df_filtered.empty:
-        rename_map = {'id': '🆔 ID', 'time': '⏰ DATA', 'pair': '💱 VALUTE', 'dir': '🚀 TIPO', 'price': '💰 PRICE', 'rsi_val': '📈 RSI IN', 'stake': '💶 STAKE', 'params_bb': '↔️ BB', 'params_rsi': '📉 RSI', 'mercato': '🌍 MARKET', 'result': '🎯 60s', 'check_120s': '⏱️ 120s', 'pnl_numeric': '📈 P&L'}
+        # Aggiunta l'EMA nel rename map
+        rename_map = {'id': '🆔 ID', 'time': '⏰ DATA', 'pair': '💱 VALUTE', 'dir': '🚀 TIPO', 'price': '💰 PRICE', 'rsi_val': '📈 RSI IN', 'stake': '💶 STAKE', 'params_bb': '↔️ BB', 'params_rsi': '📉 RSI', 'params_ema': '🌊 EMA', 'mercato': '🌍 MARKET', 'result': '🎯 60s', 'check_120s': '⏱️ 120s', 'pnl_numeric': '📈 P&L'}
 
-        # Lista colonne aggiornata con rsi_val
-        cols_to_use = ['id', 'time', 'pair', 'dir', 'price', 'rsi_val', 'stake', 'params_bb', 'params_rsi', 'mercato', 'result', 'check_120s', 'pnl_numeric']
+        cols_to_use = ['id', 'time', 'pair', 'dir', 'price', 'rsi_val', 'stake', 'params_bb', 'params_rsi', 'params_ema', 'mercato', 'result', 'check_120s', 'pnl_numeric']
         
         df_display = df_filtered.iloc[::-1].copy()[[c for c in cols_to_use if c in df_filtered.columns]].rename(columns=rename_map)
         
         df_display['📈 P&L'] = df_display['📈 P&L'].apply(lambda x: f"{x:.1f}€" if x % 1 != 0 else f"{x:.0f}€")
         try:
-            colonne_esito = [c for c in ['🔍 60s', '⏱️ 75s', '⏱️ 120s'] if c in df_display.columns]
+            colonne_esito = [c for c in ['🎯 60s', '⏱️ 120s'] if c in df_display.columns]
             st.dataframe(df_display.style.applymap(style_result, subset=colonne_esito).applymap(style_pnl, subset=['📈 P&L']), use_container_width=True, hide_index=True)
         except Exception:
             st.dataframe(df_display, use_container_width=True, hide_index=True)
@@ -858,13 +791,11 @@ if st.session_state.connected:
         st.subheader("🖥️ Monitor Asset Globali (OTC)")
         m_cols = st.columns(3)
         
-        # FIX: Usiamo le coppie fittizie, così get_candles capisce in automatico che deve scaricare R_50, R_75 e R_100
         indices = [("Volatility 50", "EURUSD"), ("Volatility 75", "USDJPY"), ("Volatility 100", "AUDUSD")]
         
         for i, (name, pair) in enumerate(indices):
             with m_cols[i]:
                 st.caption(f"📈 {name}")
-                # Usiamo i WebSocket di Deriv invece di MT5
                 candles, _ = get_candles(pair, 60, 40)
                 if candles:
                     df = pd.DataFrame(candles)
