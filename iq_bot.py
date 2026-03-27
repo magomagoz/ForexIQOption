@@ -152,7 +152,7 @@ if st.session_state.scanner_on:
     
     # 5.1 CICLO DI SCANSIONE ASSET
     for i, pair in enumerate(ALL_PAIRS):
-        res_candles = deriv_call({"ticks_history": pair, "count": 100, "end": "latest", "style": "candles", "granularity": 60})
+        res_candles = deriv_call({"ticks_history": pair, "count": 160, "end": "latest", "style": "candles", "granularity": 60})
         
         if "candles" in res_candles:
             df = pd.DataFrame(res_candles["candles"])
