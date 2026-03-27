@@ -487,13 +487,13 @@ if st.session_state.connected:
             in_pausa_overlap = True
 
     # --- Nella Main Dashboard, subito dopo il banner ---
-    if st.session_state.scanner_on:
-        daily_news = get_daily_economic_alerts()
-        if daily_news:
-            with st.expander("📅 NOTIZIE ECONOMICHE DEL GIORNO", expanded=True):
-                for alert in daily_news:
-                    st.write(alert)
-                st.caption("Consiglio: Spegnere lo scanner 15 minuti prima e riaccendere 15 minuti dopo questi orari.")
+    #if st.session_state.scanner_on:
+        #daily_news = get_daily_economic_alerts()
+        #if daily_news:
+            #with st.expander("📅 NOTIZIE ECONOMICHE DEL GIORNO", expanded=True):
+                #for alert in daily_news:
+                    #st.write(alert)
+                #st.caption("Consiglio: Spegnere lo scanner 15 minuti prima e riaccendere 15 minuti dopo questi orari.")
 
     st.divider()
     st.subheader("🌍 Live Market Flow 24h")
