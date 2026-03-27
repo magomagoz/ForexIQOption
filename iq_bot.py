@@ -184,27 +184,27 @@ if st.session_state.scanner_on:
     # Session State per i trade attivi
 if 'active_contracts' not in st.session_state: st.session_state.active_contracts = {}
 
-    # --- SIDEBAR: CONTROLLO REALTIME ---
-    with st.sidebar:
-        st.header("🎮 Trading Control Panel")
-        st.session_state.auto_trade = st.toggle("🤖 Esecuzione Automatica", value=False)
-        
-        st.divider()
-        st.subheader("💰 Gestione Rischio")
-        stake = st.number_input("Stake ($)", value=10.0, step=1.0)
-        mult = st.selectbox("Moltiplicatore", [10, 20, 30, 50, 100], index=2)
-        
-        st.divider()
-        st.subheader("🎯 Target Real-Time")
-        # Questi valori possono essere modificati mentre il bot gira
-        tp_val = st.slider("Take Profit ($)", 1.0, 50.0, 5.0)
-        sl_val = st.slider("Stop Loss ($)", 1.0, 10.0, 5.0)
-        
-        st.divider()
-        st.subheader("📈 Sensibilità")
-        rsi_b = st.number_input("RSI Buy Level", value=20)
-        rsi_s = st.number_input("RSI Sell Level", value=80)
-        bb_dev = st.number_input("BB Std Dev", value=2.2)
+# --- SIDEBAR: CONTROLLO REALTIME ---
+with st.sidebar:
+    st.header("🎮 Trading Control Panel")
+    st.session_state.auto_trade = st.toggle("🤖 Esecuzione Automatica", value=False)
+    
+    st.divider()
+    st.subheader("💰 Gestione Rischio")
+    stake = st.number_input("Stake ($)", value=10.0, step=1.0)
+    mult = st.selectbox("Moltiplicatore", [10, 20, 30, 50, 100], index=2)
+    
+    st.divider()
+    st.subheader("🎯 Target Real-Time")
+    # Questi valori possono essere modificati mentre il bot gira
+    tp_val = st.slider("Take Profit ($)", 1.0, 50.0, 5.0)
+    sl_val = st.slider("Stop Loss ($)", 1.0, 10.0, 5.0)
+    
+    st.divider()
+    st.subheader("📈 Sensibilità")
+    rsi_b = st.number_input("RSI Buy Level", value=20)
+    rsi_s = st.number_input("RSI Sell Level", value=80)
+    bb_dev = st.number_input("BB Std Dev", value=2.2)
 
 # --- 5. DASHBOARD PRINCIPALE ---
 col_stats = st.columns(len(ALL_PAIRS[:5]))
