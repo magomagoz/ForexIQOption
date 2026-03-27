@@ -391,12 +391,12 @@ with st.sidebar:
 
         st.markdown("---")
         st.subheader("💸 PROTEZIONE OVERLAP LONDRA-NY")
-        # Il toggle rimane per fermare tutto manualmente se non ti fidi della volatilità
-        pausa_overlap = st.toggle("🛑 **Stop Totale Overlap**", value=False, help="Spegne lo scanner dalle 14:30 alle 17:30")
+        # FIX: Aggiunta la key="pause_overlap" e uniformato il nome della variabile
+        pausa_overlap = st.toggle("🛑 **Stop Totale Overlap**", value=False, key="pause_overlap", help="Spegne lo scanner dalle 14:30 alle 17:30")
         
         # Logica di autorizzazione trading
         trading_autorizzato = True
-        if is_overlap_time and pausa_manuale_overlap:
+        if is_overlap_time and pausa_overlap:
             trading_autorizzato = False
 
         st.divider()
@@ -414,10 +414,12 @@ with st.sidebar:
 
         if st.button("🗑️ **PULISCI SEGNALI**", use_container_width=True):
             st.session_state.signal_history = []
-            st.session_state.session_pnl = 0.0  # <--- AGGIUNGI QUESTA RIGA
-            st.session_state.local_balance = 10000.0 # <--- RESETTA IL BILANCIO VIRTUALE
+            st.session_state.session_pnl = 0.0  
+            st.session_state.local_balance = 10000.0 
+            st.session_state.active_trades = {}  # <--- FIX: Svuota i trade fantasma
+            st.session_state.last_trade_time = 0 # <--- FIX: Azzera il timer del cooldown
             save_journal([]) 
-            st.success("Memoria pulita e PNL resettato!")
+            st.success("Memoria pulita, PNL e Cooldown resettati!")
             time_module.sleep(1)
             st.rerun()
 
@@ -517,23 +519,25 @@ if st.session_state.connected:
                 st.success("SISTEMA LIVE IN SCANSIONE ATTIVA 🔥", icon="📡")
         
         st.divider()
-        st.subheader("🕵️ Coppie di valute osservate")
-        cols = st.columns(5)
-        for i, pair in enumerate(CURRENT_PAIRS):
-            with cols[i % 5]: st.code(f"{icons.get(pair, '🔍')} {pair}")
+        
+        # FIX: Esegue la scansione SOLO se non siamo in pausa overlap o a mercati chiusi
+        if trading_autorizzato:
+            st.subheader("🕵️ Coppie di valute osservate")
+            cols = st.columns(5)
+            for i, pair in enumerate(CURRENT_PAIRS):
+                with cols[i % 5]: st.code(f"{icons.get(pair, '🔍')} {pair}")
 
-        for pair in CURRENT_PAIRS:
-            try:
-                candles, source = get_candles(pair, timeframe, 100) 
-                if not candles or len(candles) < 20: continue
-                
-                df = pd.DataFrame(candles)
-                
-                # --- FIX SICUREZZA: Evita il KeyError ---
-                df.columns = df.columns.str.lower() # Forza tutte le colonne in minuscolo (es. 'Close' diventa 'close')
-                if 'close' not in df.columns: 
-                    continue # Se l'API ha mandato dati corrotti senza prezzi, salta questo giro senza crashare
-                # ----------------------------------------
+            for pair in CURRENT_PAIRS:
+                try:
+                    candles, source = get_candles(pair, timeframe, 100) 
+                    if not candles or len(candles) < 20: continue
+                    
+                    df = pd.DataFrame(candles)
+                    
+                    # --- FIX SICUREZZA: Evita il KeyError ---
+                    df.columns = df.columns.str.lower()
+                    if 'close' not in df.columns: 
+                        continue 
                 
                 df['RSI'] = ta.rsi(df['close'], length=7)
                 bb = ta.bbands(df['close'], length=b_period, std=b_std)
