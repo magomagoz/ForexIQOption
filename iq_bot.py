@@ -130,6 +130,49 @@ def get_market_status():
     # Se non è nessuna delle precedenti (es. tra le 23:00 e le 00:00)
     return "💤 **MERCATI CHIUSI**"
 
+def execute_deriv_trade(token, symbol, stake, direction, duration_sec):
+    """Piazza un ordine reale su Deriv.com (Call/Put)"""
+    if not token: return False, "Token non inserito"
+    try:
+        ws = websocket.create_connection(f"wss://ws.binaryws.com/websockets/v3?app_id={DERIV_APP_ID}", timeout=10)
+        
+        # 1. Autenticazione
+        ws.send(json.dumps({"authorize": token}))
+        res = json.loads(ws.recv())
+        if "error" in res:
+            ws.close()
+            return False, f"Errore Auth: {res['error']['message']}"
+        
+        # 2. Preparazione Ordine
+        deriv_symbol = to_deriv_symbol(symbol)
+        contract_type = "CALL" if direction == "BUY" else "PUT"
+        
+        req = {
+            "buy": 1,
+            "price": stake,
+            "parameters": {
+                "amount": stake,
+                "basis": "stake",
+                "contract_type": contract_type,
+                "currency": "USD", # Cambia in EUR se il tuo conto demo è in Euro
+                "duration": duration_sec,
+                "duration_unit": "s",
+                "symbol": deriv_symbol
+            }
+        }
+        
+        # 3. Invio Ordine
+        ws.send(json.dumps(req))
+        buy_res = json.loads(ws.recv())
+        ws.close()
+        
+        if "error" in buy_res:
+            return False, f"Errore Ordine: {buy_res['error']['message']}"
+        
+        return True, buy_res["buy"]["transaction_id"]
+    except Exception as e:
+        return False, f"Errore di sistema: {str(e)}"
+
 def draw_market_map_inverted(trading_autorizzato):
     fig = go.Figure()
     tz_roma = pytz.timezone('Europe/Rome')
@@ -316,6 +359,18 @@ with st.sidebar:
                 else: st.error("Nessuna sorgente dati disponibile.")
     else:
         st.success(f"Connesso a: **DERIV.COM 🔵**")
+        
+        # --- LETTURA BALANCE REALE ---
+        if DERIV_TOKEN:
+            with st.spinner("Lettura conto..."):
+                real_balance = get_deriv_balance(DERIV_TOKEN)
+            if real_balance is not None:
+                st.metric("💰 Balance Deriv (Live/Demo)", f"{real_balance:,.2f} $")
+            else:
+                st.warning("⚠️ Token API non valido o permessi 'Read' mancanti.")
+        else:
+            st.info("ℹ️ Nessun Token API inserito. Modalità Paper Trading.")
+      
         if st.button("🔴 DISCONNETTI", use_container_width=True):
             st.session_state.connected = False
             st.session_state.scanner_on = False
@@ -579,9 +634,22 @@ if st.session_state.connected:
 
                     # SE PASSA I FILTRI, PROCEDI
                     direction = "BUY" if is_buy else "SELL"
-                    t_id = genera_trade_id()
                     tipo_mercato = "OTC" if st.session_state.weekend_mode else "LIVE"
                     
+                    # --- ESECUZIONE REALE SU DERIV ---
+                    if DERIV_TOKEN:
+                        success, trade_msg = execute_deriv_trade(DERIV_TOKEN, pair, st.session_state.stake, direction, timeframe)
+                        
+                        if success:
+                            t_id = str(trade_msg) # Usiamo l'ID reale della transazione Deriv
+                            st.toast(f"✅ Ordine Eseguito! ID: {t_id}")
+                        else:
+                            st.error(f"❌ Errore Deriv su {pair}: {trade_msg}")
+                            invia_telegram(f"⚠️ *ERRORE ESECUZIONE DERIV*\nAsset: {pair}\nMotivo: `{trade_msg}`")
+                            continue # Blocca l'esecuzione e salta questo trade
+                    else:
+                        t_id = genera_trade_id() # Modalità finta (Paper Trading) se non c'è token
+
                     # AGGIORNA IL MOMENTO DELL'ULTIMO TRADE
                     st.session_state.last_trade_time = current_time
                 
