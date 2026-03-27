@@ -43,7 +43,30 @@ def deriv_call(request, token=None):
     except Exception as e:
         return {"error": str(e)}
 
-# --- 3. LOGICA DI SEGNALE (TRIPLA CONVERGENZA) ---
+# --- 2. FUNZIONI API DERIV (AGGIORNATE E PIÙ ROBUSTE) ---
+def deriv_call(request, token=None):
+    """Gestisce tutte le comunicazioni con Deriv aprendo una connessione sicura."""
+    try:
+        ws = websocket.create_connection(f"wss://ws.binaryws.com/websockets/v3?app_id={DERIV_APP_ID}", timeout=10)
+        
+        if token:
+            # Puliamo il token da eventuali spazi vuoti prima e dopo
+            clean_token = token.strip()
+            ws.send(json.dumps({"authorize": clean_token}))
+            auth_res = json.loads(ws.recv())
+            
+            if "error" in auth_res:
+                ws.close()
+                return {"error": auth_res["error"]["message"]}
+        
+        ws.send(json.dumps(request))
+        response = json.loads(ws.recv())
+        ws.close()
+        return response
+    except Exception as e:
+        # Catturiamo l'errore esatto per capire cosa va storto
+        return {"error": f"Problema di rete o WebSocket: {str(e)}"}
+
 def check_signal(df, rsi_b, rsi_s, bb_std):
     """Analizza le candele e restituisce BUY, SELL o WAIT."""
     if len(df) < 50: return "WAIT"
@@ -70,21 +93,28 @@ def check_signal(df, rsi_b, rsi_s, bb_std):
         
     return "WAIT"
 
+# --- SOSTITUISCI IL BLOCCO DEL TEST NELLA SIDEBAR CON QUESTO: ---
+    # Tasto per Test Connessione (nella sidebar)
+
 # --- 4. INTERFACCIA E SIDEBAR ---
 with st.sidebar:
     st.header("🔑 Connessione API")
     token_input = st.text_input("Deriv API Token", value = "FfHFQiTimFwP7mi", type="password", help="Token con permessi 'Trading Control'")
     
-    # Tasto per Test Connessione
     if st.button("🧪 Test Connessione", use_container_width=True):
         if not token_input:
             st.warning("Inserisci il token per testare.")
         else:
-            res = deriv_call({"balance": 1}, token_input)
-            if "error" in res:
-                st.error(f"Errore: {res['error']}")
-            else:
-                st.success(f"✅ Connesso! Bilancio: {res['balance']['balance']} USD")
+            with st.spinner("Connessione al server Deriv in corso..."):
+                res = deriv_call({"balance": 1}, token_input)
+                if "error" in res:
+                    st.error(f"Errore: {res['error']}")
+                elif "balance" in res:
+                    bilancio = res['balance'].get('balance', 'N/D')
+                    valuta = res['balance'].get('currency', 'USD')
+                    st.success(f"✅ Connesso! Bilancio: {bilancio} {valuta}")
+                else:
+                    st.warning(f"Risposta imprevista: {res}")
 
     st.divider()
     st.header("🎮 Trading Control Panel")
@@ -116,6 +146,7 @@ if not token_input and st.session_state.scanner_on:
 
 if st.session_state.scanner_on:
     st.subheader("📡 Monitoraggio Live")
+    
     cols = st.columns(len(ALL_PAIRS))
     
     # 5.1 CICLO DI SCANSIONE ASSET
