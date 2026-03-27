@@ -142,29 +142,34 @@ st.title("🛡️ Sentinel AI - Tripla Convergenza")
 st.caption("Analisi Algoritmica H24 per Indici Sintetici (Deriv)")
 
 if not token_input and st.session_state.scanner_on:
-    st.warning("⚠️ Scanner avviato, ma Token API mancante. Le operazioni di trading non funzioneranno.")
+    st.warning("⚠️ Scanner avviato, ma Token API mancante. Le operazioni non funzioneranno.")
 
 if st.session_state.scanner_on:
     st.subheader("📡 Monitoraggio Live")
     
-    cols = st.columns(len(ALL_PAIRS))
+    # Creiamo 3 colonne. Il ciclo ci distribuirà i 6 asset su 2 righe in automatico.
+    cols = st.columns(3)
     
     # 5.1 CICLO DI SCANSIONE ASSET
     for i, pair in enumerate(ALL_PAIRS):
-        # Nessun token richiesto per scaricare candele pubbliche
         res_candles = deriv_call({"ticks_history": pair, "count": 100, "end": "latest", "style": "candles", "granularity": 60})
         
         if "candles" in res_candles:
             df = pd.DataFrame(res_candles["candles"])
             signal = check_signal(df, rsi_b, rsi_s, bb_dev)
             
-            with cols[i]:
+            # Usiamo i % 3 per assegnare l'asset alla colonna giusta (0, 1, 2)
+            with cols[i % 3]:
                 st.metric(pair, f"{df['close'].iloc[-1]}", delta=signal if signal != "WAIT" else None)
+                
+                # Aggiungiamo uno spazio vuoto sotto ogni riga per separarle visivamente
+                if (i + 1) % 3 == 0:
+                    st.write("") 
             
-            # 5.2 ESECUZIONE TRADE (Se automatico, se c'è segnale, e se non abbiamo già posizioni aperte per questo asset)
+            # 5.2 ESECUZIONE TRADE 
             if signal != "WAIT" and auto_trade and token_input:
                 if pair not in st.session_state.active_contracts:
-                    st.info(f"Apertura {signal} su {pair}...")
+                    st.toast(f"Apertura {signal} su {pair}...")
                     
                     trade_req = {
                         "buy": 1, 
@@ -185,9 +190,10 @@ if st.session_state.scanner_on:
                     if "buy" in trade_res:
                         contract_id = trade_res["buy"]["contract_id"]
                         st.session_state.active_contracts[pair] = contract_id
-                        st.success(f"Trade Aperto! ID: {contract_id}")
+                        st.success(f"Trade Aperto su {pair}! ID: {contract_id}")
                     elif "error" in trade_res:
-                        st.error(f"Errore apertura: {trade_res['error']}")
+                        st.error(f"Errore apertura {pair}: {trade_res['error']}")
+
 
     # 5.3 GESTIONE POSIZIONI APERTE
     if st.session_state.active_contracts:
