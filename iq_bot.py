@@ -136,18 +136,6 @@ def draw_market_map_inverted(trading_autorizzato):
     fig.update_layout(xaxis=dict(range=[24, 0], showgrid=False, visible=False, fixedrange=True), yaxis=dict(range=[0, 4.5], showgrid=False, visible=False, fixedrange=True), template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", margin=dict(l=0, r=0, t=0, b=0), height=350)
     return fig
 
-def get_daily_economic_alerts():
-    now = datetime.now(fuso_roma)
-    alerts = []
-    news_events = [
-        {"ora": "14:30", "evento": "🇺🇸 Non-Farm Payrolls / CPI (USA)", "impatto": "ALTO"},
-        {"ora": "16:00", "evento": "🇺🇸 Indici ISM / Fiducia Consumatori", "impatto": "MEDIO"},
-        {"ora": "20:00", "evento": "🇺🇸 FOMC / Decisioni Tassi FED", "impatto": "CRITICO"}
-    ]
-    for event in news_events:
-        alerts.append(f"⚠️ **Ore {event['ora']}**: {event['evento']} - Impatto: {event['impatto']}")
-    return alerts
-
 def send_morning_report():
     history = load_journal()
     if not history:
@@ -296,7 +284,7 @@ with st.sidebar:
         is_overlap_time = time(14, 30) <= ora_attuale_time <= time(17, 30) and not st.session_state.weekend_mode
 
         if st.session_state.weekend_mode:
-            st.success("🚨 **OTC (Sab-Dom)**")
+            st.success("🚨 **OTC (Sab-Dom)**\n\nBB (20, 2.20) - RSI (20/80)")
             use_bb, use_rsi = True, True
             bb_period, bb_std = 20, 2.20
             custom_rsi_buy, custom_rsi_sell = 20, 80
@@ -309,7 +297,7 @@ with st.sidebar:
             custom_rsi_buy, custom_rsi_sell = 15, 85
         
         else:
-            st.success("🟢 **LIVE (Lun-Ven)**")
+            st.success("🟢 **LIVE (Lun-Ven)**\n\nBB (20, custom) - RSI (20/80)")
             use_bb, use_rsi = True, True
             bb_period = 20
             custom_rsi_buy, custom_rsi_sell = 20, 80
