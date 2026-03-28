@@ -284,9 +284,9 @@ with st.sidebar:
         is_overlap_time = time(14, 30) <= ora_attuale_time <= time(17, 30) and not st.session_state.weekend_mode
 
         if st.session_state.weekend_mode:
-            st.success("🚨 **OTC (Sab-Dom)**\n\n📏 BB (20, 2.30) - 📉 RSI (25/75)")
+            st.success("🚨 **OTC (Sab-Dom)**\n\n📏 BB (20, 2.00) - 📉 RSI (25/75)")
             use_bb, use_rsi = True, True
-            bb_period, bb_std = 20, 2.30
+            bb_period, bb_std = 20, 2.00
             custom_rsi_buy, custom_rsi_sell = 25, 75
         
         elif is_overlap_time:
