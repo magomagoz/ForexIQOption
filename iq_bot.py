@@ -286,7 +286,7 @@ with st.sidebar:
         if st.session_state.weekend_mode:
             st.success("🚨 **OTC (Sab-Dom)**\n\nBB (20, 2.0) - RSI (25/75)")
             use_bb, use_rsi = True, True
-            bb_period, bb_std = 20, 2.0
+            bb_period, bb_std = 20, 2.30
             custom_rsi_buy, custom_rsi_sell = 25, 75
         
         elif is_overlap_time:
@@ -301,7 +301,7 @@ with st.sidebar:
             use_bb, use_rsi = True, True
             bb_period = 20
             custom_rsi_buy, custom_rsi_sell = 20, 80
-            bb_std = st.selectbox("📏 Deviazione BB", [2.20, 2.30, 2.35, 2.40, 2.50], index=1)
+            bb_std = st.selectbox("📏 Deviazione BB", [2.20, 2.30, 2.35, 2.40, 2.50], index=0)
 
         st.divider()
         st.subheader("🏛️ SESSIONI DI MERCATO")
@@ -329,7 +329,7 @@ with st.sidebar:
         st.divider()
         st.subheader("📈 FILTRO TREND (EMA)")
         use_ema = st.toggle("Attiva Filtro Trend (EMA)", value=True, help="Evita di operare contro il trend principale")
-        ema_period = st.number_input("Periodo EMA", value=50, step=10)
+        ema_period = st.selectbox("⏱️ Periodo EMA", [50, 100], index=0)
 
         st.divider()
         st.subheader("🖥️ TEST DASHBOARD")
