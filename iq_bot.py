@@ -406,7 +406,7 @@ if st.session_state.connected:
             in_pausa_overlap = True
 
     st.divider()
-    st.subheader("🌍 Live Market Flow 24h")
+    st.subheader("🌍 Market Flow 24h")
     
     if st.session_state.weekend_mode or is_weekend_reale:
         try: st.image(Image.open("banner11.png"), use_column_width=True, caption="MODALITÀ WEEKEND ATTIVA 🔴 MERCATI CHIUSI")
