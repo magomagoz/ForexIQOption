@@ -284,10 +284,10 @@ with st.sidebar:
         is_overlap_time = time(14, 30) <= ora_attuale_time <= time(17, 30) and not st.session_state.weekend_mode
 
         if st.session_state.weekend_mode:
-            st.success("🚨 **OTC (Sab-Dom)**\n\nBB (20, 2.20) - RSI (20/80)")
+            st.success("🚨 **OTC (Sab-Dom)**\n\nBB (20, 2.0) - RSI (25/75)")
             use_bb, use_rsi = True, True
-            bb_period, bb_std = 20, 2.20
-            custom_rsi_buy, custom_rsi_sell = 20, 80
+            bb_period, bb_std = 20, 2.0
+            custom_rsi_buy, custom_rsi_sell = 25, 75
         
         elif is_overlap_time:
             st.warning("⚠️ **LIVE OVERLAP ATTIVA (Lun-Ven)**\n\nParametri di sicurezza inseriti automaticamente.")
@@ -441,7 +441,7 @@ if st.session_state.connected:
                 df = pd.DataFrame(candles)
 
                 if st.session_state.weekend_mode and not stress_test:
-                    r_buy, r_sell, b_period, b_std = 20, 80, 20, 2.20
+                    r_buy, r_sell, b_period, b_std = 25, 75, 20, 2.00
                 elif stress_test:
                     r_buy, r_sell, b_period, b_std = 45, 55, 20, 2.20
                 else:
@@ -479,8 +479,9 @@ if st.session_state.connected:
                 is_consecutive = check_consecutive_candles(df.iloc[:-1], count=3)
 
                 # --- SEGNALI CONDIZIONATI ALL'EMA ---
-                is_buy = (cond_rsi_buy and cond_bb_buy and cond_ema_buy) and (use_rsi or use_bb) and not is_consecutive
-                is_sell = (cond_rsi_sell and cond_bb_sell and cond_ema_sell) and (use_rsi or use_bb) and not is_consecutive
+                # Rimosso 'not is_consecutive' per far respirare il setup in favore di trend
+                is_buy = (cond_rsi_buy and cond_bb_buy and cond_ema_buy) and (use_rsi or use_bb)
+                is_sell = (cond_rsi_sell and cond_bb_sell and cond_ema_sell) and (use_rsi or use_bb)
 
                 current_time = time_module.time()
                 trade_attivi_ora = len(st.session_state.active_trades)
@@ -576,8 +577,7 @@ if st.session_state.connected:
                 df_final['sell_sig'] = df_final.apply(lambda x: (x['close'] * 1.0002) if (
                     ((x['RSI'] > r_sell_graf) if use_rsi else True) and 
                     ((x['close'] >= x['BBU']) if use_bb else True) and
-                    ((x['close'] < x['EMA']) if (use_ema and 'EMA' in x) else True) and
-                    not x['is_consecutive']
+                    ((x['close'] < x['EMA']) if (use_ema and 'EMA' in x) else True)
                 ) else float('nan'), axis=1)
                 
                 asse_x = df_final['time']
