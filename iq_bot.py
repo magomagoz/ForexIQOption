@@ -284,10 +284,10 @@ with st.sidebar:
         is_overlap_time = time(14, 30) <= ora_attuale_time <= time(17, 30) and not st.session_state.weekend_mode
 
         if st.session_state.weekend_mode:
-            st.success("🚨 **OTC (Sab-Dom)**\n\n📏 BB (20, 2.00) - 📉 RSI (25/75)")
+            st.success("🚨 **OTC (Sab-Dom)**\n\n📏 BB (20, 2.00) - 📉 RSI (30/70)")
             use_bb, use_rsi = True, True
             bb_period, bb_std = 20, 2.00
-            custom_rsi_buy, custom_rsi_sell = 25, 75
+            custom_rsi_buy, custom_rsi_sell = 30, 70
         
         elif is_overlap_time:
             st.warning("⚠️ **LIVE OVERLAP ATTIVA (Lun-Ven)**\n\nParametri di sicurezza inseriti automaticamente.")
@@ -441,7 +441,7 @@ if st.session_state.connected:
                 df = pd.DataFrame(candles)
 
                 if st.session_state.weekend_mode and not stress_test:
-                    r_buy, r_sell, b_period, b_std = 25, 75, 20, 2.00
+                    r_buy, r_sell, b_period, b_std = 30, 70, 20, 2.00
                 elif stress_test:
                     r_buy, r_sell, b_period, b_std = 45, 55, 20, 2.20
                 else:
