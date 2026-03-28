@@ -463,11 +463,16 @@ if st.session_state.connected:
                 curr_bb_up = float(bb.filter(like='BBU').iloc[-2].iloc[0])
                 chiusura_prec = df['close'].iloc[-2]
 
-                # --- CONDIZIONI EMA ---
-                if use_ema and 'EMA' in df.columns:
-                    curr_ema = df['EMA'].iloc[-2]
-                    cond_ema_buy = chiusura_prec > curr_ema 
-                    cond_ema_sell = chiusura_prec < curr_ema
+                # --- LOGICA EMA RINFORZATA ---
+                if use_ema:
+                    if 'EMA' in df.columns and not df['EMA'].isnull().iloc[-2]:
+                        curr_ema = df['EMA'].iloc[-2]
+                        cond_ema_buy = chiusura_prec > curr_ema 
+                        cond_ema_sell = chiusura_prec < curr_ema
+                    else:
+                        # CRUCIALE: Se l'EMA è richiesta ma non calcolabile, 
+                        # NON TRADARE (imposta a False, non a True)
+                        cond_ema_buy, cond_ema_sell = False, False 
                 else:
                     cond_ema_buy, cond_ema_sell = True, True
                 
