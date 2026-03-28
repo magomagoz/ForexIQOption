@@ -410,7 +410,7 @@ if st.session_state.connected:
     
     if st.session_state.weekend_mode or is_weekend_reale:
         try: st.image(Image.open("banner11.png"), use_column_width=True, caption="MODALITÀ WEEKEND ATTIVA 🔴 MERCATI CHIUSI")
-        except: st.warning("Immagine banner2.png non trovata.")
+        except: st.warning("Immagine banner11.png non trovata.")
     else:
         st.plotly_chart(draw_market_map_inverted(trading_autorizzato), use_container_width=True)
 
@@ -435,7 +435,8 @@ if st.session_state.connected:
 
         for pair in CURRENT_PAIRS:
             try:
-                candles, source = get_candles(pair, timeframe, 100) 
+                # FIX 1: Aumentato il numero di candele scaricate a 200 per permettere il calcolo dell'EMA a 100
+                candles, source = get_candles(pair, timeframe, 200) 
                 if not candles or len(candles) < 20: continue
                 
                 df = pd.DataFrame(candles)
@@ -460,18 +461,19 @@ if st.session_state.connected:
                 
                 curr_rsi = df['RSI'].iloc[-2]
                 curr_bb_low = float(bb.filter(like='BBL').iloc[-2].iloc[0])
+                curr_bb_mid = float(bb.filter(like='BBM').iloc[-2].iloc[0]) # FIX 2: Preleviamo la SMA 20 (Linea Centrale)
                 curr_bb_up = float(bb.filter(like='BBU').iloc[-2].iloc[0])
                 chiusura_prec = df['close'].iloc[-2]
 
-                # --- LOGICA EMA RINFORZATA ---
+                # --- LOGICA EMA RINFORZATA ED EVOLUTA ---
                 if use_ema:
-                    if 'EMA' in df.columns and not df['EMA'].isnull().iloc[-2]:
+                    # Controlla che il calcolo sia avvenuto correttamente
+                    if 'EMA' in df.columns and not pd.isna(df['EMA'].iloc[-2]):
                         curr_ema = df['EMA'].iloc[-2]
-                        cond_ema_buy = chiusura_prec > curr_ema 
-                        cond_ema_sell = chiusura_prec < curr_ema
+                        # FIX 3: VERO FILTRO TREND. Confronta la linea centrale delle Bollinger (Veloce) con l'EMA (Lenta)
+                        cond_ema_buy = curr_bb_mid > curr_ema 
+                        cond_ema_sell = curr_bb_mid < curr_ema
                     else:
-                        # CRUCIALE: Se l'EMA è richiesta ma non calcolabile, 
-                        # NON TRADARE (imposta a False, non a True)
                         cond_ema_buy, cond_ema_sell = False, False 
                 else:
                     cond_ema_buy, cond_ema_sell = True, True
@@ -484,7 +486,6 @@ if st.session_state.connected:
                 is_consecutive = check_consecutive_candles(df.iloc[:-1], count=3)
 
                 # --- SEGNALI CONDIZIONATI ALL'EMA ---
-                # Rimosso 'not is_consecutive' per far respirare il setup in favore di trend
                 is_buy = (cond_rsi_buy and cond_bb_buy and cond_ema_buy) and (use_rsi or use_bb)
                 is_sell = (cond_rsi_sell and cond_bb_sell and cond_ema_sell) and (use_rsi or use_bb)
 
@@ -509,7 +510,6 @@ if st.session_state.connected:
                         'direction': direction, 'stake_num': float(st.session_state.stake)
                     }
                     
-                    # REGISTRAZIONE NEL JOURNAL - Aggiunta colonna params_ema
                     st.session_state.signal_history.append({
                         'id': t_id, 'time': datetime.now(fuso_roma).strftime("%Y-%m-%d %H:%M:%S"),
                         'pair': pair, 'dir': direction, 'price': float(price), 
@@ -517,7 +517,7 @@ if st.session_state.connected:
                         'stake': f"{st.session_state.stake:.0f}€",                         
                         'params_bb': f"{b_period}/{b_std}" if use_bb else "OFF", 
                         'params_rsi': f"{r_buy}/{r_sell}",
-                        'params_ema': f"{ema_period}" if use_ema else "OFF", # Salvataggio EMA
+                        'params_ema': f"{ema_period}" if use_ema else "OFF", 
                         'mercato': tipo_mercato, 'result': "⏳ In corso...",
                         'check_120s': "-", 'pnl_numeric': 0.0
                     })
@@ -537,7 +537,8 @@ if st.session_state.connected:
     df_final = pd.DataFrame()
     
     try:
-        candles_ta, src_ta = get_candles(pair_display, timeframe, 160)
+        # Aumentato da 160 a 250 per sicurezza del grafico
+        candles_ta, src_ta = get_candles(pair_display, timeframe, 250)
             
         if candles_ta:
             st.caption(f"Sorgente dati attuale: **{src_ta}**")
@@ -546,7 +547,7 @@ if st.session_state.connected:
             df_raw['RSI'] = ta.rsi(df_raw['close'], length=7)
 
             if st.session_state.weekend_mode and not stress_test:
-                r_buy_graf, r_sell_graf, b_period_graf, b_std_graf = 20, 80, 20, 2.20
+                r_buy_graf, r_sell_graf, b_period_graf, b_std_graf = 30, 70, 20, 2.00
             elif stress_test:
                 r_buy_graf, r_sell_graf, b_period_graf, b_std_graf = 45, 55, 20, 2.20
             else:
@@ -571,18 +572,17 @@ if st.session_state.connected:
                 is_red = df_final['close'] < df_final['open']
                 df_final['is_consecutive'] = (is_green.rolling(3).sum() == 3) | (is_red.rolling(3).sum() == 3)
 
-                # --- AGGIORNAMENTO LAMBDA CON EMA ---
+                # --- AGGIORNAMENTO LAMBDA GRAFICO CON LOGICA EMA ---
                 df_final['buy_sig'] = df_final.apply(lambda x: (x['close'] * 0.9998) if (
                     ((x['RSI'] < r_buy_graf) if use_rsi else True) and 
                     ((x['close'] <= x['BBL']) if use_bb else True) and
-                    ((x['close'] > x['EMA']) if (use_ema and 'EMA' in x) else True) and
-                    not x['is_consecutive']
+                    ((x['BBM'] > x['EMA']) if (use_ema and 'EMA' in x and not pd.isna(x['EMA'])) else True)
                 ) else float('nan'), axis=1)
                 
                 df_final['sell_sig'] = df_final.apply(lambda x: (x['close'] * 1.0002) if (
                     ((x['RSI'] > r_sell_graf) if use_rsi else True) and 
                     ((x['close'] >= x['BBU']) if use_bb else True) and
-                    ((x['close'] < x['EMA']) if (use_ema and 'EMA' in x) else True)
+                    ((x['BBM'] < x['EMA']) if (use_ema and 'EMA' in x and not pd.isna(x['EMA'])) else True)
                 ) else float('nan'), axis=1)
                 
                 asse_x = df_final['time']
@@ -592,7 +592,6 @@ if st.session_state.connected:
                 fig.add_trace(go.Scatter(x=asse_x, y=df_final['BBM'], line=dict(color='rgba(170,170,170,0.3)', width=1), name="BBM"), row=1, col=1)
                 fig.add_trace(go.Scatter(x=asse_x, y=df_final['BBL'], line=dict(color='rgba(0,71,171,0.4)', width=1), fill='tonexty', fillcolor='rgba(60, 130, 180, 0.05)', name="BBL"), row=1, col=1)
                 
-                # --- DISEGNO EMA ---
                 if use_ema and 'EMA' in df_final.columns:
                     fig.add_trace(go.Scatter(x=asse_x, y=df_final['EMA'], line=dict(color='#FFA500', width=2), name=f"EMA {ema_period}"), row=1, col=1)
 
