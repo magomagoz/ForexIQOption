@@ -258,6 +258,10 @@ if 'signal_history' not in st.session_state: st.session_state.signal_history = l
 if 'local_balance' not in st.session_state: st.session_state.local_balance = 10000.0
 if 'scanner_on' not in st.session_state: st.session_state.scanner_on = False
 if 'weekend_mode' not in st.session_state: st.session_state.weekend_mode = is_weekend_reale 
+
+# AGGIUNGI QUESTA RIGA PER FORZARE L'AGGIORNAMENTO:
+st.session_state.weekend_mode = is_weekend_reale
+
 if 'session_pnl' not in st.session_state: st.session_state.session_pnl = 0.0
 if 'last_trade_time' not in st.session_state: st.session_state.last_trade_time = 0
 if 'cooldown_minutes' not in st.session_state: st.session_state.cooldown_minutes = 5
