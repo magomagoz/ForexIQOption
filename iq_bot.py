@@ -161,9 +161,12 @@ def send_morning_report():
             f"🏁 Win Rate: {wr:.1f}%\n"
             f"💰 P&L Totale: {pnl:.2f}€\n\n"
         )
-        news = get_daily_economic_alerts()
-        for n in news:
-            msg += f"{n}\n"
+        # Assumendo get_daily_economic_alerts sia definita, altrimenti commentare
+        try:
+            news = get_daily_economic_alerts()
+            for n in news:
+                msg += f"{n}\n"
+        except: pass
             
     msg += "\n🚀 *Sistema pronto. Avviare lo scanner dalla dashboard?*"
     invia_telegram(msg)
@@ -213,12 +216,23 @@ def style_result(val):
     elif "⏳" in val_str: return 'color: #bf8801; font-style: bold;'
     return ''
 
+# --- FUNZIONE AUDIO AGGIORNATA PER DIFFERENZIARE I SEGNALI ---
 def play_trade_sound(sound_type="buy"):
-    sounds = {"buy": "https://actions.google.com/sounds/v1/alarms/beep_short.ogg", "win": "https://actions.google.com/sounds/v1/cartoon/clink_vibrant.ogg"}
+    # Suono per il BUY (Es. un "Ding" acuto e veloce)
+    buy_sound = "https://actions.google.com/sounds/v1/alarms/beep_short.ogg"
+    # Suono per il SELL (Es. un "Bloop" o un clacson rapido e grave)
+    sell_sound = "https://actions.google.com/sounds/v1/water/wood_block_drop.ogg"
+    # Suono per la vittoria
+    win_sound = "https://actions.google.com/sounds/v1/cartoon/clink_vibrant.ogg"
+
+    sound_url = buy_sound
+    if sound_type == "sell": sound_url = sell_sound
+    elif sound_type == "win": sound_url = win_sound
+
     placeholder = st.empty()
     try:
-        with placeholder: st.audio(sounds.get(sound_type, sounds["buy"]), autoplay=True)
-        time_module.sleep(2.0)
+        with placeholder: st.audio(sound_url, autoplay=True)
+        time_module.sleep(1.5)
     except: pass
     placeholder.empty()
 
@@ -229,6 +243,7 @@ st.markdown("""<style>[data-testid="stAppViewContainer"] * { transition: none !i
 try: st.image(Image.open("banner.png"), use_column_width=True)
 except: st.image("https://via.placeholder.com/800x100/ff4b4b/white?text=SENTINEL+AI", use_column_width=True)
 
+# Inizializzazione Session State
 if 'connected' not in st.session_state: st.session_state.connected = False
 if 'connection_source' not in st.session_state: st.session_state.connection_source = "Nessuna"
 if 'active_trades' not in st.session_state: st.session_state.active_trades = {}
@@ -240,6 +255,28 @@ if 'session_pnl' not in st.session_state: st.session_state.session_pnl = 0.0
 if 'last_trade_time' not in st.session_state: st.session_state.last_trade_time = 0
 if 'cooldown_minutes' not in st.session_state: st.session_state.cooldown_minutes = 5
 if 'report_sent' not in st.session_state: st.session_state.report_sent = False
+if 'new_signal_alert' not in st.session_state: st.session_state.new_signal_alert = None # GESTISCE L'ALERT GIGANTE
+
+# --- GESTIONE ALERT A TUTTO SCHERMO ---
+if st.session_state.new_signal_alert:
+    alert_data = st.session_state.new_signal_alert
+    bg_color = "#00ff88" if alert_data['dir'] == "BUY" else "#ff4b4b"
+    text_color = "#000000" if alert_data['dir'] == "BUY" else "#ffffff"
+    arrow = "⬆️" if alert_data['dir'] == "BUY" else "⬇️"
+    
+    st.markdown(f"""
+        <div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: {bg_color}; z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
+            <h1 style="font-size: 15vw; color: {text_color}; margin: 0; text-transform: uppercase;">{arrow} {alert_data['dir']} {arrow}</h1>
+            <h2 style="font-size: 5vw; color: {text_color}; margin-top: 20px;">ASSET: {alert_data['pair']}</h2>
+            <h3 style="font-size: 3vw; color: {text_color};">Passa su Deriv.com!</h3>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    # Resetta l'alert dopo 3 secondi
+    time_module.sleep(3)
+    st.session_state.new_signal_alert = None
+    st.rerun()
+
 
 ora_attuale_report = now_roma.time()
 if time(8, 30) <= ora_attuale_report <= time(9, 30) and not st.session_state.report_sent:
@@ -324,7 +361,6 @@ with st.sidebar:
         st.session_state.stake = st.number_input("💶 INVESTIMENTO (€)", value=100.0)
         timeframe = st.selectbox("⏱️ TIMEFRAME (s)", [60, 120], index=0)
 
-        # --- NUOVA SEZIONE EMA ---
         st.divider()
         st.subheader("📈 FILTRO TREND (EMA)")
         use_ema = st.toggle("Attiva Filtro Trend (EMA)", value=True, help="Evita di operare contro il trend principale")
@@ -333,10 +369,13 @@ with st.sidebar:
         st.divider()
         st.subheader("🖥️ TEST DASHBOARD")
         
-        if st.button("🔔 **TEST AUDIO & TELEGRAM**", use_container_width=True):
+        if st.button("🔔 **TEST AUDIO BUY**", use_container_width=True):
             play_trade_sound("buy")
-            invia_telegram("✅ **SENTINEL AI: SYSTEM CHECK**\nBot online e pronto 🚀")
-            st.toast("Test completato!", icon="📲")
+            st.toast("Test Suono BUY completato!", icon="⬆️")
+            
+        if st.button("🔔 **TEST AUDIO SELL**", use_container_width=True):
+            play_trade_sound("sell")
+            st.toast("Test Suono SELL completato!", icon="⬇️")
 
         if st.button("🗑️ **PULISCI SEGNALI**", use_container_width=True):
             st.session_state.signal_history = []
@@ -391,7 +430,7 @@ if st.session_state.connected:
         if is_night_session:
             CURRENT_PAIRS = ["AUDUSD", "USDJPY"]
         else:
-            CURRENT_PAIRS = ["EURUSD", "AUDUSD", "USDCAD", "USDCHF", "USDJPY"]
+            CURRENT_PAIRS = ["EURUSD", "AUDUSD", "USDCHF", "USDCAD", "USDJPY"]
         
     window_1 = (time(0, 0), time(12, 0))
     window_2 = (time(12, 0), time(23, 0))
@@ -434,7 +473,6 @@ if st.session_state.connected:
 
         for pair in CURRENT_PAIRS:
             try:
-                # FIX 1: Aumentato il numero di candele scaricate a 200 per permettere il calcolo dell'EMA a 100
                 candles, source = get_candles(pair, timeframe, 200) 
                 if not candles or len(candles) < 20: continue
                 
@@ -450,7 +488,6 @@ if st.session_state.connected:
                 df['RSI'] = ta.rsi(df['close'], length=7)
                 bb = ta.bbands(df['close'], length=b_period, std=b_std)
                 
-                # --- CALCOLO EMA ---
                 if use_ema:
                     df['EMA'] = ta.ema(df['close'], length=ema_period)
 
@@ -460,16 +497,13 @@ if st.session_state.connected:
                 
                 curr_rsi = df['RSI'].iloc[-2]
                 curr_bb_low = float(bb.filter(like='BBL').iloc[-2].iloc[0])
-                curr_bb_mid = float(bb.filter(like='BBM').iloc[-2].iloc[0]) # FIX 2: Preleviamo la SMA 20 (Linea Centrale)
+                curr_bb_mid = float(bb.filter(like='BBM').iloc[-2].iloc[0]) 
                 curr_bb_up = float(bb.filter(like='BBU').iloc[-2].iloc[0])
                 chiusura_prec = df['close'].iloc[-2]
 
-                # --- LOGICA EMA RINFORZATA ED EVOLUTA ---
                 if use_ema:
-                    # Controlla che il calcolo sia avvenuto correttamente
                     if 'EMA' in df.columns and not pd.isna(df['EMA'].iloc[-2]):
                         curr_ema = df['EMA'].iloc[-2]
-                        # FIX 3: VERO FILTRO TREND. Confronta la linea centrale delle Bollinger (Veloce) con l'EMA (Lenta)
                         cond_ema_buy = curr_bb_mid > curr_ema 
                         cond_ema_sell = curr_bb_mid < curr_ema
                     else:
@@ -482,9 +516,6 @@ if st.session_state.connected:
                 cond_rsi_sell = (curr_rsi > r_sell) if use_rsi else True
                 cond_bb_sell = (chiusura_prec >= curr_bb_up) if use_bb else True
                 
-                is_consecutive = check_consecutive_candles(df.iloc[:-1], count=3)
-
-                # --- SEGNALI CONDIZIONATI ALL'EMA ---
                 is_buy = (cond_rsi_buy and cond_bb_buy and cond_ema_buy) and (use_rsi or use_bb)
                 is_sell = (cond_rsi_sell and cond_bb_sell and cond_ema_sell) and (use_rsi or use_bb)
 
@@ -523,7 +554,11 @@ if st.session_state.connected:
 
                     save_journal(st.session_state.signal_history)
                     send_telegram_signal(direction, pair, price, curr_rsi, t_id, st.session_state.stake, tipo_mercato)
-                    play_trade_sound("buy")
+                    
+                    # 🔊 SUONA L'AUDIO DIFFERENZIATO E ATTIVA L'ALERT GIGANTE
+                    play_trade_sound(direction.lower())
+                    st.session_state.new_signal_alert = {"dir": direction, "pair": pair}
+                    st.rerun() # Forza il ricaricamento immediato per mostrare l'alert
 
             except Exception as e:
                 continue
@@ -536,7 +571,6 @@ if st.session_state.connected:
     df_final = pd.DataFrame()
     
     try:
-        # Aumentato da 160 a 250 per sicurezza del grafico
         candles_ta, src_ta = get_candles(pair_display, timeframe, 250)
             
         if candles_ta:
@@ -546,7 +580,7 @@ if st.session_state.connected:
             df_raw['RSI'] = ta.rsi(df_raw['close'], length=7)
 
             if st.session_state.weekend_mode and not stress_test:
-                r_buy_graf, r_sell_graf, b_period_graf, b_std_graf = 30, 70, 20, 2.00
+                r_buy_graf, r_sell_graf, b_period_graf, b_std_graf = 25, 75, 20, 2.20
             elif stress_test:
                 r_buy_graf, r_sell_graf, b_period_graf, b_std_graf = 45, 55, 20, 2.20
             else:
@@ -557,7 +591,6 @@ if st.session_state.connected:
             if bb_ta is not None and not bb_ta.empty:
                 bb_ta.columns = ['BBL', 'BBM', 'BBU', 'BBB', 'BBP'] 
                 
-                # --- AGGIUNTA EMA AL GRAFICO ---
                 if use_ema:
                     df_raw['EMA'] = ta.ema(df_raw['close'], length=ema_period)
                 
@@ -565,13 +598,7 @@ if st.session_state.connected:
 
                 df_final['buy_sig'] = float('nan')
                 df_final['sell_sig'] = float('nan')
-                df_final['is_consecutive'] = False
-
-                is_green = df_final['close'] > df_final['open']
-                is_red = df_final['close'] < df_final['open']
-                df_final['is_consecutive'] = (is_green.rolling(3).sum() == 3) | (is_red.rolling(3).sum() == 3)
-
-                # --- AGGIORNAMENTO LAMBDA GRAFICO CON LOGICA EMA ---
+                
                 df_final['buy_sig'] = df_final.apply(lambda x: (x['close'] * 0.9998) if (
                     ((x['RSI'] < r_buy_graf) if use_rsi else True) and 
                     ((x['close'] <= x['BBL']) if use_bb else True) and
@@ -656,7 +683,7 @@ if st.session_state.connected:
                                    f"📉 Esito 60s: {icona_esito} {res_status}\n"
                                    f"💵 P&L 60s: `{profit:.2f}€`\n"
                                    f"📉 Esito 120s: {esito_120s}\n"
-                                   f"📅 P&L Sessione 60s: `{st.session_state.session_pnl:.2f}€` ")
+                                   f"📅 P&L Sessione: `{st.session_state.session_pnl:.2f}€` ")
                             invia_telegram(msg)
 
                             if res_status == "WIN": play_trade_sound("win")
@@ -760,7 +787,6 @@ if st.session_state.connected:
     d4.metric("🏆 Top Asset 120s", best_pairs_str_120)
 
     if not df_filtered.empty:
-        # Aggiunta l'EMA nel rename map
         rename_map = {'id': '🆔 ID', 'time': '⏰ DATA', 'pair': '💱 VALUTE', 'dir': '🚀 TIPO', 'price': '💰 PRICE', 'rsi_val': '📈 RSI IN', 'stake': '💶 STAKE', 'params_bb': '↔️ BB', 'params_rsi': '📉 RSI', 'params_ema': '🌊 EMA', 'mercato': '🌍 MARKET', 'result': '🎯 60s', 'check_120s': '⏱️ 120s', 'pnl_numeric': '📈 P&L'}
 
         cols_to_use = ['id', 'time', 'pair', 'dir', 'price', 'rsi_val', 'stake', 'params_bb', 'params_rsi', 'params_ema', 'mercato', 'result', 'check_120s', 'pnl_numeric']
