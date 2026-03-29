@@ -391,7 +391,7 @@ if st.session_state.connected:
         if is_night_session:
             CURRENT_PAIRS = ["AUDUSD", "USDJPY"]
         else:
-            CURRENT_PAIRS = ["EURUSD", "AUDUSD", "USDCHF", "USDCAD"]
+            CURRENT_PAIRS = ["EURUSD", "AUDUSD", "USDCAD", "USDCHF", "USDJPY"]
         
     window_1 = (time(0, 0), time(12, 0))
     window_2 = (time(12, 0), time(23, 0))
