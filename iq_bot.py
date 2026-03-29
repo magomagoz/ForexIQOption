@@ -472,7 +472,7 @@ if st.session_state.connected:
             elif not trading_autorizzato:
                 st.warning("🛡️ PROTEZIONE ATTIVA: Mercato fuori orario. Scanner in pausa.")
             elif is_night_session:
-                st.info("🌙 **MODALITÀ NOTTURNA (00:00 - 08:00)**\n\nScanner limitato a JPY e AUD per sicurezza.")
+                st.info("🌙 **MODALITÀ NOTTURNA (00:00 - 08:00)**\n\nScanner limitato a USDJPY e AUDUSD per sicurezza.")
             else:
                 st.success("SISTEMA LIVE IN SCANSIONE ATTIVA 🔥", icon="📡")
         
