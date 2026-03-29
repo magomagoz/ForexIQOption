@@ -664,7 +664,7 @@ if st.session_state.connected:
                     win = win_60 if timeframe == 60 else win_120 
                     res_status = "WIN" if win else "LOSS"
                     icona_esito = "✅" if win else "❌"
-                    profit = (trade['stake_num'] * 0.90) if (res_status == "WIN") else -trade['stake_num']
+                    profit = (trade['stake_num'] * 0.92) if (res_status == "WIN") else -trade['stake_num']
 
                     for s in st.session_state.signal_history:
                         if s.get('id') == t_id and s.get('result') == "⏳ In corso...":
@@ -761,12 +761,12 @@ if st.session_state.connected:
         total_pnl_60 = df_filtered['pnl_numeric'].sum()
         
         stake_rif = float(st.session_state.stake)
-        total_pnl_120 = (wins_120 * (stake_rif * 0.90)) - (losses_120 * stake_rif)
+        total_pnl_120 = (wins_120 * (stake_rif * 0.92)) - (losses_120 * stake_rif)
         profit_by_pair = df_filtered.groupby('pair')['pnl_numeric'].sum()
         
         def calc_pnl_120(row):
             val = str(row['check_120s'])
-            if "✅" in val: return stake_rif * 0.90
+            if "✅" in val: return stake_rif * 0.92
             if "❌" in val: return -stake_rif
             return 0.0
             
