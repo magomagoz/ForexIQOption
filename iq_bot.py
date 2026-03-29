@@ -267,7 +267,7 @@ if 'new_signal_alert' not in st.session_state: st.session_state.new_signal_alert
 # --- GESTIONE ALERT A TUTTO SCHERMO ---
 if st.session_state.new_signal_alert:
     alert_data = st.session_state.new_signal_alert
-    bg_color = "#00ff88" if alert_data['dir'] == "BUY" else "#ff4b4b"
+    bg_color = "#00ff00" if alert_data['dir'] == "BUY" else "#ff0000"
     text_color = "#000000" if alert_data['dir'] == "BUY" else "#ffffff"
     arrow = "⬆️" if alert_data['dir'] == "BUY" else "⬇️"
     
