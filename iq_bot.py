@@ -248,7 +248,7 @@ if time(8, 30) <= ora_attuale_report <= time(9, 30) and not st.session_state.rep
 
 # --- 3. SIDEBAR ---
 with st.sidebar:
-    st.title("⚙️ AI TRADING")
+    st.title("⚙️ AI BINARY TRADING")
     
     if not st.session_state.connected:
         if st.button("🔌 CONNETTI SISTEMA", use_container_width=True, type="primary"):
