@@ -31,7 +31,7 @@ icons = {"EURUSD": "🇪🇺🇺🇸", "AUDUSD": "🇦🇺🇺🇸", "USDCAD": "
 fuso_roma = pytz.timezone('Europe/Rome')
 now_roma = datetime.now(fuso_roma)
 giorno_settimana = now_roma.weekday() 
-is_weekend_reale = 5 >= giorno_settimana <= 7  
+is_weekend_reale = giorno_settimana >= 5  
 now_cet = now_roma.time()
 ora_attuale = now_roma.hour
 
