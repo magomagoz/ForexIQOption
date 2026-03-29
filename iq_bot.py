@@ -45,6 +45,13 @@ def to_deriv_symbol(pair):
         return "R_50" 
     return f"frx{pair}"
 
+# Modifica la lista dei simboli per riflettere quello che guarderai su Pocket Option
+SQUADRA_FOREX = [
+    "frxEURUSD", # Corrisponde a EUR/USD OTC
+    "frxGBPUSD", # Corrisponde a GBP/USD OTC
+    "frxUSDJPY"  # Corrisponde a USD/JPY OTC
+]
+
 def get_candles(pair, timeframe_sec, count):
     try:
         ws = websocket.create_connection(f"wss://ws.binaryws.com/websockets/v3?app_id={DERIV_APP_ID}", timeout=5)
@@ -180,10 +187,10 @@ def send_telegram_signal(signal_type, pair, price, rsi, trade_id, stake, tipo_me
     timestamp = datetime.now(fuso_roma).strftime("%H:%M:%S")
     mapping_nomi = {"EURUSD": "V50", "USDJPY": "V75", "AUDUSD": "V100"}
     nome_reale = mapping_nomi.get(pair, pair)
-
+    
     message = (
         f"🚀 *NUOVO TRADE*\n🔔 *Segnale:* {signal_type}\n🆔 ID: `{trade_id}`\n"
-        f"💱 Asset: {pair}\n" 
+        f"💱 Asset: {pair.replace('frx', '')} OTC\n" 
         f"🌍 Market: {tipo_mercato}\n💵 Stake: `{stake:.0f} €` \n" 
         f"💰 Prezzo: `{price:.5f}`\n📈 RSI Ingresso: `{rsi:.1f}`\n⏰ Ora: {timestamp}"
     )
