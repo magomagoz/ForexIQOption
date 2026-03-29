@@ -160,7 +160,6 @@ def send_morning_report():
             f"✅ Win: {wins} | ❌ Loss: {losses}\n"
             f"🏁 Win Rate: {wr:.1f}%\n"
             f"💰 P&L Totale: {pnl:.2f}€\n\n"
-            f"📅 **News Critiche di Oggi:**\n"
         )
         news = get_daily_economic_alerts()
         for n in news:
@@ -183,7 +182,7 @@ def send_telegram_signal(signal_type, pair, price, rsi, trade_id, stake, tipo_me
         f"🚀 *NUOVO TRADE*\n🔔 *Segnale:* {signal_type}\n🆔 ID: `{trade_id}`\n"
         f"💱 Asset: {pair}\n" 
         f"🌍 Market: {tipo_mercato}\n💵 Stake: `{stake:.0f} €` \n" 
-        f"💰 Prezzo: `{price:.5f}`\n📈 RSI: `{rsi:.1f}`\n⏰ Ora: {timestamp}"
+        f"💰 Prezzo: `{price:.5f}`\n📈 RSI Ingresso: `{rsi:.1f}`\n⏰ Ora: {timestamp}"
     )
     invia_telegram(message)
 
@@ -657,7 +656,7 @@ if st.session_state.connected:
                                    f"📉 Esito 60s: {icona_esito} {res_status}\n"
                                    f"💵 P&L 60s: `{profit:.2f}€`\n"
                                    f"📉 Esito 120s: {esito_120s}\n"
-                                   f"📅 P&L Sessione: `{st.session_state.session_pnl:.2f}€` ")
+                                   f"📅 P&L Sessione 60s: `{st.session_state.session_pnl:.2f}€` ")
                             invia_telegram(msg)
 
                             if res_status == "WIN": play_trade_sound("win")
