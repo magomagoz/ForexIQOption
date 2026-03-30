@@ -345,8 +345,8 @@ with st.sidebar:
             st.warning("⚠️ **LIVE OVERLAP ATTIVA (Lun-Ven)**\n\nParametri di sicurezza inseriti automaticamente.")
             st.info("📏 BB (20/2.50)\n📉 RSI (15/85)")
             use_bb, use_rsi = True, True
-            bb_period, bb_std = 20, 2.50
-            custom_rsi_buy, custom_rsi_sell = 15, 85
+            bb_period, bb_std = 20, 2.00
+            custom_rsi_buy, custom_rsi_sell = 25, 75
         
         else:
             st.success("🟢 **LIVE (Lun-Ven)**\n\n📏 BB (20/x) - 📉 RSI (25/75)")
