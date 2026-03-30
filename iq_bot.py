@@ -159,7 +159,7 @@ def send_morning_report():
     df_ieri = df[df['time'].dt.date == ieri]
 
     if df_ieri.empty:
-        msg = f"☀️ **MORNING REPORT ({ieri})**\n\nIeri non sono stati eseguiti trade. Lo scanner era spento o i parametri troppo stretti."
+        msg = f"☀️ **MORNING REPORT ({ieri})**"
     else:
         wins = df_ieri['result'].astype(str).str.contains("WIN").sum()
         losses = df_ieri['result'].astype(str).str.contains("LOSS").sum()
