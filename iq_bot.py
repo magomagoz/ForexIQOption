@@ -25,8 +25,10 @@ TELEGRAM_CHAT_ID = st.secrets.get("TELEGRAM_CHAT_ID", "IL_TUO_CHAT_ID_QUI")
 DERIV_TOKEN = st.secrets.get("DERIV_TOKEN", "") 
 DERIV_APP_ID = "71759" 
 
-ALL_PAIRS = ["EURUSD", "AUDUSD", "USDCAD", "USDCHF", "USDJPY"]
-icons = {"EURUSD": "🇪🇺🇺🇸", "AUDUSD": "🇦🇺🇺🇸", "USDCAD": "🇺🇸🇨🇦", "USDCHF": "🇺🇸🇨🇭", "USDJPY": "🇺🇸🇯🇵"}
+ALL_PAIRS = ["EURUSD", "AUDUSD", "USDCAD", "USDCHF", "USDJPY", "NZDUSD", "EURGBP", "GBPUSD", "EURJPY"]
+icons = {"EURUSD": "🇪🇺🇺🇸", "AUDUSD": "🇦🇺🇺🇸", "USDCAD": "🇺🇸🇨🇦", "USDCHF": "🇺🇸🇨🇭", "USDJPY": "🇺🇸🇯🇵", "NZDUSD": "🇺🇸", "EURGBP": "🇪🇺", "GBPUSD": "🇺🇸", "EURJPY": "🇪🇺🇯🇵"}
+
+
 
 fuso_roma = pytz.timezone('Europe/Rome')
 now_roma = datetime.now(fuso_roma)
