@@ -343,16 +343,16 @@ with st.sidebar:
         
         elif is_overlap_time:
             st.warning("⚠️ **LIVE OVERLAP ATTIVA (Lun-Ven)**\n\nSicurezza automatica")
-            st.info("📏 BB (20/2.00)\n📉 RSI (15/85)")
+            st.info("📏 BB (20/2.00)\n📉 RSI (20/80)")
             use_bb, use_rsi = True, True
             bb_period, bb_std = 20, 2.00
-            custom_rsi_buy, custom_rsi_sell = 15, 85
+            custom_rsi_buy, custom_rsi_sell = 20, 80
         
         else:
             st.success("🟢 **LIVE (Lun-Ven)**\n\n📏 BB (20/x) - 📉 RSI (25/75)")
             use_bb, use_rsi = True, True
             bb_period = 20
-            custom_rsi_buy, custom_rsi_sell = 25, 75
+            custom_rsi_buy, custom_rsi_sell = 30, 70
             bb_std = st.selectbox("📏 Deviazione BB", [2.00, 2.10, 2.20, 2.30, 2.35, 2.40, 2.50], index=0)
 
         st.divider()
