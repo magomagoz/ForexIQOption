@@ -460,7 +460,7 @@ if st.session_state.connected:
         if st.session_state.weekend_mode:
             st.success("SCANNER OTC ATTIVO", icon="🎯")
         else:
-            if in_pausa_overlap:
+            if is_overlap_time:
                 st.error("🛑 PAUSA OVERLAP ATTIVA: Scanner in attesa. Riprenderà da solo alle 17:30.")
             elif not trading_autorizzato:
                 st.warning("🛡️ PROTEZIONE ATTIVA: Scanner in pausa.")
