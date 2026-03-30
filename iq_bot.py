@@ -365,7 +365,7 @@ with st.sidebar:
         st.info(status_testo if status_testo else "Recupero informazioni mercato...")
 
         st.markdown("---")
-        st.subheader("💸 PROTEZIONE OVERLAP LONDRA-NY")
+        st.subheader("💸 PROTEZIONE LONDRA-NY")
         pausa_manuale_overlap = st.toggle("🛑 **Stop Totale Overlap**", value=False, help="Spegne lo scanner dalle 14:30 alle 17:30")
         
         trading_autorizzato = True
