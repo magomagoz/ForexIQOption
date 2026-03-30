@@ -491,7 +491,7 @@ if st.session_state.connected:
         else:
             if in_pausa_overlap:
                 st.error("🛑 PAUSA OVERLAP ATTIVA: Scanner in attesa. Riprenderà da solo alle 17:30.")
-            elif non trading_autorizzato:
+            elif not trading_autorizzato:
                 st.warning("🛡️ PROTEZIONE ATTIVA: Scanner in pausa.")
             else:
                 st.success(f"SISTEMA LIVE ATTIVO 🔥 | {nome_sessione_attiva}", icon="📡")
