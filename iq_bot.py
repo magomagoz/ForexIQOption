@@ -530,7 +530,16 @@ if st.session_state.connected:
                 curr_bb_low = float(bb.filter(like='BBL').iloc[-2].iloc[0])
                 curr_bb_mid = float(bb.filter(like='BBM').iloc[-2].iloc[0]) 
                 curr_bb_up = float(bb.filter(like='BBU').iloc[-2].iloc[0])
+
                 chiusura_prec = df['close'].iloc[-2]
+
+                # --- GESTIONE SPREAD POCKET OPTION ---
+                # 0.08% in OTC (0.0008) | 0.14% in LIVE (0.0014)
+                spread_val = 0.0008 if st.session_state.weekend_mode else 0.0014
+                
+                # Applichiamo lo spread alle Bande di Bollinger
+                target_bb_low = curr_bb_low * (1 - spread_val) # Sfondamento più profondo al ribasso
+                target_bb_up = curr_bb_up * (1 + spread_val)   # Sfondamento più alto al rialzo
 
                 if use_ema:
                     if 'EMA' in df.columns and not pd.isna(df['EMA'].iloc[-2]):
@@ -543,10 +552,13 @@ if st.session_state.connected:
                     cond_ema_buy, cond_ema_sell = True, True
                 
                 cond_rsi_buy = (curr_rsi < r_buy) if use_rsi else True
-                cond_bb_buy = (chiusura_prec <= curr_bb_low) if use_bb else True
-                cond_rsi_sell = (curr_rsi > r_sell) if use_rsi else True
-                cond_bb_sell = (chiusura_prec >= curr_bb_up) if use_bb else True
+                # Usiamo le nuove variabili target_bb_low e target_bb_up per le condizioni
+                cond_bb_buy = (chiusura_prec <= target_bb_low) if use_bb else True
                 
+                cond_rsi_sell = (curr_rsi > r_sell) if use_rsi else True
+                # Usiamo le nuove variabili target_bb_low e target_bb_up per le condizioni
+                cond_bb_sell = (chiusura_prec >= target_bb_up) if use_bb else True
+
                 is_buy = (cond_rsi_buy and cond_bb_buy and cond_ema_buy) and (use_rsi or use_bb)
                 is_sell = (cond_rsi_sell and cond_bb_sell and cond_ema_sell) and (use_rsi or use_bb)
 
