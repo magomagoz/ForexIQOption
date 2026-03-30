@@ -503,6 +503,10 @@ if st.session_state.connected:
             with cols[i]: st.code(f"{icons.get(pair, '🔍')} {pair}")
 
         for pair in CURRENT_PAIRS:
+            # FIX: Blocca fisicamente la scansione se c'è una pausa (es. Overlap attivato)
+            if not trading_autorizzato:
+                continue
+                
             try:
                 candles, source = get_candles(pair, timeframe, 400) 
                 if not candles or len(candles) < 20: continue
@@ -533,14 +537,14 @@ if st.session_state.connected:
 
                 chiusura_prec = df['close'].iloc[-2]
 
-                # --- GESTIONE SPREAD POCKET OPTION ---
-                # 0.08% in OTC (0.0008) | 0.14% in LIVE (0.0014)
-                spread_val = 0.0008 if st.session_state.weekend_mode else 0.0014
+                # --- GESTIONE SPREAD POCKET OPTION CORRETTA ---
+                # 0.008% in OTC (0.00008) | 0.014% in LIVE (0.00014) -> ~1.5 pips
+                spread_val = 0.00008 if st.session_state.weekend_mode else 0.00014
                 
                 # Applichiamo lo spread alle Bande di Bollinger
-                target_bb_low = curr_bb_low * (1 - spread_val) # Sfondamento più profondo al ribasso
-                target_bb_up = curr_bb_up * (1 + spread_val)   # Sfondamento più alto al rialzo
-
+                target_bb_low = curr_bb_low * (1 - spread_val) # Sfondamento reale
+                target_bb_up = curr_bb_up * (1 + spread_val)   
+                
                 if use_ema:
                     if 'EMA' in df.columns and not pd.isna(df['EMA'].iloc[-2]):
                         curr_ema = df['EMA'].iloc[-2]
@@ -631,6 +635,8 @@ if st.session_state.connected:
 
             bb_ta = ta.bbands(df_raw['close'], length=b_period_graf, std=b_std_graf)
 
+
+            
             if bb_ta is not None and not bb_ta.empty:
                 bb_ta.columns = ['BBL', 'BBM', 'BBU', 'BBB', 'BBP'] 
                 
@@ -638,6 +644,9 @@ if st.session_state.connected:
                     df_raw['EMA'] = ta.ema(df_raw['close'], length=ema_period)
                 
                 df_final = pd.concat([df_raw, bb_ta[['BBL', 'BBM', 'BBU']]], axis=1).tail(100)
+
+                # Definizione spread visivo corretto
+                spread_val_graf = 0.00008 if st.session_state.weekend_mode else 0.00014
 
                 df_final['buy_sig'] = float('nan')
                 df_final['sell_sig'] = float('nan')
