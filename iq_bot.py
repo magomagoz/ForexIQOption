@@ -504,7 +504,7 @@ if st.session_state.connected:
 
         for pair in CURRENT_PAIRS:
             try:
-                candles, source = get_candles(pair, timeframe, 200) 
+                candles, source = get_candles(pair, timeframe, 400) 
                 if not candles or len(candles) < 20: continue
                 
                 df = pd.DataFrame(candles)
@@ -602,7 +602,7 @@ if st.session_state.connected:
     df_final = pd.DataFrame()
     
     try:
-        candles_ta, src_ta = get_candles(pair_display, timeframe, 250)
+        candles_ta, src_ta = get_candles(pair_display, timeframe, 400)
             
         if candles_ta:
             st.caption(f"Sorgente dati attuale: **{src_ta}**")
