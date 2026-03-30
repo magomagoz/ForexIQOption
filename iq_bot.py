@@ -374,9 +374,10 @@ with st.sidebar:
         st.divider()
         st.subheader("🖥️ TEST DASHBOARD")
         
-        if st.button("🔔 **TEST AUDIO BUY**", use_container_width=True):
+        if st.button("🔔 **TEST AUDIO BUY & TELEGRAM**", use_container_width=True):
             play_trade_sound("buy")
-            st.toast("Test Suono BUY completato!", icon="⬆️")
+            invia_telegram("✅ **SENTINEL AI: SYSTEM CHECK**\nBot online e sincronizzato con Deriv 🚀")
+            st.toast("Test completato!", icon="📲")
             
         if st.button("🔔 **TEST AUDIO SELL**", use_container_width=True):
             play_trade_sound("sell")
