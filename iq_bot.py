@@ -26,9 +26,12 @@ DERIV_TOKEN = st.secrets.get("DERIV_TOKEN", "")
 DERIV_APP_ID = "71759" 
 
 ALL_PAIRS = ["EURUSD", "AUDUSD", "USDCAD", "USDCHF", "USDJPY", "NZDUSD", "EURGBP", "GBPUSD", "EURJPY"]
-icons = {"EURUSD": "🇪🇺🇺🇸", "AUDUSD": "🇦🇺🇺🇸", "USDCAD": "🇺🇸🇨🇦", "USDCHF": "🇺🇸🇨🇭", "USDJPY": "🇺🇸🇯🇵", "NZDUSD": "🇺🇸", "EURGBP": "🇪🇺", "GBPUSD": "🇺🇸", "EURJPY": "🇪🇺🇯🇵"}
 
-
+icons = {
+    "EURUSD": "🇪🇺🇺🇸", "AUDUSD": "🇦🇺🇺🇸", "USDCAD": "🇺🇸🇨🇦", 
+    "USDCHF": "🇺🇸🇨🇭", "USDJPY": "🇺🇸🇯🇵", "NZDUSD": "🇳🇿🇺🇸", 
+    "EURGBP": "🇪🇺🇬🇧", "GBPUSD": "🇬🇧🇺🇸", "EURJPY": "🇪🇺🇯🇵"
+}
 
 fuso_roma = pytz.timezone('Europe/Rome')
 now_roma = datetime.now(fuso_roma)
@@ -435,24 +438,41 @@ with st.sidebar:
 if st.session_state.connected:
     ora_attuale_time = now_roma.time()
     
-    is_night_session = time(0, 0) <= ora_attuale_time < time(8, 0)
-
+    # --- LOGICA DELLE 4 SESSIONI DINAMICHE ---
+    nome_sessione_attiva = ""
+    
     if st.session_state.weekend_mode:
-        CURRENT_PAIRS = ["EURUSD", "USDJPY", "AUDUSD"]
+        # Nel weekend (OTC) teniamo le più stabili su Pocket Option
+        CURRENT_PAIRS = ["EURUSD", "USDJPY", "AUDUSD", "GBPUSD"]
+        nome_sessione_attiva = "🎯 SESSIONE WEEKEND OTC"
     else:
-        if is_night_session:
-            CURRENT_PAIRS = ["AUDUSD", "USDJPY"]
+        if time(23, 0) <= ora_attuale_time or ora_attuale_time < time(9, 0):
+            # 1. ASIATICA (23:00 - 09:00) -> Bassa volatilità, ottima per RSI
+            CURRENT_PAIRS = ["AUDUSD", "NZDUSD", "USDJPY", "EURGBP"]
+            nome_sessione_attiva = "🐌 SESSIONE ASIATICA (Bassa Volatilità)"
+            
+        elif time(9, 0) <= ora_attuale_time < time(14, 30):
+            # 2. MATTINA / LONDRA (09:00 - 14:30) -> Trend fluidi
+            CURRENT_PAIRS = ["EURUSD", "GBPUSD", "EURJPY"]
+            nome_sessione_attiva = "🇪🇺 SESSIONE LONDRA (Trend Fluidi)"
+            
+        elif time(14, 30) <= ora_attuale_time < time(17, 30):
+            # 3. OVERLAP (14:30 - 17:30) -> Alta volatilità, niente GBP
+            CURRENT_PAIRS = ["EURUSD", "USDCAD"]
+            nome_sessione_attiva = "🔥 OVERLAP EU+USA (Alta Volatilità)"
+            
         else:
-            CURRENT_PAIRS = ["EURUSD", "AUDUSD", "USDCHF", "USDCAD", "USDJPY"]
-        
-    window_1 = (time(0, 0), time(12, 0))
-    window_2 = (time(12, 0), time(23, 0))
-    is_trading_time = (window_1[0] <= now_cet <= window_1[1]) or (window_2[0] <= now_cet <= window_2[1]) or is_night_session
-    trading_autorizzato = is_trading_time or stress_test
+            # 4. SERALE / NEW YORK (17:30 - 23:00) -> Ritracciamenti
+            CURRENT_PAIRS = ["USDCAD", "USDCHF", "AUDUSD"]
+            nome_sessione_attiva = "🇺🇸 SESSIONE NEW YORK (Ritracciamenti)"
 
+    # --- PROTEZIONE OVERLAP ---
+    trading_autorizzato = True 
     in_pausa_overlap = False
+
+    # Se siamo in orario overlap e il toggle è acceso, blocca tutto
     if not st.session_state.weekend_mode and pausa_manuale_overlap:
-        if time(14, 30) <= ora_attuale_time <= time(17, 30):
+        if time(14, 30) <= ora_attuale_time < time(17, 30):
             trading_autorizzato = False
             in_pausa_overlap = True
 
@@ -470,19 +490,17 @@ if st.session_state.connected:
             st.success("SCANNER OTC ATTIVO", icon="🎯")
         else:
             if in_pausa_overlap:
-                st.warning("🛑 PAUSA OVERLAP ATTIVA: Scanner in attesa. Riprenderà da solo alle 17:30.")
-            elif not trading_autorizzato:
-                st.warning("🛡️ PROTEZIONE ATTIVA: Mercato fuori orario. Scanner in pausa.")
-            elif is_night_session:
-                st.info("🌙 **MODALITÀ NOTTURNA (00:00 - 08:00)**\n\nScanner limitato a USDJPY e AUDUSD per sicurezza.")
+                st.error("🛑 PAUSA OVERLAP ATTIVA: Scanner in attesa. Riprenderà da solo alle 17:30.")
+            elif non trading_autorizzato:
+                st.warning("🛡️ PROTEZIONE ATTIVA: Scanner in pausa.")
             else:
-                st.success("SISTEMA LIVE IN SCANSIONE ATTIVA 🔥", icon="📡")
+                st.success(f"SISTEMA LIVE ATTIVO 🔥 | {nome_sessione_attiva}", icon="📡")
         
         st.divider()
-        st.subheader("🕵️ Coppie di valute osservate")
-        cols = st.columns(5)
+        st.subheader("🕵️ Coppie in Scansione (Auto-Selezionate)")
+        cols = st.columns(len(CURRENT_PAIRS))
         for i, pair in enumerate(CURRENT_PAIRS):
-            with cols[i % 5]: st.code(f"{icons.get(pair, '🔍')} {pair}")
+            with cols[i]: st.code(f"{icons.get(pair, '🔍')} {pair}")
 
         for pair in CURRENT_PAIRS:
             try:
