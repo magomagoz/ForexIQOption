@@ -686,12 +686,18 @@ if st.session_state.connected:
 
         if current_ts >= scadenza:
             try:
-                res, _ = get_candles(pair, timeframe, 6)
+                # FIX 1: Usiamo sempre candele da 60s per la verifica. 
+                # Le API di Deriv accettano sempre 60s per il Forex reale.
+                res, _ = get_candles(pair, 60, 6)
+                
                 if res and len(res) >= 4:
                     entry_price = trade['entry_price']
                     dir_trade, t_id = trade['direction'], trade['id']
                     
-                    exit_60 = res[-3]['close'] if timeframe == 60 else res[-2]['close']
+                    # res[-1] è il minuto in corso
+                    # res[-2] è la candela chiusa ai 120s esatti
+                    # res[-3] è la candela chiusa ai 60s esatti
+                    exit_60 = res[-3]['close']
                     exit_120 = res[-2]['close']
                     
                     win_60 = (exit_60 > entry_price) if dir_trade == "BUY" else (exit_60 < entry_price)
@@ -733,10 +739,22 @@ if st.session_state.connected:
                             
                             if pair in st.session_state.active_trades:
                                 del st.session_state.active_trades[pair]
+                else:
+                    # FIX 2: Rete di sicurezza. Se il broker non invia i dati per più di 4 minuti, 
+                    # sblocca lo scanner forzando l'eliminazione del trade pendente.
+                    if current_ts > scadenza + 240:
+                        if pair in st.session_state.active_trades:
+                            del st.session_state.active_trades[pair]
+                            
             except Exception as e:
+                # Se c'è un errore imprevisto, usa la rete di sicurezza
+                if current_ts > scadenza + 240:
+                    if pair in st.session_state.active_trades:
+                        del st.session_state.active_trades[pair]
                 continue
                     
     st.divider()
+
 
     # --- 7. TABELLA JOURNAL E FILTRI DINAMICI ---
     st.subheader("📋 Trading Journal & Performance Hub")
