@@ -348,7 +348,7 @@ with st.sidebar:
             use_bb, use_rsi = True, True
             bb_period = 20
             custom_rsi_buy, custom_rsi_sell = 20, 80
-            bb_std = st.selectbox("📏 Deviazione BB", [2.20, 2.30, 2.35, 2.40, 2.50], index=0)
+            bb_std = st.selectbox("📏 Deviazione BB", [2.00, 2.10, 2.20, 2.30, 2.35, 2.40, 2.50], index=0)
 
         st.divider()
         st.subheader("🏛️ SESSIONI DI MERCATO")
