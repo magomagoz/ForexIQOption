@@ -50,11 +50,10 @@ def to_deriv_symbol(pair):
         return "R_50" 
     return f"frx{pair}"
 
-# Modifica la lista dei simboli per riflettere quello che guarderai su Pocket Option
 SQUADRA_FOREX = [
-    "frxEURUSD", # Corrisponde a EUR/USD OTC
-    "frxGBPUSD", # Corrisponde a GBP/USD OTC
-    "frxUSDJPY"  # Corrisponde a USD/JPY OTC
+    "frxEURUSD",
+    "frxGBPUSD",
+    "frxUSDJPY" 
 ]
 
 def get_candles(pair, timeframe_sec, count):
@@ -173,7 +172,6 @@ def send_morning_report():
             f"🏁 Win Rate: {wr:.1f}%\n"
             f"💰 P&L Totale: {pnl:.2f}€\n\n"
         )
-        # Assumendo get_daily_economic_alerts sia definita, altrimenti commentare
         try:
             news = get_daily_economic_alerts()
             for n in news:
@@ -228,13 +226,9 @@ def style_result(val):
     elif "⏳" in val_str: return 'color: #bf8801; font-style: bold;'
     return ''
 
-# --- FUNZIONE AUDIO AGGIORNATA PER DIFFERENZIARE I SEGNALI ---
 def play_trade_sound(sound_type="buy"):
-    # Suono per il BUY (Es. un "Ding" acuto e veloce)
     buy_sound = "https://actions.google.com/sounds/v1/alarms/beep_short.ogg"
-    # Suono per il SELL (Es. un "Bloop" o un clacson rapido e grave)
     sell_sound = "https://actions.google.com/sounds/v1/water/wood_block_drop.ogg"
-    # Suono per la vittoria
     win_sound = "https://actions.google.com/sounds/v1/cartoon/clink_vibrant.ogg"
 
     sound_url = buy_sound
@@ -255,25 +249,21 @@ st.markdown("""<style>[data-testid="stAppViewContainer"] * { transition: none !i
 try: st.image(Image.open("banner.png"), use_column_width=True)
 except: st.image("https://via.placeholder.com/800x100/ff4b4b/white?text=SENTINEL+AI", use_column_width=True)
 
-# Inizializzazione Session State
 if 'connected' not in st.session_state: st.session_state.connected = False
 if 'connection_source' not in st.session_state: st.session_state.connection_source = "Nessuna"
 if 'active_trades' not in st.session_state: st.session_state.active_trades = {}
 if 'signal_history' not in st.session_state: st.session_state.signal_history = load_journal()
 if 'local_balance' not in st.session_state: st.session_state.local_balance = 10000.0
 if 'scanner_on' not in st.session_state: st.session_state.scanner_on = False
-if 'weekend_mode' not in st.session_state: st.session_state.weekend_mode = is_weekend_reale 
 
-# AGGIUNGI QUESTA RIGA PER FORZARE L'AGGIORNAMENTO:
 st.session_state.weekend_mode = is_weekend_reale
 
 if 'session_pnl' not in st.session_state: st.session_state.session_pnl = 0.0
 if 'last_trade_time' not in st.session_state: st.session_state.last_trade_time = 0
 if 'cooldown_minutes' not in st.session_state: st.session_state.cooldown_minutes = 5
 if 'report_sent' not in st.session_state: st.session_state.report_sent = False
-if 'new_signal_alert' not in st.session_state: st.session_state.new_signal_alert = None # GESTISCE L'ALERT GIGANTE
+if 'new_signal_alert' not in st.session_state: st.session_state.new_signal_alert = None
 
-# --- GESTIONE ALERT A TUTTO SCHERMO ---
 if st.session_state.new_signal_alert:
     alert_data = st.session_state.new_signal_alert
     bg_color = "#00ff00" if alert_data['dir'] == "BUY" else "#ff0000"
@@ -284,15 +274,13 @@ if st.session_state.new_signal_alert:
         <div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: {bg_color}; z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
             <h1 style="font-size: 15vw; color: {text_color}; margin: 0; text-transform: uppercase;">{arrow} {alert_data['dir']} {arrow}</h1>
             <h2 style="font-size: 5vw; color: {text_color}; margin-top: 20px;">ASSET: {alert_data['pair']}</h2>
-            <h3 style="font-size: 3vw; color: {text_color};">Passa su Deriv.com!</h3>
+            <h3 style="font-size: 3vw; color: {text_color};">Passa su Deriv.com / Pocket Option!</h3>
         </div>
     """, unsafe_allow_html=True)
     
-    # Resetta l'alert dopo 3 secondi
     time_module.sleep(3)
     st.session_state.new_signal_alert = None
     st.rerun()
-
 
 ora_attuale_report = now_roma.time()
 if time(8, 30) <= ora_attuale_report <= time(9, 30) and not st.session_state.report_sent:
@@ -336,24 +324,29 @@ with st.sidebar:
         is_overlap_time = time(14, 30) <= ora_attuale_time <= time(17, 30) and not st.session_state.weekend_mode
 
         if st.session_state.weekend_mode:
-            st.success("🚨 **OTC (Sab-Dom)**\n\n📏 BB (20/2.00) - 📉 RSI (25/75)")
-            use_bb, use_rsi = True, True
-            bb_period, bb_std = 20, 2.00
+            st.success("🚨 **OTC (Sab-Dom)**\n\n📏 Parametri Base: BB 2.00 / RSI 25-75")
+            bb_period = 20
             custom_rsi_buy, custom_rsi_sell = 25, 75
         
         elif is_overlap_time:
             st.warning("⚠️ **LIVE OVERLAP ATTIVA (Lun-Ven)**\n\nSicurezza automatica")
-            st.info("📏 BB (20/2.00)\n📉 RSI (20/80)")
-            use_bb, use_rsi = True, True
-            bb_period, bb_std = 20, 2.00
+            bb_period = 20
             custom_rsi_buy, custom_rsi_sell = 20, 80
         
         else:
-            st.success("🟢 **LIVE (Lun-Ven)**\n\n📏 BB (20/x) - 📉 RSI (25/75)")
-            use_bb, use_rsi = True, True
+            st.success("🟢 **LIVE (Lun-Ven)**\n\n📏 Parametri Base: RSI 30-70")
             bb_period = 20
             custom_rsi_buy, custom_rsi_sell = 30, 70
-            bb_std = st.selectbox("📏 Deviazione BB", [2.00, 2.10, 2.20, 2.30, 2.35, 2.40, 2.50], index=0)
+            
+        bb_std = st.selectbox("📏 Deviazione BB", [2.00, 2.10, 2.20, 2.30, 2.35, 2.40, 2.50], index=0)
+
+        st.divider()
+        st.subheader("🎛️ FILTRI ATTIVI (CONTROLLO MANUALE)")
+        # QUESTI SONO I TOGGLE REALI PER ACCENDERE/SPEGNERE GLI INDICATORI
+        use_bb = st.toggle("Usa Bollinger Bands (BB)", value=True, help="Se disattivato, ignora le Bande di Bollinger")
+        use_rsi = st.toggle("Usa RSI", value=True, help="Se disattivato, ignora l'ipercomprato/ipervenduto")
+        use_ema = st.toggle("Usa Filtro Trend (EMA)", value=True, help="Evita di operare contro il trend principale")
+        use_spread = st.toggle("Applica Filtro Spread (Pocket Option)", value=True, help="Richiede che il prezzo superi la banda di una % per compensare lo spread")
 
         st.divider()
         st.subheader("🏛️ SESSIONI DI MERCATO")
@@ -376,10 +369,6 @@ with st.sidebar:
         st.subheader("🛠️ PARAMETRI TRADING")
         st.session_state.stake = st.number_input("💶 INVESTIMENTO (€)", value=100.0)
         timeframe = st.selectbox("⏱️ TIMEFRAME (s)", [60, 120], index=0)
-
-        st.divider()
-        st.subheader("📈 FILTRO TREND (EMA)")
-        use_ema = st.toggle("Attiva Filtro Trend (EMA)", value=True, help="Evita di operare contro il trend principale")
         ema_period = st.selectbox("⏱️ Periodo EMA", [50, 100], index=0)
 
         st.divider()
@@ -402,7 +391,7 @@ with st.sidebar:
             time_module.sleep(1)
             st.rerun()
 
-        stress_test = st.toggle("🚀 **STRESS MODE**", value=False)
+        stress_test = st.toggle("🚀 **STRESS MODE (TEST RAPIDO)**", value=False)
         if stress_test:
             st.warning("⚠️ **Modalità TEST:**\n\nno BB - RSI (45/55)")
             use_bb, use_rsi = False, True
@@ -442,39 +431,21 @@ if st.session_state.connected:
     nome_sessione_attiva = ""
     
     if st.session_state.weekend_mode:
-        # Nel weekend (OTC) teniamo le più stabili su Pocket Option
         CURRENT_PAIRS = ["EURUSD", "USDJPY", "AUDUSD", "GBPUSD"]
         nome_sessione_attiva = "🎯 SESSIONE WEEKEND OTC"
     else:
         if time(23, 0) <= ora_attuale_time or ora_attuale_time < time(9, 0):
-            # 1. ASIATICA (23:00 - 09:00) -> Bassa volatilità, ottima per RSI
             CURRENT_PAIRS = ["AUDUSD", "NZDUSD", "USDJPY", "EURGBP"]
             nome_sessione_attiva = "🐌 SESSIONE ASIATICA (Bassa Volatilità)"
-            
         elif time(9, 0) <= ora_attuale_time < time(14, 30):
-            # 2. MATTINA / LONDRA (09:00 - 14:30) -> Trend fluidi
             CURRENT_PAIRS = ["EURUSD", "GBPUSD", "EURJPY"]
             nome_sessione_attiva = "🇪🇺 SESSIONE LONDRA (Trend Fluidi)"
-            
         elif time(14, 30) <= ora_attuale_time < time(17, 30):
-            # 3. OVERLAP (14:30 - 17:30) -> Alta volatilità, niente GBP
             CURRENT_PAIRS = ["EURUSD", "USDCAD"]
             nome_sessione_attiva = "🔥 OVERLAP EU+USA (Alta Volatilità)"
-            
         else:
-            # 4. SERALE / NEW YORK (17:30 - 23:00) -> Ritracciamenti
             CURRENT_PAIRS = ["USDCAD", "USDCHF", "AUDUSD"]
             nome_sessione_attiva = "🇺🇸 SESSIONE NEW YORK (Ritracciamenti)"
-
-    # --- PROTEZIONE OVERLAP ---
-    trading_autorizzato = True 
-    in_pausa_overlap = False
-
-    # Se siamo in orario overlap e il toggle è acceso, blocca tutto
-    if not st.session_state.weekend_mode and pausa_manuale_overlap:
-        if time(14, 30) <= ora_attuale_time < time(17, 30):
-            trading_autorizzato = False
-            in_pausa_overlap = True
 
     st.divider()
     st.subheader("🌍 Market Flow 24h")
@@ -503,7 +474,6 @@ if st.session_state.connected:
             with cols[i]: st.code(f"{icons.get(pair, '🔍')} {pair}")
 
         for pair in CURRENT_PAIRS:
-            # FIX: Blocca fisicamente la scansione se c'è una pausa (es. Overlap attivato)
             if not trading_autorizzato:
                 continue
                 
@@ -537,12 +507,13 @@ if st.session_state.connected:
 
                 chiusura_prec = df['close'].iloc[-2]
 
-                # --- GESTIONE SPREAD POCKET OPTION CORRETTA ---
-                # 0.008% in OTC (0.00008) | 0.014% in LIVE (0.00014) -> ~1.5 pips
-                spread_val = 0.00008 if st.session_state.weekend_mode else 0.00014
+                # --- GESTIONE SPREAD POCKET OPTION ---
+                if use_spread:
+                    spread_val = 0.00008 if st.session_state.weekend_mode else 0.00014
+                else:
+                    spread_val = 0.0
                 
-                # Applichiamo lo spread alle Bande di Bollinger
-                target_bb_low = curr_bb_low * (1 - spread_val) # Sfondamento reale
+                target_bb_low = curr_bb_low * (1 - spread_val)
                 target_bb_up = curr_bb_up * (1 + spread_val)   
                 
                 if use_ema:
@@ -556,15 +527,18 @@ if st.session_state.connected:
                     cond_ema_buy, cond_ema_sell = True, True
                 
                 cond_rsi_buy = (curr_rsi < r_buy) if use_rsi else True
-                # Usiamo le nuove variabili target_bb_low e target_bb_up per le condizioni
                 cond_bb_buy = (chiusura_prec <= target_bb_low) if use_bb else True
                 
                 cond_rsi_sell = (curr_rsi > r_sell) if use_rsi else True
-                # Usiamo le nuove variabili target_bb_low e target_bb_up per le condizioni
                 cond_bb_sell = (chiusura_prec >= target_bb_up) if use_bb else True
 
-                is_buy = (cond_rsi_buy and cond_bb_buy and cond_ema_buy) and (use_rsi or use_bb)
-                is_sell = (cond_rsi_sell and cond_bb_sell and cond_ema_sell) and (use_rsi or use_bb)
+                is_buy = (cond_rsi_buy and cond_bb_buy and cond_ema_buy) 
+                is_sell = (cond_rsi_sell and cond_bb_sell and cond_ema_sell) 
+                
+                # Se tutti i filtri sono disattivati, non inviare segnali impazziti
+                if not use_bb and not use_rsi and not use_ema:
+                    is_buy = False
+                    is_sell = False
 
                 current_time = time_module.time()
                 trade_attivi_ora = len(st.session_state.active_trades)
@@ -593,7 +567,7 @@ if st.session_state.connected:
                         'rsi_val': f"{curr_rsi:.1f}",
                         'stake': f"{st.session_state.stake:.0f}€",                         
                         'params_bb': f"{b_period}/{b_std}" if use_bb else "OFF", 
-                        'params_rsi': f"{r_buy}/{r_sell}",
+                        'params_rsi': f"{r_buy}/{r_sell}" if use_rsi else "OFF",
                         'params_ema': f"{ema_period}" if use_ema else "OFF", 
                         'mercato': tipo_mercato, 'result': "⏳ In corso...",
                         'check_120s': "-", 'pnl_numeric': 0.0
@@ -602,10 +576,9 @@ if st.session_state.connected:
                     save_journal(st.session_state.signal_history)
                     send_telegram_signal(direction, pair, price, curr_rsi, t_id, st.session_state.stake, tipo_mercato)
                     
-                    # 🔊 SUONA L'AUDIO DIFFERENZIATO E ATTIVA L'ALERT GIGANTE
                     play_trade_sound(direction.lower())
                     st.session_state.new_signal_alert = {"dir": direction, "pair": pair}
-                    st.rerun() # Forza il ricaricamento immediato per mostrare l'alert
+                    st.rerun() 
 
             except Exception as e:
                 continue
@@ -634,8 +607,6 @@ if st.session_state.connected:
                 r_buy_graf, r_sell_graf, b_period_graf, b_std_graf = custom_rsi_buy, custom_rsi_sell, bb_period, bb_std
 
             bb_ta = ta.bbands(df_raw['close'], length=b_period_graf, std=b_std_graf)
-
-
             
             if bb_ta is not None and not bb_ta.empty:
                 bb_ta.columns = ['BBL', 'BBM', 'BBU', 'BBB', 'BBP'] 
@@ -645,21 +616,23 @@ if st.session_state.connected:
                 
                 df_final = pd.concat([df_raw, bb_ta[['BBL', 'BBM', 'BBU']]], axis=1).tail(100)
 
-                # Definizione spread visivo corretto
-                spread_val_graf = 0.00008 if st.session_state.weekend_mode else 0.00014
+                if use_spread:
+                    spread_val_graf = 0.00008 if st.session_state.weekend_mode else 0.00014
+                else:
+                    spread_val_graf = 0.0
 
                 df_final['buy_sig'] = float('nan')
                 df_final['sell_sig'] = float('nan')
                 
                 df_final['buy_sig'] = df_final.apply(lambda x: (x['close'] * 0.9998) if (
                     ((x['RSI'] < r_buy_graf) if use_rsi else True) and 
-                    ((x['close'] <= x['BBL']) if use_bb else True) and
+                    ((x['close'] <= (x['BBL'] * (1 - spread_val_graf))) if use_bb else True) and
                     ((x['BBM'] > x['EMA']) if (use_ema and 'EMA' in x and not pd.isna(x['EMA'])) else True)
                 ) else float('nan'), axis=1)
                 
                 df_final['sell_sig'] = df_final.apply(lambda x: (x['close'] * 1.0002) if (
                     ((x['RSI'] > r_sell_graf) if use_rsi else True) and 
-                    ((x['close'] >= x['BBU']) if use_bb else True) and
+                    ((x['close'] >= (x['BBU'] * (1 + spread_val_graf))) if use_bb else True) and
                     ((x['BBM'] < x['EMA']) if (use_ema and 'EMA' in x and not pd.isna(x['EMA'])) else True)
                 ) else float('nan'), axis=1)
                 
@@ -695,17 +668,12 @@ if st.session_state.connected:
 
         if current_ts >= scadenza:
             try:
-                # FIX 1: Usiamo sempre candele da 60s per la verifica. 
-                # Le API di Deriv accettano sempre 60s per il Forex reale.
                 res, _ = get_candles(pair, 60, 6)
                 
                 if res and len(res) >= 4:
                     entry_price = trade['entry_price']
                     dir_trade, t_id = trade['direction'], trade['id']
                     
-                    # res[-1] è il minuto in corso
-                    # res[-2] è la candela chiusa ai 120s esatti
-                    # res[-3] è la candela chiusa ai 60s esatti
                     exit_60 = res[-3]['close']
                     exit_120 = res[-2]['close']
                     
@@ -749,21 +717,17 @@ if st.session_state.connected:
                             if pair in st.session_state.active_trades:
                                 del st.session_state.active_trades[pair]
                 else:
-                    # FIX 2: Rete di sicurezza. Se il broker non invia i dati per più di 4 minuti, 
-                    # sblocca lo scanner forzando l'eliminazione del trade pendente.
                     if current_ts > scadenza + 240:
                         if pair in st.session_state.active_trades:
                             del st.session_state.active_trades[pair]
                             
             except Exception as e:
-                # Se c'è un errore imprevisto, usa la rete di sicurezza
                 if current_ts > scadenza + 240:
                     if pair in st.session_state.active_trades:
                         del st.session_state.active_trades[pair]
                 continue
                     
     st.divider()
-
 
     # --- 7. TABELLA JOURNAL E FILTRI DINAMICI ---
     st.subheader("📋 Trading Journal & Performance Hub")
