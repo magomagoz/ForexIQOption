@@ -346,7 +346,7 @@ with st.sidebar:
         use_bb = st.toggle("Usa Bollinger Bands (BB)", value=True, help="Se disattivato, ignora le Bande di Bollinger")
         use_rsi = st.toggle("Usa RSI", value=True, help="Se disattivato, ignora l'ipercomprato/ipervenduto")
         use_ema = st.toggle("Usa Filtro Trend (EMA)", value=True, help="Evita di operare contro il trend principale")
-        use_spread = st.toggle("Applica Filtro Spread (Pocket Option)", value=True, help="Richiede che il prezzo superi la banda di una % per compensare lo spread")
+        use_spread = st.toggle("Applica Filtro Spread (Pocket Option)", value=False, help="Richiede che il prezzo superi la banda di una % per compensare lo spread")
 
         st.divider()
         st.subheader("🏛️ SESSIONI DI MERCATO")
