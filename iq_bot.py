@@ -115,6 +115,7 @@ def get_market_status():
     tokyo = (time(0,0), time(9,0))
     londra = (time(9,0), time(17,30))
     new_york = (time(14,30), time(23,0))
+    chiuso = (time(23,00), time(0,0))
     
     if is_weekend_reale: 
         return "⚠️ **WEEKEND OTC**"
@@ -470,7 +471,10 @@ if st.session_state.connected:
             # 2. Se il trading è autorizzato ma siamo in orario overlap, mostra l'avviso giallo
             elif is_overlap_time:
                 st.warning(f"⚠️ {nome_sessione_attiva} - In funzione con filtri di sicurezza 🔥")
-            
+
+            elif chiuso:
+                st.info(f"💤 MERCATI CHIUSI")
+
             # 3. Altrimenti, tutto regolare
             else:
                 st.success(f"SISTEMA LIVE ATTIVO 🔥 | {nome_sessione_attiva}", icon="📡")
