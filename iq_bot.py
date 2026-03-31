@@ -444,11 +444,11 @@ if st.session_state.connected:
         elif time(14, 30) <= ora_attuale_time < time(17, 30):
             CURRENT_PAIRS = ["EURUSD", "USDCAD"]
             nome_sessione_attiva = "🔥 OVERLAP EU+USA (Alta Volatilità)"
-        elif time(23, 0) <= ora_attuale_time < time(0, 0):
-            nome_sessione_attiva = "💤 MERCATI CHIUSI"
-        else:
+        elif time(17, 30) <= ora_attuale_time < time(23, 0):
             CURRENT_PAIRS = ["USDCAD", "USDCHF", "AUDUSD"]
             nome_sessione_attiva = "🇺🇸 SESSIONE AMERICANA (Ritracciamenti)"
+        else:
+            nome_sessione_attiva = "💤 MERCATI CHIUSI"
 
     st.divider()
     st.subheader("🌍 Market Flow 24h")
