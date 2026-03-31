@@ -368,7 +368,7 @@ with st.sidebar:
         st.divider()
         st.subheader("🛠️ PARAMETRI TRADING")
         st.session_state.stake = st.number_input("💶 INVESTIMENTO (€)", value=100.0)
-        timeframe = st.selectbox("⏱️ TIMEFRAME (s)", [60, 120], index=0)
+        timeframe = st.selectbox("⏱️ TIMEFRAME (s)", [60, 120, 180], index=0)
         ema_period = st.selectbox("⏱️ Periodo EMA", [50, 100], index=0)
 
         st.divider()
@@ -576,7 +576,9 @@ if st.session_state.connected:
                         'params_rsi': f"{r_buy}/{r_sell}" if use_rsi else "OFF",
                         'params_ema': f"{ema_period}" if use_ema else "OFF", 
                         'mercato': tipo_mercato, 'result': "⏳ In corso...",
-                        'check_120s': "-", 'pnl_numeric': 0.0
+                        'check_120s': "-",
+                        'check_180s': "-", # NUOVO CONTROLLO 3 MINUTI
+                        'pnl_numeric': 0.0
                     })
 
                     save_journal(st.session_state.signal_history)
@@ -669,32 +671,48 @@ if st.session_state.connected:
     trades_pendenti = list(st.session_state.active_trades.items())
 
     for pair, trade in trades_pendenti:
-        attesa_reale = max(timeframe, 120) 
+        # Attesa innalzata per permettere di controllare i 180 secondi
+        attesa_reale = max(timeframe, 180) 
         scadenza = trade['entry_time'] + attesa_reale + 2 
 
         if current_ts >= scadenza:
             try:
-                res, _ = get_candles(pair, 60, 6)
+                # Estraiamo 8 candele invece di 6 per garantire che 1m, 2m e 3m passati siano coperti
+                res, _ = get_candles(pair, 60, 8)
                 
-                if res and len(res) >= 4:
+                if res and len(res) >= 5:
                     entry_price = trade['entry_price']
                     dir_trade, t_id = trade['direction'], trade['id']
                     
-                    exit_60 = res[-3]['close']
-                    exit_120 = res[-2]['close']
+                    # Calcolo chiusura rispetto all'indicizzazione delle candele:
+                    # res[-1] è la candela che si sta formando adesso
+                    # res[-2] è la candela chiusa 3 minuti dopo il trade (180s)
+                    # res[-3] è la candela chiusa 2 minuti dopo il trade (120s)
+                    # res[-4] è la candela chiusa 1 minuto dopo il trade (60s)
+                    exit_60 = res[-4]['close']
+                    exit_120 = res[-3]['close']
+                    exit_180 = res[-2]['close']
                     
                     win_60 = (exit_60 > entry_price) if dir_trade == "BUY" else (exit_60 < entry_price)
                     win_120 = (exit_120 > entry_price) if dir_trade == "BUY" else (exit_120 < entry_price)
+                    win_180 = (exit_180 > entry_price) if dir_trade == "BUY" else (exit_180 < entry_price)
                     
-                    win = win_60 if timeframe == 60 else win_120 
+                    if timeframe == 60:
+                        win = win_60
+                    elif timeframe == 120:
+                        win = win_120
+                    else:
+                        win = win_180 
+
                     res_status = "WIN" if win else "LOSS"
                     icona_esito = "✅" if win else "❌"
                     profit = (trade['stake_num'] * 0.92) if (res_status == "WIN") else -trade['stake_num']
 
                     for s in st.session_state.signal_history:
                         if s.get('id') == t_id and s.get('result') == "⏳ In corso...":
-                            s['result'] = f"{'✅' if win_60 else '❌'} {res_status}"
+                            s['result'] = f"{'✅' if win_60 else '❌'} {'WIN' if win_60 else 'LOSS'}"
                             s['check_120s'] = f"{'✅' if win_120 else '❌'} {'WIN' if win_120 else 'LOSS'}"
+                            s['check_180s'] = f"{'✅' if win_180 else '❌'} {'WIN' if win_180 else 'LOSS'}"
                             s['pnl_numeric'] = float(profit)
                             
                             rsi_ingresso = s.get('rsi_val', 'N/D')
@@ -703,19 +721,20 @@ if st.session_state.connected:
                             save_journal(st.session_state.signal_history)
 
                             esito_120s = f"{'✅' if win_120 else '❌'} {'WIN' if win_120 else 'LOSS'}"
+                            esito_180s = f"{'✅' if win_180 else '❌'} {'WIN' if win_180 else 'LOSS'}"
                             mapping_nomi = {"EURUSD": "V50", "USDJPY": "V75", "AUDUSD": "V100"}
                             nome_reale = mapping_nomi.get(pair, pair)
                             tipo_mercato = "OTC" if st.session_state.weekend_mode else "LIVE"
                             
-                            msg = (f"🏁 *ESITO* {'💰' if win else '💀'} {res_status}\n"
+                            msg = (f"🏁 *ESITO* {'💰' if win else '💀'} {res_status} ({timeframe}s)\n"
                                    f"🆔 ID: `{t_id}`\n"
                                    f"💱 Asset: {pair}\n"
                                    f"🌍 Market: {tipo_mercato}\n"
                                    f"📈 RSI Ingresso: `{rsi_ingresso}`\n"
-                                   f"📉 Esito 60s: {icona_esito} {res_status}\n"
-                                   f"💵 P&L 60s: `{profit:.2f}€`\n"
+                                   f"📉 Esito 60s: {'✅ WIN' if win_60 else '❌ LOSS'}\n"
                                    f"📉 Esito 120s: {esito_120s}\n"
-                                   f"📅 P&L Total: `{st.session_state.session_pnl:.2f}€` ")
+                                   f"📉 Esito 180s: {esito_180s}\n"
+                                   f"💵 P&L Sessione: `{st.session_state.session_pnl:.2f}€` ")
                             invia_telegram(msg)
 
                             if res_status == "WIN": play_trade_sound("win")
@@ -740,12 +759,12 @@ if st.session_state.connected:
 
     if st.session_state.signal_history:
         df_journal = pd.DataFrame(st.session_state.signal_history)
-        colonne_critiche = ['result', 'check_120s', 'rsi_val', 'params_ema', 'pnl_numeric']
+        colonne_critiche = ['result', 'check_120s', 'check_180s', 'rsi_val', 'params_ema', 'pnl_numeric']
         for col in colonne_critiche:
             if col not in df_journal.columns:
                 df_journal[col] = 0.0 if col == 'pnl_numeric' else "-"
     else:
-        df_journal = pd.DataFrame(columns=['id', 'time', 'pair', 'dir', 'price', 'rsi_val', 'stake', 'params_bb', 'params_rsi', 'params_ema', 'mercato', 'result', 'check_120s', 'pnl_numeric'])
+        df_journal = pd.DataFrame(columns=['id', 'time', 'pair', 'dir', 'price', 'rsi_val', 'stake', 'params_bb', 'params_rsi', 'params_ema', 'mercato', 'result', 'check_120s', 'check_180s', 'pnl_numeric'])
 
     df_journal['pnl_numeric'] = pd.to_numeric(df_journal.get('pnl_numeric', 0.0), errors='coerce').fillna(0.0)
     remaining = 0.0 
@@ -782,19 +801,24 @@ if st.session_state.connected:
         except Exception: pass 
 
     total_trades = len(df_filtered)
-    best_pairs_str, best_pairs_str_120 = "-", "-"
-    wins, losses, wins_120, losses_120 = 0, 0, 0, 0
-    total_pnl_60, total_pnl_120 = 0.0, 0.0
+    best_pairs_str, best_pairs_str_120, best_pairs_str_180 = "-", "-", "-"
+    wins, losses, wins_120, losses_120, wins_180, losses_180 = 0, 0, 0, 0, 0, 0
+    total_pnl_60, total_pnl_120, total_pnl_180 = 0.0, 0.0, 0.0
     
     if total_trades > 0:
         wins = df_filtered['result'].astype(str).str.contains("WIN").sum()
         losses = df_filtered['result'].astype(str).str.contains("LOSS").sum()
         wins_120 = df_filtered['check_120s'].astype(str).str.contains("✅").sum()
         losses_120 = df_filtered['check_120s'].astype(str).str.contains("❌").sum()
+        wins_180 = df_filtered['check_180s'].astype(str).str.contains("✅").sum()
+        losses_180 = df_filtered['check_180s'].astype(str).str.contains("❌").sum()
+        
         total_pnl_60 = df_filtered['pnl_numeric'].sum()
         
         stake_rif = float(st.session_state.stake)
         total_pnl_120 = (wins_120 * (stake_rif * 0.92)) - (losses_120 * stake_rif)
+        total_pnl_180 = (wins_180 * (stake_rif * 0.92)) - (losses_180 * stake_rif)
+        
         profit_by_pair = df_filtered.groupby('pair')['pnl_numeric'].sum()
         
         def calc_pnl_120(row):
@@ -803,14 +827,25 @@ if st.session_state.connected:
             if "❌" in val: return -stake_rif
             return 0.0
             
+        def calc_pnl_180(row):
+            val = str(row['check_180s'])
+            if "✅" in val: return stake_rif * 0.92
+            if "❌" in val: return -stake_rif
+            return 0.0
+            
         df_filtered['pnl_120_tmp'] = df_filtered.apply(calc_pnl_120, axis=1)
+        df_filtered['pnl_180_tmp'] = df_filtered.apply(calc_pnl_180, axis=1)
+        
         profit_by_pair_120 = df_filtered.groupby('pair')['pnl_120_tmp'].sum()
+        profit_by_pair_180 = df_filtered.groupby('pair')['pnl_180_tmp'].sum()
         
         best_pairs_str = ", ".join(profit_by_pair[profit_by_pair == profit_by_pair.max()].index.tolist()) if not profit_by_pair.empty and profit_by_pair.max() > 0 else "-"
         best_pairs_str_120 = ", ".join(profit_by_pair_120[profit_by_pair_120 == profit_by_pair_120.max()].index.tolist()) if not profit_by_pair_120.empty and profit_by_pair_120.max() > 0 else "-"
+        best_pairs_str_180 = ", ".join(profit_by_pair_180[profit_by_pair_180 == profit_by_pair_180.max()].index.tolist()) if not profit_by_pair_180.empty and profit_by_pair_180.max() > 0 else "-"
 
     win_rate_60 = (wins / (wins + losses) * 100) if (wins + losses) > 0 else 0.0
     win_rate_120 = (wins_120 / (wins_120 + losses_120) * 100) if (wins_120 + losses_120) > 0 else 0.0
+    win_rate_180 = (wins_180 / (wins_180 + losses_180) * 100) if (wins_180 + losses_180) > 0 else 0.0
     
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("🎯 W/L 60s", f"{wins}W - {losses}L")
@@ -825,17 +860,25 @@ if st.session_state.connected:
     d2.metric("💰 P&L 120s", f"{total_pnl_120:.2f} €")
     d3.metric("🏁 Win Rate 120s", f"{win_rate_120:.1f}%")
     d4.metric("🏆 Top Asset 120s", best_pairs_str_120)
+    
+    st.markdown("<hr style='border:1px dashed #555; margin: 10px 0; opacity: 0.5;'>", unsafe_allow_html=True)
+
+    e1, e2, e3, e4 = st.columns(4) 
+    e1.metric("🎯 W/L 180s", f"{wins_180}W - {losses_180}L")
+    e2.metric("💰 P&L 180s", f"{total_pnl_180:.2f} €")
+    e3.metric("🏁 Win Rate 180s", f"{win_rate_180:.1f}%")
+    e4.metric("🏆 Top Asset 180s", best_pairs_str_180)
 
     if not df_filtered.empty:
-        rename_map = {'id': '🆔 ID', 'time': '⏰ DATA', 'pair': '💱 VALUTE', 'dir': '🚀 TIPO', 'price': '💰 PRICE', 'rsi_val': '📈 RSI IN', 'stake': '💶 STAKE', 'params_bb': '↔️ BB', 'params_rsi': '📉 RSI', 'params_ema': '🌊 EMA', 'mercato': '🌍 MARKET', 'result': '🎯 60s', 'check_120s': '⏱️ 120s', 'pnl_numeric': '📈 P&L'}
+        rename_map = {'id': '🆔 ID', 'time': '⏰ DATA', 'pair': '💱 VALUTE', 'dir': '🚀 TIPO', 'price': '💰 PRICE', 'rsi_val': '📈 RSI IN', 'stake': '💶 STAKE', 'params_bb': '↔️ BB', 'params_rsi': '📉 RSI', 'params_ema': '🌊 EMA', 'mercato': '🌍 MARKET', 'result': '🎯 60s', 'check_120s': '⏱️ 120s', 'check_180s': '⏱️ 180s', 'pnl_numeric': '📈 P&L'}
 
-        cols_to_use = ['id', 'time', 'pair', 'dir', 'price', 'rsi_val', 'stake', 'params_bb', 'params_rsi', 'params_ema', 'mercato', 'result', 'check_120s', 'pnl_numeric']
+        cols_to_use = ['id', 'time', 'pair', 'dir', 'price', 'rsi_val', 'stake', 'params_bb', 'params_rsi', 'params_ema', 'mercato', 'result', 'check_120s', 'check_180s', 'pnl_numeric']
         
         df_display = df_filtered.iloc[::-1].copy()[[c for c in cols_to_use if c in df_filtered.columns]].rename(columns=rename_map)
         
         df_display['📈 P&L'] = df_display['📈 P&L'].apply(lambda x: f"{x:.1f}€" if x % 1 != 0 else f"{x:.0f}€")
         try:
-            colonne_esito = [c for c in ['🎯 60s', '⏱️ 120s'] if c in df_display.columns]
+            colonne_esito = [c for c in ['🎯 60s', '⏱️ 120s', '⏱️ 180s'] if c in df_display.columns]
             st.dataframe(df_display.style.applymap(style_result, subset=colonne_esito).applymap(style_pnl, subset=['📈 P&L']), use_container_width=True, hide_index=True)
         except Exception:
             st.dataframe(df_display, use_container_width=True, hide_index=True)
