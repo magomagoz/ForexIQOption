@@ -112,7 +112,7 @@ def genera_trade_id():
 def get_market_status():
     fuso_roma = pytz.timezone('Europe/Rome')
     now_time = datetime.now(fuso_roma).time()
-    tokyo = (time(23,0), time(9,0))
+    tokyo = (time(0,0), time(9,0))
     londra = (time(9,0), time(17,30))
     new_york = (time(14,30), time(23,0))
     
@@ -435,7 +435,7 @@ if st.session_state.connected:
         CURRENT_PAIRS = ["EURUSD", "USDJPY", "AUDUSD", "GBPUSD"]
         nome_sessione_attiva = "🎯 SESSIONE WEEKEND OTC"
     else:
-        if time(23, 0) <= ora_attuale_time or ora_attuale_time < time(9, 0):
+        if time(0, 0) <= ora_attuale_time or ora_attuale_time < time(9, 0):
             CURRENT_PAIRS = ["AUDUSD", "NZDUSD", "USDJPY", "EURGBP"]
             nome_sessione_attiva = "🐌 SESSIONE ASIATICA (Bassa Volatilità)"
         elif time(9, 0) <= ora_attuale_time < time(14, 30):
@@ -444,6 +444,8 @@ if st.session_state.connected:
         elif time(14, 30) <= ora_attuale_time < time(17, 30):
             CURRENT_PAIRS = ["EURUSD", "USDCAD"]
             nome_sessione_attiva = "🔥 OVERLAP EU+USA (Alta Volatilità)"
+        elif time(23, 0) <= ora_attuale_time < time(0, 0):
+            nome_sessione_attiva = "💤 MERCATI CHIUSI"
         else:
             CURRENT_PAIRS = ["USDCAD", "USDCHF", "AUDUSD"]
             nome_sessione_attiva = "🇺🇸 SESSIONE AMERICANA (Ritracciamenti)"
