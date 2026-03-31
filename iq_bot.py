@@ -341,12 +341,12 @@ with st.sidebar:
         bb_std = st.selectbox("📏 Deviazione BB", [2.00, 2.10, 2.20, 2.30, 2.35, 2.40, 2.50], index=0)
 
         st.divider()
-        st.subheader("🎛️ FILTRI ATTIVI (CONTROLLO MANUALE)")
+        st.subheader("🎛️ FILTRI ATTIVI")
         # QUESTI SONO I TOGGLE REALI PER ACCENDERE/SPEGNERE GLI INDICATORI
         use_bb = st.toggle("Usa Bollinger Bands (BB)", value=True, help="Se disattivato, ignora le Bande di Bollinger")
         use_rsi = st.toggle("Usa RSI", value=True, help="Se disattivato, ignora l'ipercomprato/ipervenduto")
         use_ema = st.toggle("Usa Filtro Trend (EMA)", value=True, help="Evita di operare contro il trend principale")
-        use_spread = st.toggle("Applica Filtro Spread (Pocket Option)", value=False, help="Richiede che il prezzo superi la banda di una % per compensare lo spread")
+        use_spread = st.toggle("Applica Filtro Spread", value=False, help="Richiede che il prezzo superi la banda di una % per compensare lo spread")
 
         st.divider()
         st.subheader("🏛️ SESSIONI DI MERCATO")
