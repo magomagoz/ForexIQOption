@@ -440,13 +440,13 @@ if st.session_state.connected:
             nome_sessione_attiva = "🐌 SESSIONE ASIATICA (Bassa Volatilità)"
         elif time(9, 0) <= ora_attuale_time < time(14, 30):
             CURRENT_PAIRS = ["EURUSD", "GBPUSD", "EURJPY"]
-            nome_sessione_attiva = "🇪🇺 SESSIONE LONDRA (Trend Fluidi)"
+            nome_sessione_attiva = "🇪🇺 SESSIONE EUROPEA (Trend Fluidi)"
         elif time(14, 30) <= ora_attuale_time < time(17, 30):
             CURRENT_PAIRS = ["EURUSD", "USDCAD"]
             nome_sessione_attiva = "🔥 OVERLAP EU+USA (Alta Volatilità)"
         else:
             CURRENT_PAIRS = ["USDCAD", "USDCHF", "AUDUSD"]
-            nome_sessione_attiva = "🇺🇸 SESSIONE NEW YORK (Ritracciamenti)"
+            nome_sessione_attiva = "🇺🇸 SESSIONE AMERICANA (Ritracciamenti)"
 
     st.divider()
     st.subheader("🌍 Market Flow 24h")
