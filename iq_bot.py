@@ -112,10 +112,9 @@ def genera_trade_id():
 def get_market_status():
     fuso_roma = pytz.timezone('Europe/Rome')
     now_time = datetime.now(fuso_roma).time()
-    tokyo = (time(0,0), time(9,0))
+    tokyo = (time(23,0), time(9,0))
     londra = (time(9,0), time(17,30))
     new_york = (time(14,30), time(23,0))
-    chiuso = (time(23,00), time(0,0))
     
     if is_weekend_reale: 
         return "⚠️ **WEEKEND OTC**"
@@ -127,8 +126,7 @@ def get_market_status():
         return "🇺🇸 **SESSIONE NEW YORK**"
     if tokyo[0] <= now_time <= tokyo[1]: 
         return "🐌 **SESSIONE ASIATICA (TOKYO+SIDNEY)**"
-    if chiuso[0] <= now_time <= chiuso[1]:
-        return "💤 **MERCATI CHIUSI**"
+    return "💤 **MERCATI CHIUSI**"
 
 def draw_market_map_inverted(trading_autorizzato):
     fig = go.Figure()
@@ -437,7 +435,7 @@ if st.session_state.connected:
         CURRENT_PAIRS = ["EURUSD", "USDJPY", "AUDUSD", "GBPUSD"]
         nome_sessione_attiva = "🎯 SESSIONE WEEKEND OTC"
     else:
-        if time(0, 0) <= ora_attuale_time or ora_attuale_time < time(9, 0):
+        if time(23, 0) <= ora_attuale_time or ora_attuale_time < time(9, 0):
             CURRENT_PAIRS = ["AUDUSD", "NZDUSD", "USDJPY", "EURGBP"]
             nome_sessione_attiva = "🐌 SESSIONE ASIATICA (Bassa Volatilità)"
         elif time(9, 0) <= ora_attuale_time < time(14, 30):
@@ -446,11 +444,9 @@ if st.session_state.connected:
         elif time(14, 30) <= ora_attuale_time < time(17, 30):
             CURRENT_PAIRS = ["EURUSD", "USDCAD"]
             nome_sessione_attiva = "🔥 OVERLAP EU+USA (Alta Volatilità)"
-        elif time(17, 30) <= ora_attuale_time < time(23, 0):
+        else:
             CURRENT_PAIRS = ["USDCAD", "USDCHF", "AUDUSD"]
             nome_sessione_attiva = "🇺🇸 SESSIONE AMERICANA (Ritracciamenti)"
-        else:
-            nome_sessione_attiva = "💤 MERCATI CHIUSI"
 
     st.divider()
     st.subheader("🌍 Market Flow 24h")
@@ -472,10 +468,7 @@ if st.session_state.connected:
             # 2. Se il trading è autorizzato ma siamo in orario overlap, mostra l'avviso giallo
             elif is_overlap_time:
                 st.warning(f"⚠️ {nome_sessione_attiva} - In funzione con filtri di sicurezza 🔥")
-
-            elif chiuso:
-                st.info(f"💤 MERCATI CHIUSI")
-
+            
             # 3. Altrimenti, tutto regolare
             else:
                 st.success(f"SISTEMA LIVE ATTIVO 🔥 | {nome_sessione_attiva}", icon="📡")
