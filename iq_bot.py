@@ -334,9 +334,9 @@ with st.sidebar:
             custom_rsi_buy, custom_rsi_sell = 20, 80
         
         else:
-            st.success("🟢 **LIVE (Lun-Ven)**\n\n📏 Parametri Base: RSI 30-70")
+            st.success("🟢 **LIVE (Lun-Ven)**\n\n📏 Parametri Base: RSI 25-75")
             bb_period = 20
-            custom_rsi_buy, custom_rsi_sell = 30, 70
+            custom_rsi_buy, custom_rsi_sell = 25, 75
             
         bb_std = st.selectbox("📏 Deviazione BB", [2.00, 2.10, 2.20, 2.30, 2.35, 2.40, 2.50], index=0)
 
