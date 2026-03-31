@@ -127,7 +127,8 @@ def get_market_status():
         return "🇺🇸 **SESSIONE NEW YORK**"
     if tokyo[0] <= now_time <= tokyo[1]: 
         return "🐌 **SESSIONE ASIATICA (TOKYO+SIDNEY)**"
-    return "💤 **MERCATI CHIUSI**"
+    if chiuso[0] <= now_time <= chiuso[1]:
+        return "💤 **MERCATI CHIUSI**"
 
 def draw_market_map_inverted(trading_autorizzato):
     fig = go.Figure()
