@@ -324,17 +324,17 @@ with st.sidebar:
         is_overlap_time = time(14, 30) <= ora_attuale_time <= time(17, 30) and not st.session_state.weekend_mode
 
         if st.session_state.weekend_mode:
-            st.success("🚨 **OTC (Sab-Dom)**\n\n📏 Parametri Base: BB 2.00 / RSI 25-75")
+            st.success("🚨 **OTC (Sab-Dom)**\n\nParametri Base: RSI 25-75")
             bb_period = 20
             custom_rsi_buy, custom_rsi_sell = 25, 75
         
         elif is_overlap_time:
-            st.warning("⚠️ **LIVE OVERLAP (Lun-Ven)**\n\n")
+            st.warning("⚠️ **LIVE OVERLAP (Lun-Ven)**\n\nParametri Base: RSI 20-80")
             bb_period = 20
             custom_rsi_buy, custom_rsi_sell = 20, 80
         
         else:
-            st.success("🟢 **LIVE (Lun-Ven)**\n\n📏 Parametri Base: RSI 25-75")
+            st.success("🟢 **LIVE (Lun-Ven)**\n\nParametri Base: RSI 25-75")
             bb_period = 20
             custom_rsi_buy, custom_rsi_sell = 25, 75
             
