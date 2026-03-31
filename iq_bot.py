@@ -178,7 +178,7 @@ def send_morning_report():
                 msg += f"{n}\n"
         except: pass
             
-    msg += "\n🚀 *Sistema pronto. Avviare lo scanner dalla dashboard?*"
+    #msg += "\n🚀 *Sistema pronto. Avviare lo scanner dalla dashboard?*"
     invia_telegram(msg)
 
 def invia_telegram(messaggio):
@@ -461,10 +461,15 @@ if st.session_state.connected:
         if st.session_state.weekend_mode:
             st.success("SCANNER OTC ATTIVO", icon="🎯")
         else:
-            if is_overlap_time:
-                st.error("🛑 PAUSA OVERLAP ATTIVA: Scanner in attesa. Riprenderà da solo alle 17:30.")
-            elif not trading_autorizzato:
-                st.warning("🛡️ PROTEZIONE ATTIVA: Scanner in pausa.")
+            # 1. Controlla prima se l'utente ha acceso il toggle e bloccato il trading
+            if not trading_autorizzato:
+                st.error("🛑 STOP TOTALE OVERLAP: Scanner in pausa. Riprenderà alle 17:30.")
+            
+            # 2. Se il trading è autorizzato ma siamo in orario overlap, mostra l'avviso giallo
+            elif is_overlap_time:
+                st.warning(f"⚠️ SISTEMA LIVE OVERLAP 🔥 | {nome_sessione_attiva} (Scanner in funzione con filtri di sicurezza)")
+            
+            # 3. Altrimenti, tutto regolare
             else:
                 st.success(f"SISTEMA LIVE ATTIVO 🔥 | {nome_sessione_attiva}", icon="📡")
         
