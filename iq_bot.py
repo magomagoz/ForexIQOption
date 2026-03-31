@@ -467,7 +467,7 @@ if st.session_state.connected:
             
             # 2. Se il trading è autorizzato ma siamo in orario overlap, mostra l'avviso giallo
             elif is_overlap_time:
-                st.warning(f"⚠️ {nome_sessione_attiva} (In funzione con filtri di sicurezza) 🔥")
+                st.warning(f"⚠️ {nome_sessione_attiva} - In funzione con filtri di sicurezza 🔥")
             
             # 3. Altrimenti, tutto regolare
             else:
