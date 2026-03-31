@@ -329,7 +329,7 @@ with st.sidebar:
             custom_rsi_buy, custom_rsi_sell = 25, 75
         
         elif is_overlap_time:
-            st.warning("⚠️ **LIVE OVERLAP ATTIVA (Lun-Ven)**\n\nSicurezza automatica")
+            st.warning("⚠️ **LIVE OVERLAP (Lun-Ven)**\n\n")
             bb_period = 20
             custom_rsi_buy, custom_rsi_sell = 20, 80
         
@@ -467,7 +467,7 @@ if st.session_state.connected:
             
             # 2. Se il trading è autorizzato ma siamo in orario overlap, mostra l'avviso giallo
             elif is_overlap_time:
-                st.warning(f"⚠️ SISTEMA LIVE OVERLAP 🔥 | {nome_sessione_attiva} (Scanner in funzione con filtri di sicurezza)")
+                st.warning(f"⚠️ {nome_sessione_attiva} (In funzione con filtri di sicurezza) 🔥")
             
             # 3. Altrimenti, tutto regolare
             else:
