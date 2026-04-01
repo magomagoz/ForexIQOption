@@ -272,8 +272,8 @@ if st.session_state.new_signal_alert:
     
     st.markdown(f"""
         <div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: {bg_color}; z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
-            <h1 style="font-size: 15vw; color: {text_color}; margin-top: 0px;">ASSET: {alert_data['pair']}</h1>
-            <h2 style="font-size: 10vw; color: {text_color}; margin: 20; text-transform: uppercase;">{arrow} {alert_data['dir']} {arrow}</h2>
+            <h1 style="font-size: 15vw; color: {text_color}; margin-top: 0px;">{alert_data['pair']}</h1>
+            <h2 style="font-size: 12vw; color: {text_color}; margin: 20; text-transform: uppercase;">{arrow} {alert_data['dir']} {arrow}</h2>
         </div>
     """, unsafe_allow_html=True)
     
