@@ -112,7 +112,7 @@ def genera_trade_id():
 def get_market_status():
     fuso_roma = pytz.timezone('Europe/Rome')
     now_time = datetime.now(fuso_roma).time()
-    tokyo = (time(23,0), time(9,0))
+    tokyo = (time(0,0), time(9,0))
     londra = (time(9,0), time(17,30))
     new_york = (time(14,30), time(23,0))
     
