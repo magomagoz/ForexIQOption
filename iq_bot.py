@@ -734,7 +734,7 @@ if st.session_state.connected:
                                    f"📉 Esito 60s: {'✅ WIN' if win_60 else '❌ LOSS'}\n"
                                    f"📉 Esito 120s: {esito_120s}\n"
                                    f"📉 Esito 180s: {esito_180s}\n"
-                                   f"💵 P&L Sessione: `{st.session_state.session_pnl:.2f}€` ")
+                                   f"💵 P&L YTD: `{st.session_state.session_pnl:.2f}€` ")
                             invia_telegram(msg)
 
                             if res_status == "WIN": play_trade_sound("win")
