@@ -272,9 +272,8 @@ if st.session_state.new_signal_alert:
     
     st.markdown(f"""
         <div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: {bg_color}; z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
-            <h1 style="font-size: 15vw; color: {text_color}; margin: 0; text-transform: uppercase;">{arrow} {alert_data['dir']} {arrow}</h1>
-            <h2 style="font-size: 5vw; color: {text_color}; margin-top: 20px;">ASSET: {alert_data['pair']}</h2>
-            <h3 style="font-size: 3vw; color: {text_color};">Passa su Deriv.com / Pocket Option!</h3>
+            <h1 style="font-size: 15vw; color: {text_color}; margin-top: 0px;">ASSET: {alert_data['pair']}</h1>
+            <h2 style="font-size: 10vw; color: {text_color}; margin: 20; text-transform: uppercase;">{arrow} {alert_data['dir']} {arrow}</h2>
         </div>
     """, unsafe_allow_html=True)
     
@@ -870,7 +869,7 @@ if st.session_state.connected:
     e4.metric("🏆 Top Asset 180s", best_pairs_str_180)
 
     if not df_filtered.empty:
-        rename_map = {'id': '🆔 ID', 'time': '⏰ DATA', 'pair': '💱 VALUTE', 'dir': '🚀 TIPO', 'price': '💰 PRICE', 'rsi_val': '📈 RSI IN', 'stake': '💶 STAKE', 'params_bb': '↔️ BB', 'params_rsi': '📉 RSI', 'params_ema': '🌊 EMA', 'mercato': '🌍 MARKET', 'result': '🎯 60s', 'check_120s': '⏱️ 120s', 'check_180s': '⏱️ 180s', 'pnl_numeric': '📈 P&L'}
+        rename_map = {'id': '🆔 ID', 'time': '⏰ DATA', 'pair': '💱 VALUTE', 'dir': '🚀 TIPO', 'price': '💰 PRICE', 'rsi_val': '📈 RSI IN', 'stake': '💶 STAKE', 'params_bb': '↔️ BB', 'params_rsi': '📉 RSI', 'params_ema': '🌊 EMA', 'mercato': '🌍 MKT', 'result': '🎯 60s', 'check_120s': '⏱️ 120s', 'check_180s': '⏱️ 180s', 'pnl_numeric': '📈 P&L'}
 
         cols_to_use = ['id', 'time', 'pair', 'dir', 'price', 'rsi_val', 'stake', 'params_bb', 'params_rsi', 'params_ema', 'mercato', 'result', 'check_120s', 'check_180s', 'pnl_numeric']
         
