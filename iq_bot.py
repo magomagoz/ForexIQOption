@@ -282,7 +282,9 @@ if st.session_state.new_signal_alert:
     st.rerun()
 
 ora_attuale_report = now_roma.time()
-if time(8, 30) <= ora_attuale_report <= time(9, 30) and not st.session_state.report_sent:
+#if time(8, 30) <= ora_attuale_report <= time(9, 30) and not st.session_state.report_sent:
+
+if time(9, 0) and not st.session_state.report_sent:
     send_morning_report()
     st.session_state.report_sent = True
 
