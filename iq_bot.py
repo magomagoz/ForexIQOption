@@ -755,7 +755,7 @@ if st.session_state.connected:
 
                             save_journal(st.session_state.signal_history)
 
-                            esito_120s = f"{'✅' if win_120 else '❌'} {'WIN' if win_120 else 'LOSS'}"
+                            esito_120s = f"{'✅' if win_120 else '❌'}
                             esito_180s = f"{'✅' if win_180 else '❌'} {'WIN' if win_180 else 'LOSS'}"
                             tipo_mercato = "OTC" if st.session_state.weekend_mode else "LIVE"
                             
@@ -786,8 +786,7 @@ if st.session_state.connected:
                                    f"💱 Asset: {pair}\n"
                                    f"🌍 Market: {tipo_mercato}\n"
                                    f"📈 RSI IN: `{rsi_ingresso}`\n"
-                                   f"💶 Stake: `{trade['stake_num']:.0f}€`\n\n"
-                                   f"⏱️ *ESITO TRADE:*\n"
+                                   f"💶 Stake: `{trade['stake_num']:.0f}€`\n"
                                    f"• 60s: {'✅' if win_60 else '❌'} ({p_60:+.2f}€)\n"
                                    f"• 120s: {esito_120s} ({p_120}€)\n"
                                    f"• 180s: {esito_180s} ({p_180}€)\n\n"
