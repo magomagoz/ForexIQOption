@@ -755,7 +755,7 @@ if st.session_state.connected:
 
                             save_journal(st.session_state.signal_history)
 
-                            esito_120s = f"{'✅' if win_120 else '❌'}
+                            esito_120s = f"{'✅' if win_120 else '❌'}"
                             esito_180s = f"{'✅' if win_180 else '❌'} {'WIN' if win_180 else 'LOSS'}"
                             tipo_mercato = "OTC" if st.session_state.weekend_mode else "LIVE"
                             
