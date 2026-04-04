@@ -781,17 +781,20 @@ if st.session_state.connected:
                             tot_180 = (w180 * stk * 0.92) - (l180 * stk)
                             
                             # 3. Costruzione del nuovo messaggio Telegram
-                            msg = (f"🏁 *ESITO TRADE* | {tipo_mercato}\n"
-                                   f"🆔 ID: `{t_id}` | 💱 {pair}\n"
-                                   f"📈 RSI IN: `{rsi_ingresso}` | 💶 Stake: `{trade['stake_num']:.0f}€`\n\n"
-                                   f"⏱️ *RISULTATI SINGOLO TRADE:*\n"
+                            msg = (f"🏁 *ESITO TRADE*\n"
+                                   f"🆔 ID: `{t_id}`\n"
+                                   f"💱 {pair}\n"
+                                   f"Market: {tipo_mercato}"
+                                   f"📈 RSI IN: `{rsi_ingresso}`\n"
+                                   f"💶 Stake: `{trade['stake_num']:.0f}€`\n\n"
+                                   f"⏱️ *ESITO TRADE:*\n"
                                    f"• 60s: {'✅ WIN' if win_60 else '❌ LOSS'} ({p_60:+.2f}€)\n"
                                    f"• 120s: {esito_120s} ({p_120:+.2f}€)\n"
                                    f"• 180s: {esito_180s} ({p_180:+.2f}€)\n\n"
-                                   f"📊 *P&L TOTALE SESSIONE:*\n"
-                                   f"• YTD 60s: `{tot_60:+.2f}€`\n"
-                                   f"• YTD 120s: `{tot_120:+.2f}€`\n"
-                                   f"• YTD 180s: `{tot_180:+.2f}€`")
+                                   f"📊 *P&L SESSION:*\n"
+                                   f"• P&L 60s: `{tot_60:+.2f}€`\n"
+                                   f"• P&L 120s: `{tot_120:+.2f}€`\n"
+                                   f"• P&L 180s: `{tot_180:+.2f}€`")
                             invia_telegram(msg)
 
                             if res_status == "WIN": play_trade_sound("win")
