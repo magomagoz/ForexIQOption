@@ -693,11 +693,11 @@ if st.session_state.connected:
                 <h3 style="margin-top:0;">💰 Risultato Economico Stimato</h3>
                 <p>Segnali Totali: <b>{totale_segnali}</b> (Vinti: <span style="color:#00ff88;">{tot_vinti}</span> | Persi: <span style="color:#ff3333;">{tot_persi}</span>)</p>
                 <h2 style="color:{colore_box}; margin-bottom:0;">Profitto Netto: {bilancio_netto:.2f} €</h2>
-                <small>Basato su investimento di {st.session_state.stake}€ e payout 85%</small>
+                <small>Basato su investimento di {st.session_state.stake}€ e payout 80% medio%</small>
             </div>
             """, unsafe_allow_html=True)
         else:
-            st.info("Regola i parametri e verifica il profitto")
+            st.info("Scegli la coppia di valute e verifica il risultato")
     except Exception as e:
         st.error(f"Errore grafico: {e}")
     
