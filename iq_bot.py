@@ -755,9 +755,10 @@ if st.session_state.connected:
 
                             save_journal(st.session_state.signal_history)
 
-                            esito_120s = f"{'✅' if win_120 else '❌'}"
-                            esito_180s = f"{'✅' if win_180 else '❌'} {'WIN' if win_180 else 'LOSS'}"
+                            esito_120s = f"{'✅' if win_120 else '❌'}" # {'WIN' if win_180 else 'LOSS'}"
+                            esito_180s = f"{'✅' if win_180 else '❌'}"
                             tipo_mercato = "OTC" if st.session_state.weekend_mode else "LIVE"
+
                             
                             # 1. Calcolo P&L del singolo trade per ogni scadenza
                             p_60 = (trade['stake_num'] * 0.92) if win_60 else -trade['stake_num']
@@ -786,14 +787,15 @@ if st.session_state.connected:
                                    f"💱 Asset: {pair}\n"
                                    f"🌍 Market: {tipo_mercato}\n"
                                    f"📈 RSI IN: `{rsi_ingresso}`\n"
-                                   f"💶 Stake: `{trade['stake_num']:.0f}€`\n"
-                                   f"• 60s: {'✅' if win_60 else '❌'} ({p_60:+.2f}€)\n"
-                                   f"• 120s: {esito_120s} ({p_120}€)\n"
-                                   f"• 180s: {esito_180s} ({p_180}€)\n\n"
+                                   f"💶 Stake: `{trade['stake_num']:.0f}€`\n\n"
+                                   f"🎯 *W&L*\n"
+                                   f"• 60s: {'✅' if win_60 else '❌'} ({p_60:.0f}€)\n"
+                                   f"• 120s: {esito_120s} ({p_120:.0f}€)\n"
+                                   f"• 180s: {esito_180s} ({p_180:.0f}€)\n\n"
                                    f"📊 *P&L SESSION:*\n"
-                                   f"• P&L 60s: `{tot_60}€`\n"
-                                   f"• P&L 120s: `{tot_120}€`\n"
-                                   f"• P&L 180s: `{tot_180}€`")
+                                   f"• P&L 60s: `{tot_60:.0f}€`\n"
+                                   f"• P&L 120s: `{tot_120:.0f}€`\n"
+                                   f"• P&L 180s: `{tot_180:.0f}€`")
                             invia_telegram(msg)
 
                             if res_status == "WIN": play_trade_sound("win")
