@@ -193,7 +193,7 @@ def send_telegram_signal(signal_type, pair, price, rsi, trade_id, stake, tipo_me
     
     message = (
         f"🚀 *NUOVO TRADE*\n🔔 *Segnale:* {signal_type}\n🆔 ID: `{trade_id}`\n"
-        f"💱 Asset: {pair.replace('frx', '')} OTC\n" 
+        f"💱 Asset: {pair.replace('frx', '')}\n" 
         f"🌍 Market: {tipo_mercato}\n💵 Stake: `{stake:.0f} €` \n" 
         f"💰 Prezzo: `{price:.5f}`\n📈 RSI Ingresso: `{rsi:.1f}`\n⏰ Ora: {timestamp}"
     )
@@ -491,7 +491,7 @@ if st.session_state.connected:
                 df = pd.DataFrame(candles)
 
                 if st.session_state.weekend_mode and not stress_test:
-                    r_buy, r_sell, b_period, b_std = 25, 75, 20, 2.00
+                    r_buy, r_sell, b_period, b_std = 25, 75, 20, 2.10
                 elif stress_test:
                     r_buy, r_sell, b_period, b_std = 45, 55, 20, 2.20
                 else:
@@ -877,20 +877,20 @@ if st.session_state.connected:
         total_pnl_60 = df_filtered['pnl_numeric'].sum()
         
         stake_rif = float(st.session_state.stake)
-        total_pnl_120 = (wins_120 * (stake_rif * 0.92)) - (losses_120 * stake_rif)
-        total_pnl_180 = (wins_180 * (stake_rif * 0.92)) - (losses_180 * stake_rif)
+        total_pnl_120 = (wins_120 * (stake_rif * 0.85)) - (losses_120 * stake_rif)
+        total_pnl_180 = (wins_180 * (stake_rif * 0.85)) - (losses_180 * stake_rif)
         
         profit_by_pair = df_filtered.groupby('pair')['pnl_numeric'].sum()
         
         def calc_pnl_120(row):
             val = str(row['check_120s'])
-            if "✅" in val: return stake_rif * 0.92
+            if "✅" in val: return stake_rif * 0.85
             if "❌" in val: return -stake_rif
             return 0.0
             
         def calc_pnl_180(row):
             val = str(row['check_180s'])
-            if "✅" in val: return stake_rif * 0.92
+            if "✅" in val: return stake_rif * 0.85
             if "❌" in val: return -stake_rif
             return 0.0
             
