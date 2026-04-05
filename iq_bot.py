@@ -359,12 +359,22 @@ with st.sidebar:
         st.info(status_testo if status_testo else "Recupero informazioni mercato...")
 
         st.markdown("---")
-        st.subheader("💸 PROTEZIONE LONDRA-NY")
-        pausa_manuale_overlap = st.toggle("🛑 **Stop Totale Overlap**", value=False, help="Spegne lo scanner dalle 14:30 alle 17:30")
+        st.subheader("🛡️ PROTEZIONI DI SISTEMA")
+        pausa_manuale_overlap = st.toggle("🛑 **Stop Totale Overlap (Lun-Ven)**", value=False, help="Spegne lo scanner dalle 14:30 alle 17:30")
         
         trading_autorizzato = True
+        motivo_blocco = ""
+
+        # Controllo 1: Blocco Overlap Manuale (Lun-Ven)
         if is_overlap_time and pausa_manuale_overlap:
             trading_autorizzato = False
+            motivo_blocco = "🛑 STOP TOTALE OVERLAP: Scanner in pausa. Riprenderà alle 17:30."
+            
+        # Controllo 2: Blocco Automatico Domenica Sera (OTC)
+        is_domenica = (now_roma.weekday() == 6)
+        if st.session_state.weekend_mode and is_domenica and (ora_attuale_time >= time(17, 0)):
+            trading_autorizzato = False
+            motivo_blocco = "🛑 STOP DOMENICA SERA: Scanner bloccato per mercato OTC instabile pre-apertura."
 
         st.divider()
         st.subheader("🛠️ PARAMETRI TRADING")
@@ -459,20 +469,16 @@ if st.session_state.connected:
         st.plotly_chart(draw_market_map_inverted(trading_autorizzato), use_container_width=True)
 
     if st.session_state.scanner_on:
-        if st.session_state.weekend_mode:
+        # Se il trading è stato bloccato da una delle due protezioni (Overlap o Domenica), mostra l'errore
+        if not trading_autorizzato:
+            st.error(motivo_blocco)
+        # Altrimenti mostra i normali messaggi di stato
+        elif st.session_state.weekend_mode:
             st.success("SCANNER OTC ATTIVO", icon="🎯")
+        elif is_overlap_time:
+            st.warning(f"⚠️ {nome_sessione_attiva} - In funzione con filtri di sicurezza 🔥")
         else:
-            # 1. Controlla prima se l'utente ha acceso il toggle e bloccato il trading
-            if not trading_autorizzato:
-                st.error("🛑 STOP TOTALE OVERLAP: Scanner in pausa. Riprenderà alle 17:30.")
-            
-            # 2. Se il trading è autorizzato ma siamo in orario overlap, mostra l'avviso giallo
-            elif is_overlap_time:
-                st.warning(f"⚠️ {nome_sessione_attiva} - In funzione con filtri di sicurezza 🔥")
-            
-            # 3. Altrimenti, tutto regolare
-            else:
-                st.success(f"SISTEMA LIVE ATTIVO 🔥 | {nome_sessione_attiva}", icon="📡")
+            st.success(f"SISTEMA LIVE ATTIVO 🔥 | {nome_sessione_attiva}", icon="📡")
         
         st.divider()
         st.subheader("🕵️ Coppie in Scansione (Auto-Selezionate)")
