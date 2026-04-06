@@ -339,7 +339,7 @@ with st.sidebar:
             bb_period = 20
             custom_rsi_buy, custom_rsi_sell = 25, 75
             
-        bb_std = st.selectbox("📏 Deviazione BB", [2.00, 2.10, 2.20, 2.30, 2.35, 2.40, 2.50], index=0)
+        bb_std = st.selectbox("📏 Deviazione BB", [2.00, 2.10, 2.20, 2.30, 2.35, 2.40, 2.50], index=1)
 
         st.divider()
         st.subheader("🎛️ FILTRI ATTIVI")
@@ -522,7 +522,7 @@ if st.session_state.connected:
 
                 # --- GESTIONE SPREAD POCKET OPTION ---
                 if use_spread:
-                    spread_val = 0.00008 if st.session_state.weekend_mode else 0.00014
+                    spread_val = 0.00008 if st.session_state.weekend_mode else 0.00020
                 else:
                     spread_val = 0.0
                 
