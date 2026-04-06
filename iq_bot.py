@@ -339,7 +339,7 @@ with st.sidebar:
             bb_period = 20
             custom_rsi_buy, custom_rsi_sell = 25, 75
             
-        bb_std = st.selectbox("📏 Deviazione BB", [2.00, 2.10, 2.20, 2.30, 2.35, 2.40, 2.50], index=1)
+        bb_std = st.selectbox("📏 Deviazione BB", [2.00, 2.10, 2.20, 2.30, 2.35, 2.40, 2.50], index=0)
 
         st.divider()
         st.subheader("🎛️ FILTRI ATTIVI")
@@ -497,7 +497,7 @@ if st.session_state.connected:
                 df = pd.DataFrame(candles)
 
                 if st.session_state.weekend_mode and not stress_test:
-                    r_buy, r_sell, b_period, b_std = 25, 75, 20, 2.10
+                    r_buy, r_sell, b_period, b_std = 25, 75, 20, 2.00
                 elif stress_test:
                     r_buy, r_sell, b_period, b_std = 45, 55, 20, 2.20
                 else:
@@ -615,7 +615,7 @@ if st.session_state.connected:
             df_raw['RSI'] = ta.rsi(df_raw['close'], length=7)
 
             if st.session_state.weekend_mode and not stress_test:
-                r_buy_graf, r_sell_graf, b_period_graf, b_std_graf = 25, 75, 20, 2.20
+                r_buy_graf, r_sell_graf, b_period_graf, b_std_graf = 25, 75, 20, 2.10
             elif stress_test:
                 r_buy_graf, r_sell_graf, b_period_graf, b_std_graf = 45, 55, 20, 2.20
             else:
@@ -632,7 +632,7 @@ if st.session_state.connected:
                 df_final = pd.concat([df_raw, bb_ta[['BBL', 'BBM', 'BBU']]], axis=1).tail(100)
 
                 if use_spread:
-                    spread_val_graf = 0.00008 if st.session_state.weekend_mode else 0.00014
+                    spread_val_graf = 0.00008 if st.session_state.weekend_mode else 0.00020
                 else:
                     spread_val_graf = 0.0
 
