@@ -339,7 +339,7 @@ with st.sidebar:
             bb_period = 20
             custom_rsi_buy, custom_rsi_sell = 25, 75
             
-        bb_std = st.selectbox("📏 Deviazione BB", [2.00, 2.10, 2.20, 2.30, 2.35, 2.40, 2.50], index=1)
+        bb_std = st.selectbox("📏 Deviazione BB", [2.00, 2.10, 2.20, 2.30, 2.35, 2.40, 2.50], index=0)
 
         st.divider()
         st.subheader("🎛️ FILTRI ATTIVI")
@@ -497,7 +497,7 @@ if st.session_state.connected:
                 df = pd.DataFrame(candles)
 
                 if st.session_state.weekend_mode and not stress_test:
-                    r_buy, r_sell, b_period, b_std = 25, 75, 20, 2.00
+                    r_buy, r_sell, b_period, b_std = 25, 75, 20, 2.10
                 elif stress_test:
                     r_buy, r_sell, b_period, b_std = 45, 55, 20, 2.20
                 else:
@@ -575,7 +575,7 @@ if st.session_state.connected:
                     }
                     
                     st.session_state.signal_history.append({
-                        'id': t_id, 'time': datetime.now(fuso_roma).strftime("%Y-%m-%d %H:%M:%S"),
+                        'id': t_id, 'time': datetime.now(fuso_roma).strftime("%d-%m-%Y %H:%M:%S"),
                         'pair': pair, 'dir': direction, 'price': float(price), 
                         'rsi_val': f"{curr_rsi:.1f}",
                         'stake': f"{st.session_state.stake:.0f}€",                         
