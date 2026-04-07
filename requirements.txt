@@ -10,3 +10,5 @@ requests
 iqoptionapi @ git+https://github.com/Lu-Yi-Hsun/iqoptionapi.git
 pillow
 websocket-client
+git+https://github.com/DeKog/pocketoptionapi.git
+
