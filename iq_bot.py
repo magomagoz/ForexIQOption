@@ -12,12 +12,11 @@ import os
 import websocket
 from datetime import datetime, time, timedelta
 
-# --- NUOVA IMPORTAZIONE POCKET OPTION ---
 try:
-    from pocketoptionapi.stable_api import PocketOption
-    POCKET_AVAILABLE = True
+    from pocketoptionapi.stable_api import PocketOptionAPI
 except ImportError:
-    POCKET_AVAILABLE = False
+    # Se per qualche motivo fallisce, questo aiuta a capire dove cerca
+    st.error("Cartella pocketoptionapi non trovata nel repository!")
 
 # Importazione MT5 sicura
 try:
