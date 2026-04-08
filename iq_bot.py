@@ -12,6 +12,13 @@ import os
 import websocket
 from datetime import datetime, time, timedelta
 
+# --- NUOVA IMPORTAZIONE POCKET OPTION ---
+try:
+    from pocketoptionapi.stable_api import PocketOption
+    POCKET_AVAILABLE = True
+except ImportError:
+    POCKET_AVAILABLE = False
+
 # Importazione MT5 sicura
 try:
     import MetaTrader5 as mt5
@@ -50,12 +57,6 @@ def to_deriv_symbol(pair):
         return "R_50" 
     return f"frx{pair}"
 
-SQUADRA_FOREX = [
-    "frxEURUSD",
-    "frxGBPUSD",
-    "frxUSDJPY" 
-]
-
 def get_candles(pair, timeframe_sec, count):
     try:
         ws = websocket.create_connection(f"wss://ws.binaryws.com/websockets/v3?app_id={DERIV_APP_ID}", timeout=5)
@@ -84,20 +85,43 @@ def get_candles(pair, timeframe_sec, count):
     except Exception as e: 
         return None, f"Errore: {str(e)}"
 
-def get_deriv_balance(token):
-    try:
-        ws = websocket.create_connection(f"wss://ws.binaryws.com/websockets/v3?app_id={DERIV_APP_ID}", timeout=10)
-        ws.send(json.dumps({"authorize": token}))
-        res = json.loads(ws.recv())
-        if "error" in res:
-            ws.close()
-            return None
-        ws.send(json.dumps({"balance": 1}))
-        res_bal = json.loads(ws.recv())
-        ws.close()
-        return res_bal['balance']['balance']
-    except:
-        return None
+# --- FUNZIONI POCKET OPTION API ---
+def inizializza_pocket():
+    if "api_pocket" not in st.session_state:
+        try:
+            email = st.secrets.get("POCKET_EMAIL", "")
+            password = st.secrets.get("POCKET_PASSWORD", "")
+            
+            if not email or not password:
+                return False, "Credenziali Pocket Option mancanti nei secrets."
+                
+            api = PocketOption(email, password)
+            check, message = api.connect()
+            
+            if check:
+                api.change_balance("PRACTICE") # Forza il conto Demo
+                st.session_state.api_pocket = api
+                return True, "Connesso a Pocket Option (DEMO)"
+            return False, f"Errore Pocket Option: {message}"
+        except Exception as e:
+            return False, f"Errore Inizializzazione: {e}"
+    return True, "Già connesso"
+
+def invia_ordine_pocket(simbolo, direzione, ammontare=100, durata=120):
+    if "api_pocket" in st.session_state:
+        api = st.session_state.api_pocket
+        
+        # Pocket Option richiede il suffisso _otc nel weekend
+        is_weekend = st.session_state.get('weekend_mode', False)
+        asset_name = f"{simbolo}_otc" if is_weekend else simbolo
+        
+        action = "call" if direzione == "BUY" else "put"
+        
+        # Invia l'ordine a mercato
+        check, id_info = api.buy(ammontare, asset_name, action, durata)
+        return check, id_info
+    return False, "API non connessa"
+
 
 def check_consecutive_candles(df, count=3):
     if len(df) < count: return False
@@ -172,13 +196,7 @@ def send_morning_report():
             f"🏁 Win Rate: {wr:.1f}%\n"
             f"💰 P&L Totale: {pnl:.2f}€\n\n"
         )
-        try:
-            news = get_daily_economic_alerts()
-            for n in news:
-                msg += f"{n}\n"
-        except: pass
             
-    #msg += "\n🚀 *Sistema pronto. Avviare lo scanner dalla dashboard?*"
     invia_telegram(msg)
 
 def invia_telegram(messaggio):
@@ -188,12 +206,11 @@ def invia_telegram(messaggio):
 
 def send_telegram_signal(signal_type, pair, price, rsi, trade_id, stake, tipo_mercato): 
     timestamp = datetime.now(fuso_roma).strftime("%H:%M:%S")
-    mapping_nomi = {"EURUSD": "V50", "USDJPY": "V75", "AUDUSD": "V100"}
-    nome_reale = mapping_nomi.get(pair, pair)
     
     message = (
-        f"🚀 *NUOVO TRADE*\n🔔 *Segnale:* {signal_type}\n🆔 ID: `{trade_id}`\n"
-        f"💱 Asset: {pair.replace('frx', '')}\n" 
+        f"🚀 *NUOVO TRADE AUTOMATICO (Pocket Option)*\n"
+        f"🔔 *Segnale:* {signal_type}\n🆔 ID: `{trade_id}`\n"
+        f"💱 Asset: {pair}\n" 
         f"🌍 Market: {tipo_mercato}\n💵 Stake: `{stake:.0f} €` \n" 
         f"💰 Prezzo: `{price:.5f}`\n📈 RSI Ingresso: `{rsi:.1f}`\n⏰ Ora: {timestamp}"
     )
@@ -243,7 +260,7 @@ def play_trade_sound(sound_type="buy"):
     placeholder.empty()
 
 # --- 2. SETUP STREAMLIT E SESSIONE ---
-st.set_page_config(page_title="Sentinel AI", page_icon="🚀", layout="wide")
+st.set_page_config(page_title="Sentinel AI + Pocket Option", page_icon="🚀", layout="wide")
 st.markdown("""<style>[data-testid="stAppViewContainer"] * { transition: none !important; } div[data-testid="stVerticalBlock"] { opacity: 1 !important; }</style>""", unsafe_allow_html=True)
 
 try: st.image(Image.open("banner.png"), use_column_width=True)
@@ -255,6 +272,7 @@ if 'active_trades' not in st.session_state: st.session_state.active_trades = {}
 if 'signal_history' not in st.session_state: st.session_state.signal_history = load_journal()
 if 'local_balance' not in st.session_state: st.session_state.local_balance = 10000.0
 if 'scanner_on' not in st.session_state: st.session_state.scanner_on = False
+if 'pocket_connected' not in st.session_state: st.session_state.pocket_connected = False
 
 st.session_state.weekend_mode = is_weekend_reale
 
@@ -274,6 +292,7 @@ if st.session_state.new_signal_alert:
         <div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: {bg_color}; z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
             <h1 style="font-size: 15vw; color: {text_color}; margin-top: 0px;">{alert_data['pair']}</h1>
             <h2 style="font-size: 12vw; color: {text_color}; margin: 20; text-transform: uppercase;">{arrow} {alert_data['dir']} {arrow}</h2>
+            <h3 style="color: {text_color};">TRADE INVIATO A POCKET OPTION 🚀</h3>
         </div>
     """, unsafe_allow_html=True)
     
@@ -283,8 +302,6 @@ if st.session_state.new_signal_alert:
 
 ora_attuale_report = now_roma.time()
 if time(9, 30) <= ora_attuale_report <= time(9, 30) and not st.session_state.report_sent:
-
-#if time(9, 0) and not st.session_state.report_sent:
     send_morning_report()
     st.session_state.report_sent = True
 
@@ -293,30 +310,42 @@ with st.sidebar:
     st.title("⚙️ AI BINARY TRADING")
     
     if not st.session_state.connected:
-        if st.button("🔌 CONNETTI SISTEMA", use_container_width=True, type="primary"):
-            with st.spinner("Ricerca connessione disponibile..."):
+        if st.button("🔌 CONNETTI SORGENTI", use_container_width=True, type="primary"):
+            with st.spinner("Connessione a Deriv (Dati) e Pocket Option (Trading)..."):
+                # Connessione Dati
                 test_data, source = get_candles("R_50", 60, 1) 
-                if test_data:
+                
+                # Connessione Pocket Option
+                pocket_ok, pocket_msg = inizializza_pocket()
+                
+                if test_data and pocket_ok:
                     st.session_state.connected = True
+                    st.session_state.pocket_connected = True
                     st.session_state.connection_source = source
                     st.rerun()
-                else: st.error("Nessuna sorgente dati disponibile.")
+                else: 
+                    st.error(f"Errore: {pocket_msg if not pocket_ok else 'Dati non disponibili'}")
     else:
-        st.success(f"Connesso a: **DERIV.COM 🔵**")
+        st.success(f"Dati: **DERIV.COM 🔵**")
+        st.success(f"Broker: **POCKET OPTION DEMO 🟢**")
+        
         if st.button("🔴 DISCONNETTI", use_container_width=True):
             st.session_state.connected = False
+            st.session_state.pocket_connected = False
             st.session_state.scanner_on = False
+            if "api_pocket" in st.session_state:
+                del st.session_state.api_pocket
             st.rerun()
 
         st.divider()
         st.subheader("👁️ SCANSIONE FOREX")
-        label = "🛑 STOP SCANNER" if st.session_state.scanner_on else "🚀 **AVVIA SCANNER**"
+        label = "🛑 STOP SCANNER" if st.session_state.scanner_on else "🚀 **AVVIA SCANNER AUTOMATICO**"
         if st.button(label, use_container_width=True, type="primary"):
             st.session_state.scanner_on = not st.session_state.scanner_on
             st.rerun()
             
         if st.session_state.scanner_on:
-            st.caption(f"🔄 Scanner attivo...  \nUltimo check: {now_roma.time().strftime('%H:%M:%S')}")
+            st.caption(f"🔄 Scanner attivo e pronto a tradare...  \nUltimo check: {now_roma.time().strftime('%H:%M:%S')}")
         
         st.divider()
         st.subheader("🌍 TIPO DI MERCATO")
@@ -339,11 +368,10 @@ with st.sidebar:
             bb_period = 20
             custom_rsi_buy, custom_rsi_sell = 25, 75
             
-        bb_std = st.selectbox("📏 Deviazione BB", [2.00, 2.10, 2.20, 2.30, 2.35, 2.40, 2.50], index=0)
+        bb_std = st.selectbox("📏 Deviazione BB", [2.00, 2.10, 2.20, 2.30, 2.35, 2.40, 2.50], index=1)
 
         st.divider()
         st.subheader("🎛️ FILTRI ATTIVI")
-        # QUESTI SONO I TOGGLE REALI PER ACCENDERE/SPEGNERE GLI INDICATORI
         use_bb = st.toggle("Usa Bollinger Bands (BB)", value=True, help="Se disattivato, ignora le Bande di Bollinger")
         use_rsi = st.toggle("Usa RSI", value=True, help="Se disattivato, ignora l'ipercomprato/ipervenduto")
         use_ema = st.toggle("Usa Filtro Trend (EMA)", value=True, help="Evita di operare contro il trend principale")
@@ -365,12 +393,10 @@ with st.sidebar:
         trading_autorizzato = True
         motivo_blocco = ""
 
-        # Controllo 1: Blocco Overlap Manuale (Lun-Ven)
         if is_overlap_time and pausa_manuale_overlap:
             trading_autorizzato = False
             motivo_blocco = "🛑 STOP TOTALE OVERLAP: Scanner in pausa. Riprenderà alle 17:30."
             
-        # Controllo 2: Blocco Automatico Domenica Sera (OTC)
         is_domenica = (now_roma.weekday() == 6)
         if st.session_state.weekend_mode and is_domenica and (ora_attuale_time >= time(17, 0)):
             trading_autorizzato = False
@@ -379,7 +405,7 @@ with st.sidebar:
         st.divider()
         st.subheader("🛠️ PARAMETRI TRADING")
         st.session_state.stake = st.number_input("💶 INVESTIMENTO (€)", value=100.0)
-        timeframe = st.selectbox("⏱️ TIMEFRAME GRAFICO (s)", [60, 120, 180], index=0)
+        timeframe = st.selectbox("⏱️ TIMEFRAME GRAFICO (s)", [60, 120, 180], index=1) # Impostato a 120s di default
         ema_period = st.selectbox("⏱️ Periodo EMA", [50, 100], index=0)
 
         st.divider()
@@ -387,7 +413,7 @@ with st.sidebar:
         
         if st.button("🔔 **TEST AUDIO BUY & TELEGRAM**", use_container_width=True):
             play_trade_sound("buy")
-            invia_telegram("✅ **SENTINEL AI: SYSTEM CHECK**\nBot online e sincronizzato con Deriv 🚀")
+            invia_telegram("✅ **SENTINEL AI: SYSTEM CHECK**\nBot online e pronto a tradare su Pocket Option Demo 🚀")
             st.toast("Test completato!", icon="📲")
             
         if st.button("🔔 **TEST AUDIO SELL**", use_container_width=True):
@@ -417,21 +443,6 @@ with st.sidebar:
             st.download_button(label="📥 ESPORTA STORICO (CSV)", data=csv_data, file_name=f"sentinel_history_{now_roma.time().strftime('%d%m%Y_%H%M')}.csv", mime="text/csv", use_container_width=True)
         else:
             st.button("📥 ESPORTA STORICO (CSV)", disabled=True, use_container_width=True)
-
-        uploaded_file = st.file_uploader("📤 IMPORTA DATI", type=["csv"], label_visibility="collapsed")
-        if uploaded_file is not None:
-            if st.button("🔄 CARICA DATI", use_container_width=True, type="secondary"):
-                try:
-                    df_import = pd.read_csv(uploaded_file)
-                    st.session_state.signal_history.extend(df_import.to_dict('records'))
-                    df_pulito = pd.DataFrame(st.session_state.signal_history).drop_duplicates(subset=['time', 'pair'], keep='last')
-                    st.session_state.signal_history = df_pulito.to_dict('records')
-                    save_journal(st.session_state.signal_history) 
-                    st.success("✅ Storico caricato con successo!")
-                    time_module.sleep(1.5)
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"⚠️ Errore nel file: {e}")
 
         st.divider()
 
@@ -469,16 +480,14 @@ if st.session_state.connected:
         st.plotly_chart(draw_market_map_inverted(trading_autorizzato), use_container_width=True)
 
     if st.session_state.scanner_on:
-        # Se il trading è stato bloccato da una delle due protezioni (Overlap o Domenica), mostra l'errore
         if not trading_autorizzato:
             st.error(motivo_blocco)
-        # Altrimenti mostra i normali messaggi di stato
         elif st.session_state.weekend_mode:
-            st.success("SCANNER OTC ATTIVO", icon="🎯")
+            st.success("SCANNER OTC ATTIVO & BOT PRONTO", icon="🎯")
         elif is_overlap_time:
             st.warning(f"⚠️ {nome_sessione_attiva} - In funzione con filtri di sicurezza 🔥")
         else:
-            st.success(f"SISTEMA LIVE ATTIVO 🔥 | {nome_sessione_attiva}", icon="📡")
+            st.success(f"SISTEMA LIVE ATTIVO E BOT PRONTO 🔥 | {nome_sessione_attiva}", icon="📡")
         
         st.divider()
         st.subheader("🕵️ Coppie in Scansione (Auto-Selezionate)")
@@ -497,7 +506,7 @@ if st.session_state.connected:
                 df = pd.DataFrame(candles)
 
                 if st.session_state.weekend_mode and not stress_test:
-                    r_buy, r_sell, b_period, b_std = 25, 75, 20, 2.10
+                    r_buy, r_sell, b_period, b_std = 25, 75, 20, 2.00
                 elif stress_test:
                     r_buy, r_sell, b_period, b_std = 45, 55, 20, 2.20
                 else:
@@ -520,7 +529,6 @@ if st.session_state.connected:
 
                 chiusura_prec = df['close'].iloc[-2]
 
-                # --- GESTIONE SPREAD POCKET OPTION ---
                 if use_spread:
                     spread_val = 0.00008 if st.session_state.weekend_mode else 0.00020
                 else:
@@ -548,7 +556,6 @@ if st.session_state.connected:
                 is_buy = (cond_rsi_buy and cond_bb_buy and cond_ema_buy) 
                 is_sell = (cond_rsi_sell and cond_bb_sell and cond_ema_sell) 
                 
-                # Se tutti i filtri sono disattivati, non inviare segnali impazziti
                 if not use_bb and not use_rsi and not use_ema:
                     is_buy = False
                     is_sell = False
@@ -564,32 +571,45 @@ if st.session_state.connected:
                         continue
 
                     direction = "BUY" if is_buy else "SELL"
-                    t_id = genera_trade_id()
                     tipo_mercato = "OTC" if st.session_state.weekend_mode else "LIVE"
+                    stake_trade = float(st.session_state.stake)
+
+                    # ----------------------------------------------------
+                    # ESECUZIONE REALE SU POCKET OPTION
+                    # ----------------------------------------------------
+                    check_po, info_po = invia_ordine_pocket(pair, direction, stake_trade, timeframe)
+                    
+                    if not check_po:
+                        # Se fallisce la chiamata API, registriamo l'errore e NON salviamo il trade
+                        st.error(f"Errore Pocket Option su {pair}: {info_po}")
+                        continue 
+                    
+                    # Se il trade va a buon fine, salviamo l'ID fornito dal broker
+                    t_id = f"PO-{info_po}" if str(info_po).isdigit() else genera_trade_id()
                     
                     st.session_state.last_trade_time = current_time
                 
                     st.session_state.active_trades[pair] = {
                         'id': t_id, 'entry_price': float(price), 'entry_time': current_time, 
-                        'direction': direction, 'stake_num': float(st.session_state.stake)
+                        'direction': direction, 'stake_num': stake_trade
                     }
                     
                     st.session_state.signal_history.append({
-                        'id': t_id, 'time': datetime.now(fuso_roma).strftime("%d-%m-%Y %H:%M:%S"),
+                        'id': t_id, 'time': datetime.now(fuso_roma).strftime("%Y-%m-%d %H:%M:%S"),
                         'pair': pair, 'dir': direction, 'price': float(price), 
                         'rsi_val': f"{curr_rsi:.1f}",
-                        'stake': f"{st.session_state.stake:.0f}€",                         
+                        'stake': f"{stake_trade:.0f}€",                         
                         'params_bb': f"{b_period}/{b_std}" if use_bb else "OFF", 
                         'params_rsi': f"{r_buy}/{r_sell}" if use_rsi else "OFF",
                         'params_ema': f"{ema_period}" if use_ema else "OFF", 
                         'mercato': tipo_mercato, 'result': "⏳ In corso...",
                         'check_120s': "-",
-                        'check_180s': "-", # NUOVO CONTROLLO 3 MINUTI
+                        'check_180s': "-",
                         'pnl_numeric': 0.0
                     })
 
                     save_journal(st.session_state.signal_history)
-                    send_telegram_signal(direction, pair, price, curr_rsi, t_id, st.session_state.stake, tipo_mercato)
+                    send_telegram_signal(direction, pair, price, curr_rsi, t_id, stake_trade, tipo_mercato)
                     
                     play_trade_sound(direction.lower())
                     st.session_state.new_signal_alert = {"dir": direction, "pair": pair}
@@ -670,9 +690,6 @@ if st.session_state.connected:
                 fig.add_trace(go.Scatter(x=asse_x, y=df_final['sell_sig'], mode='markers', marker=dict(symbol='triangle-down', size=15, color='#ff3333', line=dict(width=1, color='white')), name="Entry SELL"), row=1, col=1)
                 st.plotly_chart(fig, use_container_width=True)
 
-    #except Exception as e:
-        #st.error(f"Errore generazione grafico: {e}")
-
         st.write("---")
         st.subheader("📊 Analisi Performance (1m)")
         n_buy, n_sell = df_final['buy_sig'].notnull().sum(), df_final['sell_sig'].notnull().sum()
@@ -687,7 +704,7 @@ if st.session_state.connected:
             tot_vinti = wins_buy + wins_sell
             tot_persi = totale_segnali - tot_vinti
             accuracy = (tot_vinti / totale_segnali * 100) if totale_segnali > 0 else 0
-            bilancio_netto = (tot_vinti * (st.session_state.stake * 0.8)) - (tot_persi * st.session_state.stake)
+            bilancio_netto = (tot_vinti * (st.session_state.stake * 0.85)) - (tot_persi * st.session_state.stake)
 
             c1, c2, c3 = st.columns(3)
             c1.metric("🟢 BUY VINCENTI", f"{wins_buy} / {n_buy}")
@@ -699,7 +716,7 @@ if st.session_state.connected:
                 <h3 style="margin-top:0;">💰 Risultato Economico Stimato</h3>
                 <p>Segnali Totali: <b>{totale_segnali}</b> (Vinti: <span style="color:#00ff88;">{tot_vinti}</span> | Persi: <span style="color:#ff3333;">{tot_persi}</span>)</p>
                 <h2 style="color:{colore_box}; margin-bottom:0;">Profitto Netto: {bilancio_netto:.2f} €</h2>
-                <small>Basato su investimento di {st.session_state.stake}€ e payout 80% medio%</small>
+                <small>Basato su investimento di {st.session_state.stake}€ e payout 85% medio</small>
             </div>
             """, unsafe_allow_html=True)
         else:
@@ -712,24 +729,17 @@ if st.session_state.connected:
     trades_pendenti = list(st.session_state.active_trades.items())
 
     for pair, trade in trades_pendenti:
-        # Attesa innalzata per permettere di controllare i 180 secondi
         attesa_reale = max(timeframe, 180) 
         scadenza = trade['entry_time'] + attesa_reale + 2 
 
         if current_ts >= scadenza:
             try:
-                # Estraiamo 8 candele invece di 6 per garantire che 1m, 2m e 3m passati siano coperti
                 res, _ = get_candles(pair, 60, 8)
                 
                 if res and len(res) >= 5:
                     entry_price = trade['entry_price']
                     dir_trade, t_id = trade['direction'], trade['id']
                     
-                    # Calcolo chiusura rispetto all'indicizzazione delle candele:
-                    # res[-1] è la candela che si sta formando adesso
-                    # res[-2] è la candela chiusa 3 minuti dopo il trade (180s)
-                    # res[-3] è la candela chiusa 2 minuti dopo il trade (120s)
-                    # res[-4] è la candela chiusa 1 minuto dopo il trade (60s)
                     exit_60 = res[-4]['close']
                     exit_120 = res[-3]['close']
                     exit_180 = res[-2]['close']
@@ -738,16 +748,12 @@ if st.session_state.connected:
                     win_120 = (exit_120 > entry_price) if dir_trade == "BUY" else (exit_120 < entry_price)
                     win_180 = (exit_180 > entry_price) if dir_trade == "BUY" else (exit_180 < entry_price)
                     
-                    if timeframe == 60:
-                        win = win_60
-                    elif timeframe == 120:
-                        win = win_120
-                    else:
-                        win = win_180 
+                    if timeframe == 60: win = win_60
+                    elif timeframe == 120: win = win_120
+                    else: win = win_180 
 
                     res_status = "WIN" if win else "LOSS"
-                    icona_esito = "✅" if win else "❌"
-                    profit = (trade['stake_num'] * 0.92) if (res_status == "WIN") else -trade['stake_num']
+                    profit = (trade['stake_num'] * 0.85) if (res_status == "WIN") else -trade['stake_num']
                     
                     for s in st.session_state.signal_history:
                         if s.get('id') == t_id and s.get('result') == "⏳ In corso...":
@@ -761,34 +767,30 @@ if st.session_state.connected:
 
                             save_journal(st.session_state.signal_history)
 
-                            esito_120s = f"{'✅' if win_120 else '❌'}" # {'WIN' if win_180 else 'LOSS'}"
+                            esito_120s = f"{'✅' if win_120 else '❌'}" 
                             esito_180s = f"{'✅' if win_180 else '❌'}"
                             tipo_mercato = "OTC" if st.session_state.weekend_mode else "LIVE"
 
-                            
-                            # 1. Calcolo P&L del singolo trade per ogni scadenza
-                            p_60 = (trade['stake_num'] * 0.92) if win_60 else -trade['stake_num']
-                            p_120 = (trade['stake_num'] * 0.92) if win_120 else -trade['stake_num']
-                            p_180 = (trade['stake_num'] * 0.92) if win_180 else -trade['stake_num']
+                            p_60 = (trade['stake_num'] * 0.85) if win_60 else -trade['stake_num']
+                            p_120 = (trade['stake_num'] * 0.85) if win_120 else -trade['stake_num']
+                            p_180 = (trade['stake_num'] * 0.85) if win_180 else -trade['stake_num']
 
-                            # 2. Calcolo P&L Totale Cumulato estrapolandolo dallo storico
                             storico_df = pd.DataFrame(st.session_state.signal_history)
                             stk = float(st.session_state.stake)
                             
                             w60 = storico_df['result'].astype(str).str.contains("✅").sum()
                             l60 = storico_df['result'].astype(str).str.contains("❌").sum()
-                            tot_60 = (w60 * stk * 0.92) - (l60 * stk)
+                            tot_60 = (w60 * stk * 0.85) - (l60 * stk)
                             
                             w120 = storico_df['check_120s'].astype(str).str.contains("✅").sum()
                             l120 = storico_df['check_120s'].astype(str).str.contains("❌").sum()
-                            tot_120 = (w120 * stk * 0.92) - (l120 * stk)
+                            tot_120 = (w120 * stk * 0.85) - (l120 * stk)
                             
                             w180 = storico_df['check_180s'].astype(str).str.contains("✅").sum()
                             l180 = storico_df['check_180s'].astype(str).str.contains("❌").sum()
-                            tot_180 = (w180 * stk * 0.92) - (l180 * stk)
+                            tot_180 = (w180 * stk * 0.85) - (l180 * stk)
                             
-                            # 3. Costruzione del nuovo messaggio Telegram
-                            msg = (f"🏁 *ESITO TRADE*\n"
+                            msg = (f"🏁 *ESITO TRADE (Pocket Option)*\n"
                                    f"🆔 ID: `{t_id}`\n"
                                    f"💱 Asset: {pair}\n"
                                    f"🌍 Market: {tipo_mercato}\n"
@@ -845,9 +847,6 @@ if st.session_state.connected:
         st.warning(f"⏳ Pausa Sicurezza: {remaining:.1f} min")
     else:
         st.success("✅ Sistema pronto per segnali")
-
-    if st.session_state.scanner_on:
-        st.caption(f"🔄 Scanner attivo... Ultimo check: {now_roma.time().strftime('%H:%M:%S')}")
 
     st.markdown("<hr style='border:1px dashed #555; margin: 10px 0; opacity: 0.5;'>", unsafe_allow_html=True)
 
