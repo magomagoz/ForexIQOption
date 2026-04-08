@@ -1,15 +1,3 @@
-import subprocess
-import sys
-
-def install_package(package):
-    subprocess.check_call([sys.executable, "-m", "pip", "install", package])
-
-try:
-    import pocketoptionapi
-except ImportError:
-    install_package("git+https://github.com/DeKog/pocketoptionapi.git")
-    import pocketoptionapi
-
 import streamlit as st
 import pandas as pd
 import pandas_ta as ta
