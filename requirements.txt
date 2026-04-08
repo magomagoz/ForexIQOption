@@ -9,3 +9,4 @@ plotly
 requests
 pillow
 websocket-client
+https://github.com/DeKog/pocketoptionapi/archive/main.zip
