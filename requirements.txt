@@ -8,4 +8,4 @@ streamlit-autorefresh
 plotly
 requests
 pillow
-websocket-client
+websocket-client==1.3.1
