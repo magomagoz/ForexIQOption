@@ -1,3 +1,11 @@
+import sys
+import os
+
+# Forza Python a cercare i moduli nella cartella locale
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.append(current_dir)
+
 import streamlit as st
 import pandas as pd
 import pandas_ta as ta
@@ -11,10 +19,6 @@ import json
 import os
 import websocket
 from datetime import datetime, time, timedelta
-
-import sys
-import os
-sys.path.append(os.path.join(os.path.dirname(__file__), "pocketoptionapi"))
 
 # 1. QUI POSIZIONI L'IMPORT DELLA LIBRERIA
 from pocketoptionapi.client import PocketOption
