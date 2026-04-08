@@ -12,11 +12,8 @@ import os
 import websocket
 from datetime import datetime, time, timedelta
 
-try:
-    # Questa è la riga corretta per la libreria di DeKog
-    from pocketoptionapi.client import PocketOption
-except ImportError as e:
-    st.error(f"Errore di importazione: {e}")
+# 1. QUI POSIZIONI L'IMPORT DELLA LIBRERIA
+from pocketoptionapi.client import PocketOption
 
 # Importazione MT5 sicura
 try:
@@ -93,8 +90,9 @@ def inizializza_pocket():
             
             if not email or not password:
                 return False, "Credenziali Pocket Option mancanti nei secrets."
-                
-            api = PocketOption(email, password)
+                            
+            # Sostituisci la riga 76 con:
+            api = PocketOption(email=email, password=password)
             check, message = api.connect()
             
             if check:
