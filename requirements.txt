@@ -3,6 +3,5 @@ pandas
 pandas_ta
 pytz
 plotly
-pillow
 requests
 websocket-client
