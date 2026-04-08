@@ -12,6 +12,10 @@ import os
 import websocket
 from datetime import datetime, time, timedelta
 
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), "pocketoptionapi"))
+
 # 1. QUI POSIZIONI L'IMPORT DELLA LIBRERIA
 from pocketoptionapi.client import PocketOption
 
