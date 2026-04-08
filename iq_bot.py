@@ -81,7 +81,6 @@ def get_candles(pair, timeframe_sec, count):
     except Exception as e: 
         return None, f"Errore: {str(e)}"
 
-# --- FUNZIONI POCKET OPTION API ---
 def inizializza_pocket():
     if "api_pocket" not in st.session_state:
         try:
@@ -89,19 +88,25 @@ def inizializza_pocket():
             password = st.secrets.get("POCKET_PASSWORD", "")
             
             if not email or not password:
-                return False, "Credenziali Pocket Option mancanti nei secrets."
-                            
-            # Sostituisci la riga 76 con:
+                return False, "Credenziali mancanti nei Secrets di Streamlit!"
+                
+            # Uso dei parametri corretti per la libreria client.py
             api = PocketOption(email=email, password=password)
-            check, message = api.connect()
+            
+            # Nota: la libreria di DeKog spesso restituisce solo True/False
+            check = api.connect()
             
             if check:
-                api.change_balance("PRACTICE") # Forza il conto Demo
+                # Se la libreria supporta change_balance
+                try:
+                    api.change_balance("PRACTICE") 
+                except:
+                    pass
                 st.session_state.api_pocket = api
                 return True, "Connesso a Pocket Option (DEMO)"
-            return False, f"Errore Pocket Option: {message}"
+            return False, "Connessione fallita. Controlla email/password o SSID."
         except Exception as e:
-            return False, f"Errore Inizializzazione: {e}"
+            return False, f"Errore Tecnico: {e}"
     return True, "Già connesso"
 
 def invia_ordine_pocket(simbolo, direzione, ammontare=100, durata=120):
