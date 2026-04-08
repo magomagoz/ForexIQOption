@@ -1,11 +1,8 @@
 streamlit
-yfinance
 pandas
 pandas_ta
-numpy
 pytz
-streamlit-autorefresh
 plotly
-requests
 pillow
-websocket-client==1.3.1
+requests
+websocket-client
