@@ -339,7 +339,7 @@ with st.sidebar:
             bb_period = 20
             custom_rsi_buy, custom_rsi_sell = 25, 75
             
-        bb_std = st.selectbox("📏 Deviazione BB", [2.00, 2.10, 2.20, 2.30, 2.35, 2.40, 2.50], index=1)
+        bb_std = st.selectbox("📏 Deviazione BB", [2.00, 2.10, 2.20, 2.30, 2.35, 2.40, 2.50], index=0)
 
         st.divider()
         st.subheader("🎛️ FILTRI ATTIVI")
@@ -397,13 +397,13 @@ with st.sidebar:
         if st.button("🗑️ **PULISCI SEGNALI**", use_container_width=True):
             st.session_state.signal_history = []
             st.session_state.session_pnl = 0.0  
-            st.session_state.local_balance = 10000.0 
+            st.session_state.local_balance = 1000.0 
             save_journal([]) 
             st.success("Memoria pulita e PNL resettato!")
             time_module.sleep(1)
             st.rerun()
 
-        stress_test = st.toggle("🚀 **STRESS MODE (TEST RAPIDO)**", value=False)
+        stress_test = st.toggle("🚀 **STRESS MODE**", value=False)
         if stress_test:
             st.warning("⚠️ **Modalità TEST:**\n\nno BB - RSI (45/55)")
             use_bb, use_rsi = False, True
