@@ -360,7 +360,7 @@ with st.sidebar:
 
         st.markdown("---")
         st.subheader("🛡️ PROTEZIONI DI SISTEMA")
-        pausa_manuale_overlap = st.toggle("🛑 **Stop Totale Overlap (Lun-Ven)**", value=False, help="Spegne lo scanner dalle 14:30 alle 17:30")
+        pausa_manuale_overlap = st.toggle("🛑 **Stop Overlap (Lun-Ven)**", value=False, help="Spegne lo scanner dalle 14:30 alle 17:30")
         
         trading_autorizzato = True
         motivo_blocco = ""
