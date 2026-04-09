@@ -1,7 +1,8 @@
 streamlit
 pandas
-pandas_ta
+pandas-ta
 pytz
 plotly
+Pillow
 requests
 websocket-client
