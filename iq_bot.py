@@ -20,8 +20,8 @@ except ImportError:
     MT5_AVAILABLE = False
 
 # --- 1. CONFIGURAZIONI, TELEGRAM E DERIV ---
-TELEGRAM_TOKEN = st.secrets.get("TELEGRAM_TOKEN", "IL_TUO_TOKEN_QUI")
-TELEGRAM_CHAT_ID = st.secrets.get("TELEGRAM_CHAT_ID", "IL_TUO_CHAT_ID_QUI")
+TELEGRAM_TOKEN = st.secrets.get("TELEGRAM_TOKEN", "")
+TELEGRAM_CHAT_ID = st.secrets.get("TELEGRAM_CHAT_ID", "")
 DERIV_TOKEN = st.secrets.get("DERIV_TOKEN", "") 
 DERIV_APP_ID = "71759" 
 
