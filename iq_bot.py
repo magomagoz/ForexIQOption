@@ -951,7 +951,7 @@ if st.session_state.connected:
     st.markdown("<hr style='border:1px dashed #555; margin: 10px 0; opacity: 0.5;'>", unsafe_allow_html=True)
 
     g1, g2, g3, g4 = st.columns(4) 
-    g1.metric("🎯 W/L 300s (5m)", f"{wins_300}W - {losses_300}L")
+    g1.metric("🎯 W/L 300s", f"{wins_300}W - {losses_300}L")
     g2.metric("💰 P&L 300s", f"{total_pnl_300:.2f} €")
     g3.metric("🏁 Win Rate 300s", f"{win_rate_300:.1f}%")
     g4.metric("🏆 Top Asset 300s", best_pairs_str_300)
