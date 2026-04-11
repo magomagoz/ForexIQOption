@@ -478,7 +478,7 @@ if st.session_state.connected:
         # --- NUOVO: BATTITO CARDIACO ORARIO SU TELEGRAM (SEMPRE ATTIVO) ---
         if st.session_state.last_status_hour != ora_attuale:
             
-            sezione_stato = "🟢 *ATTIVO* e in monitoraggio" if trading_autorizzato else f"🛑 *IN PAUSA AUTOMATICA*\n⚠️ Motivo: {motivo_blocco}"
+            sezione_stato = "🟢 *ATTIVO*" if trading_autorizzato else f"🛑 *IN PAUSA AUTOMATICA*\n⚠️ Motivo: {motivo_blocco}"
             
             stato_msg = (
                 f"⏱️ *SENTINEL AI: STATUS UPDATE*\n"
@@ -489,7 +489,7 @@ if st.session_state.connected:
                 f"• RSI: `{custom_rsi_buy}/{custom_rsi_sell}` (ON: {'Sì' if use_rsi else 'No'})\n"
                 f"• Bande BB: `{bb_period} dev {bb_std}` (ON: {'Sì' if use_bb else 'No'})\n"
                 f"• EMA Trend: `{ema_period}` (ON: {'Sì' if use_ema else 'No'})\n\n"
-                f"*(Questo è un messaggio automatico orario per confermare che il server è online)*"
+                #f"*(Questo è un messaggio automatico orario per confermare che il server è online)*"
             )
             invia_telegram(stato_msg)
             st.session_state.last_status_hour = ora_attuale
