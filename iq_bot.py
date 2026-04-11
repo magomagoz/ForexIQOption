@@ -194,7 +194,7 @@ def send_telegram_signal(signal_type, pair, price, rsi, trade_id, stake, tipo_me
         f"🚀 *NUOVO TRADE*\n🔔 *Segnale:* {signal_type}\n🆔 ID: `{trade_id}`\n"
         f"💱 Asset: {pair.replace('frx', '')}\n" 
         f"🌍 Market: {tipo_mercato}\n💵 Stake: `{stake:.0f} €` \n" 
-        f"💰 Prezzo: `{price:.3f}`\n📈 RSI Ingresso: `{rsi:.1f}`\n⏰ Ora: {timestamp}"
+        f"💰 Prezzo: `{price:.5f}`\n📈 RSI Ingresso: `{rsi:.1f}`\n⏰ Ora: {timestamp}"
     )
     invia_telegram(message)
 
@@ -262,6 +262,7 @@ if 'last_trade_time' not in st.session_state: st.session_state.last_trade_time =
 if 'cooldown_minutes' not in st.session_state: st.session_state.cooldown_minutes = 5
 if 'report_sent' not in st.session_state: st.session_state.report_sent = False
 if 'new_signal_alert' not in st.session_state: st.session_state.new_signal_alert = None
+if 'last_status_hour' not in st.session_state: st.session_state.last_status_hour = -1
 
 if st.session_state.new_signal_alert:
     alert_data = st.session_state.new_signal_alert
@@ -477,7 +478,6 @@ if st.session_state.connected:
         # --- NUOVO: BATTITO CARDIACO ORARIO SU TELEGRAM (SEMPRE ATTIVO) ---
         if st.session_state.last_status_hour != ora_attuale:
             
-            # Creiamo un testo diverso se il bot è bloccato dalle protezioni
             sezione_stato = "🟢 *ATTIVO* e in monitoraggio" if trading_autorizzato else f"🛑 *IN PAUSA AUTOMATICA*\n⚠️ Motivo: {motivo_blocco}"
             
             stato_msg = (
@@ -493,9 +493,7 @@ if st.session_state.connected:
             )
             invia_telegram(stato_msg)
             st.session_state.last_status_hour = ora_attuale
-        # ------------------------------------------------------------------
 
-        # Se il trading è stato bloccato da una delle due protezioni (Overlap o Domenica), mostra l'errore sulla dashboard
         if not trading_autorizzato:
             st.error(motivo_blocco)
 
@@ -603,7 +601,11 @@ if st.session_state.connected:
                         'mercato': tipo_mercato, 'result': "⏳ In corso...",
                         'check_120s': "-",
                         'check_180s': "-", 
-                        'check_300s': "-", # NUOVO CONTROLLO 5 MINUTI
+                        'check_300s': "-", 
+                        'inv_60s': "-",     # Variabile nascosta P&L inverso
+                        'inv_120s': "-",    # Variabile nascosta P&L inverso
+                        'inv_180s': "-",    # Variabile nascosta P&L inverso
+                        'inv_300s': "-",    # Variabile nascosta P&L inverso
                         'pnl_numeric': 0.0
                     })
 
@@ -728,43 +730,40 @@ if st.session_state.connected:
     trades_pendenti = list(st.session_state.active_trades.items())
 
     for pair, trade in trades_pendenti:
-        # Attesa innalzata a 300 (5 minuti) per coprire tutti i check temporali
         attesa_reale = max(timeframe, 300) 
         scadenza = trade['entry_time'] + attesa_reale + 2 
 
         if current_ts >= scadenza:
             try:
-                # Estraiamo 10 candele per essere sicuri di avere lo storico fino a 5 minuti indietro
                 res, _ = get_candles(pair, 60, 10)
                 
                 if res and len(res) >= 7:
                     entry_price = trade['entry_price']
                     dir_trade, t_id = trade['direction'], trade['id']
                     
-                    # Le candele estratte (res) terminano con la candela attualmente in formazione (res[-1]).
-                    # Essendo passati 5 minuti dal trade, la candela al momento della chiusura dei 5 minuti è res[-2].
-                    # Di conseguenza, scendendo a ritroso, estraiamo le chiusure a 3, 2 e 1 minuto.
                     exit_60 = res[-6]['close']
                     exit_120 = res[-5]['close']
                     exit_180 = res[-4]['close']
                     exit_300 = res[-2]['close']
                     
+                    # Logica Strategia Originale
                     win_60 = (exit_60 > entry_price) if dir_trade == "BUY" else (exit_60 < entry_price)
                     win_120 = (exit_120 > entry_price) if dir_trade == "BUY" else (exit_120 < entry_price)
                     win_180 = (exit_180 > entry_price) if dir_trade == "BUY" else (exit_180 < entry_price)
                     win_300 = (exit_300 > entry_price) if dir_trade == "BUY" else (exit_300 < entry_price)
+
+                    # Logica Strategia Inversa (i pareggi matematici restano LOSS per entrambe le strategie)
+                    win_60_inv = (exit_60 < entry_price) if dir_trade == "BUY" else (exit_60 > entry_price)
+                    win_120_inv = (exit_120 < entry_price) if dir_trade == "BUY" else (exit_120 > entry_price)
+                    win_180_inv = (exit_180 < entry_price) if dir_trade == "BUY" else (exit_180 > entry_price)
+                    win_300_inv = (exit_300 < entry_price) if dir_trade == "BUY" else (exit_300 > entry_price)
                     
-                    if timeframe == 60:
-                        win = win_60
-                    elif timeframe == 120:
-                        win = win_120
-                    elif timeframe == 180:
-                        win = win_180
-                    else:
-                        win = win_300 
+                    if timeframe == 60: win = win_60
+                    elif timeframe == 120: win = win_120
+                    elif timeframe == 180: win = win_180
+                    else: win = win_300 
 
                     res_status = "WIN" if win else "LOSS"
-                    icona_esito = "✅" if win else "❌"
                     profit = (trade['stake_num'] * 0.92) if (res_status == "WIN") else -trade['stake_num']
                     
                     for s in st.session_state.signal_history:
@@ -773,6 +772,13 @@ if st.session_state.connected:
                             s['check_120s'] = f"{'✅' if win_120 else '❌'} {'WIN' if win_120 else 'LOSS'}"
                             s['check_180s'] = f"{'✅' if win_180 else '❌'} {'WIN' if win_180 else 'LOSS'}"
                             s['check_300s'] = f"{'✅' if win_300 else '❌'} {'WIN' if win_300 else 'LOSS'}"
+                            
+                            # Variabili nascoste per il calcolo della strategia Inversa
+                            s['inv_60s'] = "WIN" if win_60_inv else "LOSS"
+                            s['inv_120s'] = "WIN" if win_120_inv else "LOSS"
+                            s['inv_180s'] = "WIN" if win_180_inv else "LOSS"
+                            s['inv_300s'] = "WIN" if win_300_inv else "LOSS"
+
                             s['pnl_numeric'] = float(profit)
                             
                             rsi_ingresso = s.get('rsi_val', 'N/D')
@@ -784,15 +790,13 @@ if st.session_state.connected:
                             esito_180s = f"{'✅' if win_180 else '❌'}"
                             esito_300s = f"{'✅' if win_300 else '❌'}"
                             tipo_mercato = "OTC" if st.session_state.weekend_mode else "LIVE"
-
                             
-                            # 1. Calcolo P&L del singolo trade per ogni scadenza
                             p_60 = (trade['stake_num'] * 0.92) if win_60 else -trade['stake_num']
                             p_120 = (trade['stake_num'] * 0.92) if win_120 else -trade['stake_num']
                             p_180 = (trade['stake_num'] * 0.92) if win_180 else -trade['stake_num']
                             p_300 = (trade['stake_num'] * 0.92) if win_300 else -trade['stake_num']
 
-                            # 2. Calcolo P&L Totale Cumulato estrapolandolo dallo storico
+                            # Calcolo Totali Originali
                             storico_df = pd.DataFrame(st.session_state.signal_history)
                             stk = float(st.session_state.stake)
                             
@@ -811,6 +815,26 @@ if st.session_state.connected:
                             w300 = storico_df['check_300s'].astype(str).str.contains("✅").sum()
                             l300 = storico_df['check_300s'].astype(str).str.contains("❌").sum()
                             tot_300 = (w300 * stk * 0.92) - (l300 * stk)
+
+                            # Calcolo Totali Inversi
+                            if 'inv_60s' in storico_df.columns:
+                                w60_inv = storico_df['inv_60s'].astype(str).str.contains("WIN").sum()
+                                l60_inv = storico_df['inv_60s'].astype(str).str.contains("LOSS").sum()
+                                tot_60_inv = (w60_inv * stk * 0.92) - (l60_inv * stk)
+
+                                w120_inv = storico_df['inv_120s'].astype(str).str.contains("WIN").sum()
+                                l120_inv = storico_df['inv_120s'].astype(str).str.contains("LOSS").sum()
+                                tot_120_inv = (w120_inv * stk * 0.92) - (l120_inv * stk)
+
+                                w180_inv = storico_df['inv_180s'].astype(str).str.contains("WIN").sum()
+                                l180_inv = storico_df['inv_180s'].astype(str).str.contains("LOSS").sum()
+                                tot_180_inv = (w180_inv * stk * 0.92) - (l180_inv * stk)
+
+                                w300_inv = storico_df['inv_300s'].astype(str).str.contains("WIN").sum()
+                                l300_inv = storico_df['inv_300s'].astype(str).str.contains("LOSS").sum()
+                                tot_300_inv = (w300_inv * stk * 0.92) - (l300_inv * stk)
+                            else:
+                                tot_60_inv = tot_120_inv = tot_180_inv = tot_300_inv = 0.0
                             
                             # 3. Costruzione del nuovo messaggio Telegram
                             msg = (f"🏁 *ESITO TRADE*\n"
@@ -819,16 +843,21 @@ if st.session_state.connected:
                                    f"🌍 Market: {tipo_mercato}\n"
                                    f"📈 RSI IN: `{rsi_ingresso}`\n"
                                    f"💶 Stake: `{trade['stake_num']:.0f}€`\n\n"
-                                   f"🎯 *W&L*\n"
-                                   f"• 1m: {'✅' if win_60 else '❌'} ({p_60:.0f}€)\n"
-                                   f"• 2m: {esito_120s} ({p_120:.0f}€)\n"
-                                   f"• 3m: {esito_180s} ({p_180:.0f}€)\n"
-                                   f"• 5m: {esito_300s} ({p_300:.0f}€)\n\n"
-                                   f"📊 *P&L SESSION:*\n"
-                                   f"• P&L 1m: `{tot_60:.0f}€`\n"
-                                   f"• P&L 2m: `{tot_120:.0f}€`\n"
-                                   f"• P&L 3m: `{tot_180:.0f}€`\n"
-                                   f"• P&L 5m: `{tot_300:.0f}€`")
+                                   f"🎯 *W&L CORRENTE*\n"
+                                   f"• 60s: {'✅' if win_60 else '❌'} ({p_60:.0f}€)\n"
+                                   f"• 120s: {esito_120s} ({p_120:.0f}€)\n"
+                                   f"• 180s: {esito_180s} ({p_180:.0f}€)\n"
+                                   f"• 300s: {esito_300s} ({p_300:.0f}€)\n\n"
+                                   f"📊 *P&L TOTALE STRATEGIA BASE*\n"
+                                   f"• 60s: `{tot_60:.0f}€`\n"
+                                   f"• 120s: `{tot_120:.0f}€`\n"
+                                   f"• 180s: `{tot_180:.0f}€`\n"
+                                   f"• 300s: `{tot_300:.0f}€`\n\n"
+                                   f"🔄 *P&L TOTALE STRATEGIA INVERSA*\n"
+                                   f"• 60s: `{tot_60_inv:.0f}€`\n"
+                                   f"• 120s: `{tot_120_inv:.0f}€`\n"
+                                   f"• 180s: `{tot_180_inv:.0f}€`\n"
+                                   f"• 300s: `{tot_300_inv:.0f}€`")
                             invia_telegram(msg)
 
                             if res_status == "WIN": play_trade_sound("win")
@@ -985,8 +1014,9 @@ if st.session_state.connected:
     g4.metric("🏆 Top Asset 300s", best_pairs_str_300)
 
     if not df_filtered.empty:
-        rename_map = {'id': '🆔 ID', 'time': '⏰ DATE', 'pair': '💱 PAIR', 'dir': '🚀 SIG', 'price': '💰 PRICE', 'rsi_val': '📈 RSI IN', 'stake': '💶 STAKE', 'params_bb': '↔️ BB', 'params_rsi': '📉 RSI', 'params_ema': '🌊 EMA', 'mercato': '🌍 MKT', 'result': '⏱️ 1m', 'check_120s': '⏱️ 2m, 'check_180s': '⏱️ 3m', 'check_300s': '⏱️ 5m', 'pnl_numeric': '📈 P&L'}
+        rename_map = {'id': '🆔 ID', 'time': '⏰ DATE', 'pair': '💱 PAIR', 'dir': '🚀 SIG', 'price': '💰 PRICE', 'rsi_val': '📈 RSI IN', 'stake': '💶 STAKE', 'params_bb': '↔️ BB', 'params_rsi': '📉 RSI', 'params_ema': '🌊 EMA', 'mercato': '🌍 MKT', 'result': '⏱️ 60s', 'check_120s': '⏱️ 120s', 'check_180s': '⏱️ 180s', 'check_300s': '⏱️ 300s', 'pnl_numeric': '📈 P&L'}
 
+        # Usiamo solo le colonne visibili per la UI (le 'inv_*' non ci sono)
         cols_to_use = ['id', 'time', 'pair', 'dir', 'price', 'rsi_val', 'stake', 'params_bb', 'params_rsi', 'params_ema', 'mercato', 'result', 'check_120s', 'check_180s', 'check_300s', 'pnl_numeric']
         
         df_display = df_filtered.iloc[::-1].copy()[[c for c in cols_to_use if c in df_filtered.columns]].rename(columns=rename_map)
