@@ -194,7 +194,7 @@ def send_telegram_signal(signal_type, pair, price, rsi, trade_id, stake, tipo_me
         f"🚀 *NUOVO TRADE*\n🔔 *Segnale:* {signal_type}\n🆔 ID: `{trade_id}`\n"
         f"💱 Asset: {pair.replace('frx', '')}\n" 
         f"🌍 Market: {tipo_mercato}\n💵 Stake: `{stake:.0f} €` \n" 
-        f"💰 Prezzo: `{price:.5f}`\n📈 RSI Ingresso: `{rsi:.1f}`\n⏰ Ora: {timestamp}"
+        f"💰 Prezzo: `{price:.3f}`\n📈 RSI Ingresso: `{rsi:.1f}`\n⏰ Ora: {timestamp}"
     )
     invia_telegram(message)
 
@@ -471,6 +471,34 @@ if st.session_state.connected:
             st.warning(f"⚠️ {nome_sessione_attiva} - In funzione con filtri di sicurezza 🔥")
         else:
             st.success(f"SISTEMA LIVE ATTIVO 🔥 | {nome_sessione_attiva}", icon="📡")
+
+    if st.session_state.scanner_on:
+        
+        # --- NUOVO: BATTITO CARDIACO ORARIO SU TELEGRAM (SEMPRE ATTIVO) ---
+        if st.session_state.last_status_hour != ora_attuale:
+            
+            # Creiamo un testo diverso se il bot è bloccato dalle protezioni
+            sezione_stato = "🟢 *ATTIVO* e in monitoraggio" if trading_autorizzato else f"🛑 *IN PAUSA AUTOMATICA*\n⚠️ Motivo: {motivo_blocco}"
+            
+            stato_msg = (
+                f"⏱️ *SENTINEL AI: STATUS UPDATE*\n"
+                f"Stato Scanner: {sezione_stato}\n\n"
+                f"🌍 *Fase:* {nome_sessione_attiva}\n"
+                f"💱 *Asset in Scan:* {', '.join([p.replace('frx', '') for p in CURRENT_PAIRS])}\n\n"
+                f"⚙️ *Filtri Attuali:*\n"
+                f"• RSI: `{custom_rsi_buy}/{custom_rsi_sell}` (ON: {'Sì' if use_rsi else 'No'})\n"
+                f"• Bande BB: `{bb_period} dev {bb_std}` (ON: {'Sì' if use_bb else 'No'})\n"
+                f"• EMA Trend: `{ema_period}` (ON: {'Sì' if use_ema else 'No'})\n\n"
+                f"*(Questo è un messaggio automatico orario per confermare che il server è online)*"
+            )
+            invia_telegram(stato_msg)
+            st.session_state.last_status_hour = ora_attuale
+        # ------------------------------------------------------------------
+
+        # Se il trading è stato bloccato da una delle due protezioni (Overlap o Domenica), mostra l'errore sulla dashboard
+        if not trading_autorizzato:
+            st.error(motivo_blocco)
+
         
         st.divider()
         st.subheader("🕵️ Coppie in Scansione (Auto-Selezionate)")
@@ -792,15 +820,15 @@ if st.session_state.connected:
                                    f"📈 RSI IN: `{rsi_ingresso}`\n"
                                    f"💶 Stake: `{trade['stake_num']:.0f}€`\n\n"
                                    f"🎯 *W&L*\n"
-                                   f"• 60s: {'✅' if win_60 else '❌'} ({p_60:.0f}€)\n"
-                                   f"• 120s: {esito_120s} ({p_120:.0f}€)\n"
-                                   f"• 180s: {esito_180s} ({p_180:.0f}€)\n"
-                                   f"• 300s: {esito_300s} ({p_300:.0f}€)\n\n"
+                                   f"• 1m: {'✅' if win_60 else '❌'} ({p_60:.0f}€)\n"
+                                   f"• 2m: {esito_120s} ({p_120:.0f}€)\n"
+                                   f"• 3m: {esito_180s} ({p_180:.0f}€)\n"
+                                   f"• 5m: {esito_300s} ({p_300:.0f}€)\n\n"
                                    f"📊 *P&L SESSION:*\n"
-                                   f"• P&L 60s: `{tot_60:.0f}€`\n"
-                                   f"• P&L 120s: `{tot_120:.0f}€`\n"
-                                   f"• P&L 180s: `{tot_180:.0f}€`\n"
-                                   f"• P&L 300s: `{tot_300:.0f}€`")
+                                   f"• P&L 1m: `{tot_60:.0f}€`\n"
+                                   f"• P&L 2m: `{tot_120:.0f}€`\n"
+                                   f"• P&L 3m: `{tot_180:.0f}€`\n"
+                                   f"• P&L 5m: `{tot_300:.0f}€`")
                             invia_telegram(msg)
 
                             if res_status == "WIN": play_trade_sound("win")
@@ -957,7 +985,7 @@ if st.session_state.connected:
     g4.metric("🏆 Top Asset 300s", best_pairs_str_300)
 
     if not df_filtered.empty:
-        rename_map = {'id': '🆔 ID', 'time': '⏰ DATE', 'pair': '💱 PAIR', 'dir': '🚀 SIG', 'price': '💰 PRICE', 'rsi_val': '📈 RSI IN', 'stake': '💶 STAKE', 'params_bb': '↔️ BB', 'params_rsi': '📉 RSI', 'params_ema': '🌊 EMA', 'mercato': '🌍 MKT', 'result': '⏱️ 60s', 'check_120s': '⏱️ 120s', 'check_180s': '⏱️ 180s', 'check_300s': '⏱️ 300s', 'pnl_numeric': '📈 P&L'}
+        rename_map = {'id': '🆔 ID', 'time': '⏰ DATE', 'pair': '💱 PAIR', 'dir': '🚀 SIG', 'price': '💰 PRICE', 'rsi_val': '📈 RSI IN', 'stake': '💶 STAKE', 'params_bb': '↔️ BB', 'params_rsi': '📉 RSI', 'params_ema': '🌊 EMA', 'mercato': '🌍 MKT', 'result': '⏱️ 1m', 'check_120s': '⏱️ 2m, 'check_180s': '⏱️ 3m', 'check_300s': '⏱️ 5m', 'pnl_numeric': '📈 P&L'}
 
         cols_to_use = ['id', 'time', 'pair', 'dir', 'price', 'rsi_val', 'stake', 'params_bb', 'params_rsi', 'params_ema', 'mercato', 'result', 'check_120s', 'check_180s', 'check_300s', 'pnl_numeric']
         
