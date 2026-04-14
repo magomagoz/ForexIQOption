@@ -1051,5 +1051,5 @@ if st.session_state.connected:
                     st.warning("In attesa di dati...")
     
     if st.session_state.scanner_on:
-        time_module.sleep(5) 
+        time_module.sleep(30)
         st.rerun()
