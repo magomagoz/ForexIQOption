@@ -941,27 +941,27 @@ if st.session_state.connected:
         total_pnl_60 = df_filtered['pnl_numeric'].sum()
         
         stake_rif = float(st.session_state.stake)
-        total_pnl_120 = (wins_120 * (stake_rif * 0.85)) - (losses_120 * stake_rif)
-        total_pnl_180 = (wins_180 * (stake_rif * 0.85)) - (losses_180 * stake_rif)
-        total_pnl_300 = (wins_300 * (stake_rif * 0.85)) - (losses_300 * stake_rif)
+        total_pnl_120 = (wins_120 * (stake_rif * 0.75)) - (losses_120 * stake_rif)
+        total_pnl_180 = (wins_180 * (stake_rif * 0.75)) - (losses_180 * stake_rif)
+        total_pnl_300 = (wins_300 * (stake_rif * 0.75)) - (losses_300 * stake_rif)
         
         profit_by_pair = df_filtered.groupby('pair')['pnl_numeric'].sum()
         
         def calc_pnl_120(row):
             val = str(row['check_120s'])
-            if "✅" in val: return stake_rif * 0.85
+            if "✅" in val: return stake_rif * 0.75
             if "❌" in val: return -stake_rif
             return 0.0
             
         def calc_pnl_180(row):
             val = str(row['check_180s'])
-            if "✅" in val: return stake_rif * 0.85
+            if "✅" in val: return stake_rif * 0.75
             if "❌" in val: return -stake_rif
             return 0.0
 
         def calc_pnl_300(row):
             val = str(row['check_300s'])
-            if "✅" in val: return stake_rif * 0.85
+            if "✅" in val: return stake_rif * 0.75
             if "❌" in val: return -stake_rif
             return 0.0
             
@@ -985,7 +985,7 @@ if st.session_state.connected:
     
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("🎯 W/L 60s", f"{wins}W - {losses}L")
-    c2.metric("💰 P&L 60s", f"{total_pnl_60:.2f} €")
+    c2.metric("💰 P&L 60s", f"{total_pnl_60:.0f} €")
     c3.metric("🏁 Win Rate 60s", f"{win_rate_60:.1f}%")
     c4.metric("🏆 Top Asset 60s", best_pairs_str)
 
@@ -993,7 +993,7 @@ if st.session_state.connected:
 
     d1, d2, d3, d4 = st.columns(4) 
     d1.metric("🎯 W/L 120s", f"{wins_120}W - {losses_120}L")
-    d2.metric("💰 P&L 120s", f"{total_pnl_120:.2f} €")
+    d2.metric("💰 P&L 120s", f"{total_pnl_120:.0f} €")
     d3.metric("🏁 Win Rate 120s", f"{win_rate_120:.1f}%")
     d4.metric("🏆 Top Asset 120s", best_pairs_str_120)
     
@@ -1001,7 +1001,7 @@ if st.session_state.connected:
 
     e1, e2, e3, e4 = st.columns(4) 
     e1.metric("🎯 W/L 180s", f"{wins_180}W - {losses_180}L")
-    e2.metric("💰 P&L 180s", f"{total_pnl_180:.2f} €")
+    e2.metric("💰 P&L 180s", f"{total_pnl_180:.0f} €")
     e3.metric("🏁 Win Rate 180s", f"{win_rate_180:.1f}%")
     e4.metric("🏆 Top Asset 180s", best_pairs_str_180)
 
@@ -1009,7 +1009,7 @@ if st.session_state.connected:
 
     g1, g2, g3, g4 = st.columns(4) 
     g1.metric("🎯 W/L 300s", f"{wins_300}W - {losses_300}L")
-    g2.metric("💰 P&L 300s", f"{total_pnl_300:.2f} €")
+    g2.metric("💰 P&L 300s", f"{total_pnl_300:.0f} €")
     g3.metric("🏁 Win Rate 300s", f"{win_rate_300:.1f}%")
     g4.metric("🏆 Top Asset 300s", best_pairs_str_300)
 
@@ -1021,7 +1021,7 @@ if st.session_state.connected:
         
         df_display = df_filtered.iloc[::-1].copy()[[c for c in cols_to_use if c in df_filtered.columns]].rename(columns=rename_map)
         
-        df_display['📈 P&L'] = df_display['📈 P&L'].apply(lambda x: f"{x:.1f}€" if x % 1 != 0 else f"{x:.0f}€")
+        df_display['📈 P&L'] = df_display['📈 P&L'].apply(lambda x: f"{x:.0f}€" if x % 1 != 0 else f"{x:.0f}€")
         try:
             colonne_esito = [c for c in ['🎯 60s', '⏱️ 120s', '⏱️ 180s', '⏱️ 300s'] if c in df_display.columns]
             st.dataframe(df_display.style.applymap(style_result, subset=colonne_esito).applymap(style_pnl, subset=['📈 P&L']), use_container_width=True, hide_index=True)
