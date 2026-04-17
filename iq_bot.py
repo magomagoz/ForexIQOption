@@ -511,8 +511,8 @@ if st.session_state.connected:
             invia_telegram(stato_msg)
             st.session_state.last_status_hour = ora_attuale
 
-        if not trading_autorizzato:
-            st.error(motivo_blocco)
+        #if not trading_autorizzato:
+            #st.error(motivo_blocco)
 
         
         st.divider()
