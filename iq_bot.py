@@ -364,14 +364,24 @@ with st.sidebar:
         trading_autorizzato = True
         motivo_blocco = ""
 
-        if pause_8_1030 and pause_1330_1430:
+        # --- 1. Blocco Mattutino (Apertura Londra) ---
+        ora_attuale_check = now_roma.time()
+        
+        is_mattino_pericoloso = time(8, 0) <= ora_attuale_check <= time(10, 30)
+        if pause_8_1030 and is_mattino_pericoloso:
             trading_autorizzato = False
-            motivo_blocco = "🛑 STOP DI SICUREZZA: Scanner in pausa"
+            motivo_blocco = "🛑 STOP MATTINA: Pausa per l'apertura della borsa di Londra."
 
-                
+        # --- 2. Blocco Pranzo (Alta Latenza/Crollo Volumi) ---
+        is_pranzo_pericoloso = time(13, 30) <= ora_attuale_check <= time(14, 30)
+        if pause_1330_1430 and is_pranzo_pericoloso:
+            trading_autorizzato = False
+            motivo_blocco = "🛑 STOP PRANZO: Pausa pre-apertura mercato americano."
+
+        # --- 3. Blocco Overlap Manuale (Lun-Ven) ---
         if is_overlap_time and pausa_manuale_overlap:
             trading_autorizzato = False
-            motivo_blocco = "🛑 STOP TOTALE OVERLAP: Scanner in pausa. Riprenderà alle 17:30."
+            motivo_blocco = "🛑 STOP OVERLAP: Mercato altamente instabile."
             
         is_domenica = (now_roma.weekday() == 6)
         if st.session_state.weekend_mode and is_domenica and (ora_attuale_time >= time(17, 0)):
