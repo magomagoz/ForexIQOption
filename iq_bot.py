@@ -571,7 +571,7 @@ if st.session_state.connected:
                 chiusura_prec = df['close'].iloc[-2]
 
                 if use_spread:
-                    spread_val = 0.00008 if st.session_state.weekend_mode else 0.00020
+                    spread_val = 0.00025 if st.session_state.weekend_mode else 0.00025
                 else:
                     spread_val = 0.0
                 
@@ -685,7 +685,7 @@ if st.session_state.connected:
                 df_final = pd.concat([df_raw, bb_ta[['BBL', 'BBM', 'BBU']]], axis=1).tail(100)
 
                 if use_spread:
-                    spread_val_graf = 0.00008 if st.session_state.weekend_mode else 0.00020
+                    spread_val_graf = 0.00025 if st.session_state.weekend_mode else 0.00025
                 else:
                     spread_val_graf = 0.0
 
