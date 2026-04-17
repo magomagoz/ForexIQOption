@@ -455,7 +455,7 @@ with st.sidebar:
         nome_sessione_attiva = "🎯 SESSIONE WEEKEND OTC"
     else:
         # 1. Asiatica (Dalle 23:00 di sera fino alle 08:00 del mattino)
-        if ora_attuale_time >= time(0, 0) or ora_attuale_time < time(8, 0):
+        if ora_attuale_time >= time(23, 0) or ora_attuale_time < time(8, 0):
             CURRENT_PAIRS = ["EURUSD", "GBPUSD", "USDCHF", "USDCAD"]
             nome_sessione_attiva = "🐌 SESSIONE ASIATICA (Bassa Volatilità)"
             
