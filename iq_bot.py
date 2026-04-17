@@ -447,10 +447,6 @@ with st.sidebar:
 
         st.divider()
 
-# --- 4. MAIN DASHBOARD ---
-if st.session_state.connected:
-    ora_attuale_time = now_roma.time()
-    
     # --- LOGICA DELLE 4 SESSIONI DINAMICHE ---
     nome_sessione_attiva = ""
     
@@ -458,25 +454,34 @@ if st.session_state.connected:
         CURRENT_PAIRS = ["EURUSD", "USDJPY", "AUDUSD", "GBPUSD"]
         nome_sessione_attiva = "🎯 SESSIONE WEEKEND OTC"
     else:
-        if time(0, 0) <= ora_attuale_time or ora_attuale_time < time(8, 0):
+        # 1. Asiatica (Dalle 23:00 di sera fino alle 08:00 del mattino)
+        if ora_attuale_time >= time(23, 0) or ora_attuale_time < time(8, 0):
             CURRENT_PAIRS = ["EURUSD", "GBPUSD", "USDCHF", "USDCAD"]
             nome_sessione_attiva = "🐌 SESSIONE ASIATICA (Bassa Volatilità)"
+            
         elif time(8, 0) <= ora_attuale_time < time(10, 30):
             CURRENT_PAIRS = ["AUDUSD", "NZDUSD", "USDJPY"]
             nome_sessione_attiva = "🇪🇺 SESSIONE EUROPEA - MATTINA PERICOLOSA"
+
+        # 2. Europea/Mattino (Dalle 08:00 alle 13:30)
         elif time(10, 30) <= ora_attuale_time < time(13, 30):
             CURRENT_PAIRS = ["AUDUSD", "NZDUSD", "USDJPY"]
-            nome_sessione_attiva = "🇪🇺 SESSIONE EUROPEA (Trend Fluidi)"
+            nome_sessione_attiva = "🇪🇺 SESSIONE EUROPEA (Trend fluidi)"
+
         elif time(13, 30) <= ora_attuale_time < time(14, 30):
             CURRENT_PAIRS = ["AUDUSD", "NZDUSD", "USDJPY"]
             nome_sessione_attiva = "🇪🇺 SESSIONE EUROPEA - PAUSA PRANZO"
-        elif time(14, 30) <= ora_attuale_time < time(18, 00):
-            CURRENT_PAIRS = ["EURUSD", "USDCAD"]
-            nome_sessione_attiva = "🔥 OVERLAP EU+USA (Alta Volatilità)"
+        
+        # 3. Overlap / Fase Calda (Dalle 13:30 alle 18:00)
+        elif time(14, 30) <= ora_attuale_time < time(18, 0):
+            CURRENT_PAIRS = ["EURUSD", "USDCAD"] # Verranno bloccate dallo Stop Sicurezza se attivato
+            nome_sessione_attiva = "🔥 OVERLAP EU+USA E DATI MACRO"
+            
+        # 4. Serale Americana (Dalle 18:00 alle 23:00)
         else:
             CURRENT_PAIRS = ["EURJPY", "EURGBP", "EURUSD"]
-            nome_sessione_attiva = "🇺🇸 SESSIONE AMERICANA (Ritracciamenti)"
-
+            nome_sessione_attiva = "🇺🇸 SESSIONE SERALE USA (Ritracciamenti)"
+    
     st.divider()
     st.subheader("🌍 Market Flow 24h")
     
