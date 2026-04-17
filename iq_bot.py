@@ -447,6 +447,10 @@ with st.sidebar:
 
         st.divider()
 
+# --- 4. MAIN DASHBOARD ---
+if st.session_state.connected:
+    ora_attuale_time = now_roma.time()
+        
     # --- LOGICA DELLE 4 SESSIONI DINAMICHE ---
     nome_sessione_attiva = ""
     
