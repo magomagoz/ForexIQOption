@@ -347,7 +347,7 @@ with st.sidebar:
         use_bb = st.toggle("Usa Bollinger Bands (BB)", value=True, help="Se disattivato, ignora le Bande di Bollinger")
         use_rsi = st.toggle("Usa RSI", value=True, help="Se disattivato, ignora l'ipercomprato/ipervenduto")
         use_ema = st.toggle("Usa Filtro Trend (EMA)", value=True, help="Evita di operare contro il trend principale")
-        pausa_manuale_overlap = st.toggle("**Stop Overlap EU+USA (LIVE)**", value=True, help="Spegne lo scanner dalle 14:30 alle 17:30")
+        pausa_manuale_overlap = st.toggle("Stop Overlap EU+USA (LIVE)", value=True, help="Spegne lo scanner dalle 14:30 alle 17:30")
         pause_8_1030 = st.toggle("Applica Blocco 08:00 - 10:30", value=True, help="Blocco mattutino")
         pause_1330_1430 = st.toggle("Applica Blocco 13:30 - 14:30", value=True, help="Blocco pranzo")
         use_spread = st.toggle("Applica Filtro Spread", value=False, help="Richiede che il prezzo superi la banda di una % per compensare lo spread")
