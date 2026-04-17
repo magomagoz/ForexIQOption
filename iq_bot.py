@@ -345,7 +345,9 @@ with st.sidebar:
         use_rsi = st.toggle("Usa RSI", value=True, help="Se disattivato, ignora l'ipercomprato/ipervenduto")
         use_ema = st.toggle("Usa Filtro Trend (EMA)", value=True, help="Evita di operare contro il trend principale")
         use_spread = st.toggle("Applica Filtro Spread", value=False, help="Richiede che il prezzo superi la banda di una % per compensare lo spread")
-
+        pause_8_1030 = st.toggle("Applica Blocco 08:00 - 10:30", value=True, help="Blocco mattutino")
+        pause_1330_1430 = st.toggle("Applica Blocco 13:30 - 14:30", value=True, help="Blocco pranzo")
+        
         st.divider()
         st.subheader("🏛️ SESSIONI DI MERCATO")
         for city, (start, end) in {"🇬🇧 LONDRA:": (time(9,0), time(18,0)), "🇺🇸 NEW YORK:": (time(14,0), time(23,0)), "🇦🇺 SYDNEY:": (time(0,0), time(8,0)), "🇯🇵 TOKYO:": (time(0,0), time(9,0))}.items():
@@ -357,11 +359,16 @@ with st.sidebar:
 
         st.markdown("---")
         st.subheader("🛡️ PROTEZIONI DI SISTEMA")
-        pausa_manuale_overlap = st.toggle("🛑 **Stop Overlap (Lun-Ven)**", value=False, help="Spegne lo scanner dalle 14:30 alle 17:30")
+        pausa_manuale_overlap = st.toggle("🛑 **Stop Overlap (Lun-Ven)**", value=True, help="Spegne lo scanner dalle 14:30 alle 17:30")
         
         trading_autorizzato = True
         motivo_blocco = ""
 
+        if pause_8_1030 and pause_1330_1430:
+            trading_autorizzato = False
+            motivo_blocco = "🛑 STOP DI SICUREZZA: Scanner in pausa"
+
+                
         if is_overlap_time and pausa_manuale_overlap:
             trading_autorizzato = False
             motivo_blocco = "🛑 STOP TOTALE OVERLAP: Scanner in pausa. Riprenderà alle 17:30."
@@ -441,17 +448,17 @@ if st.session_state.connected:
         CURRENT_PAIRS = ["EURUSD", "USDJPY", "AUDUSD", "GBPUSD"]
         nome_sessione_attiva = "🎯 SESSIONE WEEKEND OTC"
     else:
-        if time(23, 0) <= ora_attuale_time or ora_attuale_time < time(9, 0):
-            CURRENT_PAIRS = ["AUDUSD", "NZDUSD", "USDJPY", "EURGBP"]
+        if time(0, 0) <= ora_attuale_time or ora_attuale_time < time(8, 0):
+            CURRENT_PAIRS = ["EURUSD", "GBPUSD", "USDCHF", "USDCAD"]
             nome_sessione_attiva = "🐌 SESSIONE ASIATICA (Bassa Volatilità)"
-        elif time(9, 0) <= ora_attuale_time < time(14, 30):
-            CURRENT_PAIRS = ["EURUSD", "GBPUSD", "EURJPY"]
+        elif time(10, 30) <= ora_attuale_time < time(13, 30):
+            CURRENT_PAIRS = ["AUDUSD", "NZDUSD", "USDJPY"]
             nome_sessione_attiva = "🇪🇺 SESSIONE EUROPEA (Trend Fluidi)"
-        elif time(14, 30) <= ora_attuale_time < time(17, 30):
+        elif time(14, 30) <= ora_attuale_time < time(18, 00):
             CURRENT_PAIRS = ["EURUSD", "USDCAD"]
             nome_sessione_attiva = "🔥 OVERLAP EU+USA (Alta Volatilità)"
         else:
-            CURRENT_PAIRS = ["USDCAD", "USDCHF", "AUDUSD"]
+            CURRENT_PAIRS = ["EURJPY", "EURGBP", "EURUSD"]
             nome_sessione_attiva = "🇺🇸 SESSIONE AMERICANA (Ritracciamenti)"
 
     st.divider()
