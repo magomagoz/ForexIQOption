@@ -340,13 +340,17 @@ with st.sidebar:
         bb_std = st.selectbox("📏 Deviazione BB", [2.00, 2.10, 2.20, 2.30, 2.35, 2.40, 2.50], index=0)
 
         st.divider()
-        st.subheader("🎛️ FILTRI ATTIVI")
+        #st.subheader("🎛️ FILTRI ATTIVI")
+        #st.markdown("---")
+        st.subheader("🛡️ PROTEZIONI DI SISTEMA")
+        
         use_bb = st.toggle("Usa Bollinger Bands (BB)", value=True, help="Se disattivato, ignora le Bande di Bollinger")
         use_rsi = st.toggle("Usa RSI", value=True, help="Se disattivato, ignora l'ipercomprato/ipervenduto")
         use_ema = st.toggle("Usa Filtro Trend (EMA)", value=True, help="Evita di operare contro il trend principale")
-        use_spread = st.toggle("Applica Filtro Spread", value=False, help="Richiede che il prezzo superi la banda di una % per compensare lo spread")
+        pausa_manuale_overlap = st.toggle("🛑 **Stop Overlap 14:30 - 17:30 (Lun-Ven)**", value=True, help="Spegne lo scanner dalle 14:30 alle 17:30")
         pause_8_1030 = st.toggle("Applica Blocco 08:00 - 10:30", value=True, help="Blocco mattutino")
         pause_1330_1430 = st.toggle("Applica Blocco 13:30 - 14:30", value=True, help="Blocco pranzo")
+        use_spread = st.toggle("Applica Filtro Spread", value=False, help="Richiede che il prezzo superi la banda di una % per compensare lo spread")
         
         st.divider()
         st.subheader("🏛️ SESSIONI DI MERCATO")
@@ -356,10 +360,6 @@ with st.sidebar:
             
         status_testo = get_market_status()
         st.info(status_testo if status_testo else "Recupero informazioni mercato...")
-
-        st.markdown("---")
-        st.subheader("🛡️ PROTEZIONI DI SISTEMA")
-        pausa_manuale_overlap = st.toggle("🛑 **Stop Overlap (Lun-Ven)**", value=True, help="Spegne lo scanner dalle 14:30 alle 17:30")
         
         trading_autorizzato = True
         motivo_blocco = ""
