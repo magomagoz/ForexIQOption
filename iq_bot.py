@@ -461,9 +461,15 @@ if st.session_state.connected:
         if time(0, 0) <= ora_attuale_time or ora_attuale_time < time(8, 0):
             CURRENT_PAIRS = ["EURUSD", "GBPUSD", "USDCHF", "USDCAD"]
             nome_sessione_attiva = "🐌 SESSIONE ASIATICA (Bassa Volatilità)"
+        elif time(8, 0) <= ora_attuale_time < time(10, 30):
+            CURRENT_PAIRS = ["AUDUSD", "NZDUSD", "USDJPY"]
+            nome_sessione_attiva = "🇪🇺 SESSIONE EUROPEA - MATTINA PERICOLOSA"
         elif time(10, 30) <= ora_attuale_time < time(13, 30):
             CURRENT_PAIRS = ["AUDUSD", "NZDUSD", "USDJPY"]
             nome_sessione_attiva = "🇪🇺 SESSIONE EUROPEA (Trend Fluidi)"
+        elif time(13, 30) <= ora_attuale_time < time(14, 30):
+            CURRENT_PAIRS = ["AUDUSD", "NZDUSD", "USDJPY"]
+            nome_sessione_attiva = "🇪🇺 SESSIONE EUROPEA - PAUSA PRANZO"
         elif time(14, 30) <= ora_attuale_time < time(18, 00):
             CURRENT_PAIRS = ["EURUSD", "USDCAD"]
             nome_sessione_attiva = "🔥 OVERLAP EU+USA (Alta Volatilità)"
