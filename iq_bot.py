@@ -882,15 +882,15 @@ if st.session_state.connected:
                                    f"• 3m: {esito_180s} ({p_180:.0f}€)\n"
                                    f"• 5m: {esito_300s} ({p_300:.0f}€)\n\n"
                                    f"📊 *P&L BASE*\n"
-                                   f"• 1m: `{tot_60:.0f}€`\n"
-                                   f"• 2m: `{tot_120:.0f}€`\n"
-                                   f"• 3m: `{tot_180:.0f}€`\n"
-                                   f"• 5m: `{tot_300:.0f}€`\n\n"
+                                   f"• 1m: `{tot_60:.1f}€`\n"
+                                   f"• 2m: `{tot_120:.1f}€`\n"
+                                   f"• 3m: `{tot_180:.1f}€`\n"
+                                   f"• 5m: `{tot_300:.1f}€`\n\n"
                                    f"🔄 *P&L INVERSE*\n"
-                                   f"• 1m: `{tot_60_inv:.0f}€`\n"
-                                   f"• 2m: `{tot_120_inv:.0f}€`\n"
-                                   f"• 3m: `{tot_180_inv:.0f}€`\n"
-                                   f"• 5m: `{tot_300_inv:.0f}€`")
+                                   f"• 1m: `{tot_60_inv:.1f}€`\n"
+                                   f"• 2m: `{tot_120_inv:.1f}€`\n"
+                                   f"• 3m: `{tot_180_inv:.1f}€`\n"
+                                   f"• 5m: `{tot_300_inv:.1f}€`")
                             invia_telegram(msg)
 
                             if res_status == "WIN": play_trade_sound("win")
@@ -1018,7 +1018,7 @@ if st.session_state.connected:
     
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("🎯 W/L 60s", f"{wins}W - {losses}L")
-    c2.metric("💰 P&L 60s", f"{total_pnl_60:.0f} €")
+    c2.metric("💰 P&L 60s", f"{total_pnl_60:.1f} €")
     c3.metric("🏁 Win Rate 60s", f"{win_rate_60:.1f}%")
     c4.metric("🏆 Top Asset 60s", best_pairs_str)
 
@@ -1026,7 +1026,7 @@ if st.session_state.connected:
 
     d1, d2, d3, d4 = st.columns(4) 
     d1.metric("🎯 W/L 120s", f"{wins_120}W - {losses_120}L")
-    d2.metric("💰 P&L 120s", f"{total_pnl_120:.0f} €")
+    d2.metric("💰 P&L 120s", f"{total_pnl_120:.1f} €")
     d3.metric("🏁 Win Rate 120s", f"{win_rate_120:.1f}%")
     d4.metric("🏆 Top Asset 120s", best_pairs_str_120)
     
@@ -1034,7 +1034,7 @@ if st.session_state.connected:
 
     e1, e2, e3, e4 = st.columns(4) 
     e1.metric("🎯 W/L 180s", f"{wins_180}W - {losses_180}L")
-    e2.metric("💰 P&L 180s", f"{total_pnl_180:.0f} €")
+    e2.metric("💰 P&L 180s", f"{total_pnl_180:.1f} €")
     e3.metric("🏁 Win Rate 180s", f"{win_rate_180:.1f}%")
     e4.metric("🏆 Top Asset 180s", best_pairs_str_180)
 
@@ -1042,7 +1042,7 @@ if st.session_state.connected:
 
     g1, g2, g3, g4 = st.columns(4) 
     g1.metric("🎯 W/L 300s", f"{wins_300}W - {losses_300}L")
-    g2.metric("💰 P&L 300s", f"{total_pnl_300:.0f} €")
+    g2.metric("💰 P&L 300s", f"{total_pnl_300:.1f} €")
     g3.metric("🏁 Win Rate 300s", f"{win_rate_300:.1f}%")
     g4.metric("🏆 Top Asset 300s", best_pairs_str_300)
 
