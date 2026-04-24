@@ -738,7 +738,7 @@ if st.session_state.connected:
             tot_vinti = wins_buy + wins_sell
             tot_persi = totale_segnali - tot_vinti
             accuracy = (tot_vinti / totale_segnali * 100) if totale_segnali > 0 else 0
-            bilancio_netto = (tot_vinti * (st.session_state.stake * 0.8)) - (tot_persi * st.session_state.stake)
+            bilancio_netto = (tot_vinti * (st.session_state.stake * 0.75)) - (tot_persi * st.session_state.stake)
 
             c1, c2, c3 = st.columns(3)
             c1.metric("🟢 BUY VINCENTI", f"{wins_buy} / {n_buy}")
@@ -797,7 +797,7 @@ if st.session_state.connected:
                     else: win = win_300 
 
                     res_status = "WIN" if win else "LOSS"
-                    profit = (trade['stake_num'] * 0.92) if (res_status == "WIN") else -trade['stake_num']
+                    profit = (trade['stake_num'] * 0.75) if (res_status == "WIN") else -trade['stake_num']
                     
                     for s in st.session_state.signal_history:
                         if s.get('id') == t_id and s.get('result') == "⏳ In corso...":
@@ -824,10 +824,10 @@ if st.session_state.connected:
                             esito_300s = f"{'✅' if win_300 else '❌'}"
                             tipo_mercato = "OTC" if st.session_state.weekend_mode else "LIVE"
                             
-                            p_60 = (trade['stake_num'] * 0.92) if win_60 else -trade['stake_num']
-                            p_120 = (trade['stake_num'] * 0.92) if win_120 else -trade['stake_num']
-                            p_180 = (trade['stake_num'] * 0.92) if win_180 else -trade['stake_num']
-                            p_300 = (trade['stake_num'] * 0.92) if win_300 else -trade['stake_num']
+                            p_60 = (trade['stake_num'] * 0.75) if win_60 else -trade['stake_num']
+                            p_120 = (trade['stake_num'] * 0.75) if win_120 else -trade['stake_num']
+                            p_180 = (trade['stake_num'] * 0.75) if win_180 else -trade['stake_num']
+                            p_300 = (trade['stake_num'] * 0.75) if win_300 else -trade['stake_num']
 
                             # Calcolo Totali Originali
                             storico_df = pd.DataFrame(st.session_state.signal_history)
@@ -835,37 +835,37 @@ if st.session_state.connected:
                             
                             w60 = storico_df['result'].astype(str).str.contains("✅").sum()
                             l60 = storico_df['result'].astype(str).str.contains("❌").sum()
-                            tot_60 = (w60 * stk * 0.92) - (l60 * stk)
+                            tot_60 = (w60 * stk * 0.75) - (l60 * stk)
                             
                             w120 = storico_df['check_120s'].astype(str).str.contains("✅").sum()
                             l120 = storico_df['check_120s'].astype(str).str.contains("❌").sum()
-                            tot_120 = (w120 * stk * 0.92) - (l120 * stk)
+                            tot_120 = (w120 * stk * 0.75) - (l120 * stk)
                             
                             w180 = storico_df['check_180s'].astype(str).str.contains("✅").sum()
                             l180 = storico_df['check_180s'].astype(str).str.contains("❌").sum()
-                            tot_180 = (w180 * stk * 0.92) - (l180 * stk)
+                            tot_180 = (w180 * stk * 0.75) - (l180 * stk)
 
                             w300 = storico_df['check_300s'].astype(str).str.contains("✅").sum()
                             l300 = storico_df['check_300s'].astype(str).str.contains("❌").sum()
-                            tot_300 = (w300 * stk * 0.92) - (l300 * stk)
+                            tot_300 = (w300 * stk * 0.75) - (l300 * stk)
 
                             # Calcolo Totali Inversi
                             if 'inv_60s' in storico_df.columns:
                                 w60_inv = storico_df['inv_60s'].astype(str).str.contains("WIN").sum()
                                 l60_inv = storico_df['inv_60s'].astype(str).str.contains("LOSS").sum()
-                                tot_60_inv = (w60_inv * stk * 0.92) - (l60_inv * stk)
+                                tot_60_inv = (w60_inv * stk * 0.75) - (l60_inv * stk)
 
                                 w120_inv = storico_df['inv_120s'].astype(str).str.contains("WIN").sum()
                                 l120_inv = storico_df['inv_120s'].astype(str).str.contains("LOSS").sum()
-                                tot_120_inv = (w120_inv * stk * 0.92) - (l120_inv * stk)
+                                tot_120_inv = (w120_inv * stk * 0.75) - (l120_inv * stk)
 
                                 w180_inv = storico_df['inv_180s'].astype(str).str.contains("WIN").sum()
                                 l180_inv = storico_df['inv_180s'].astype(str).str.contains("LOSS").sum()
-                                tot_180_inv = (w180_inv * stk * 0.92) - (l180_inv * stk)
+                                tot_180_inv = (w180_inv * stk * 0.75) - (l180_inv * stk)
 
                                 w300_inv = storico_df['inv_300s'].astype(str).str.contains("WIN").sum()
                                 l300_inv = storico_df['inv_300s'].astype(str).str.contains("LOSS").sum()
-                                tot_300_inv = (w300_inv * stk * 0.92) - (l300_inv * stk)
+                                tot_300_inv = (w300_inv * stk * 0.75) - (l300_inv * stk)
                             else:
                                 tot_60_inv = tot_120_inv = tot_180_inv = tot_300_inv = 0.0
                             
