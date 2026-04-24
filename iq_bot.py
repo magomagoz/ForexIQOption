@@ -113,7 +113,7 @@ def get_market_status():
     fuso_roma = pytz.timezone('Europe/Rome')
     now_time = datetime.now(fuso_roma).time()
     tokyo = (time(0,0), time(9,0))
-    londra = (time(9,0), time(17,30))
+    londra = (time(9,0), time(18,00))
     new_york = (time(14,30), time(23,0))
     
     if is_weekend_reale: 
@@ -347,9 +347,10 @@ with st.sidebar:
         use_bb = st.toggle("Usa Bollinger Bands (BB)", value=True, help="Se disattivato, ignora le Bande di Bollinger")
         use_rsi = st.toggle("Usa RSI", value=True, help="Se disattivato, ignora l'ipercomprato/ipervenduto")
         use_ema = st.toggle("Usa Filtro Trend (EMA)", value=True, help="Evita di operare contro il trend principale")
-        pausa_manuale_overlap = st.toggle("Stop Overlap EU+USA (LIVE)", value=True, help="Spegne lo scanner dalle 14:30 alle 17:30")
-        pause_8_1030 = st.toggle("Applica Blocco 08:00 - 10:30", value=True, help="Blocco mattutino")
-        pause_1330_1430 = st.toggle("Applica Blocco 13:30 - 14:30", value=True, help="Blocco pranzo")
+        pause_8_1030 = st.toggle("Blocco Londra 08:00-10:30", value=True, help="Blocco mattutino")
+        pause_1330_1430 = st.toggle("Blocco pranzo 13:30-14:30", value=True, help="Blocco pranzo")
+        pausa_manuale_overlap = st.toggle("Stop Overlap EU+USA 14:30-18:00", value=True, help="Spegne lo scanner dalle 14:30 alle 18:00")
+
         use_spread = st.toggle("Applica Filtro Spread", value=False, help="Richiede che il prezzo superi la banda di una % per compensare lo spread")
         
         st.divider()
@@ -390,7 +391,7 @@ with st.sidebar:
 
         st.divider()
         st.subheader("🛠️ PARAMETRI TRADING")
-        st.session_state.stake = st.number_input("💶 INVESTIMENTO (€)", value=100.0)
+        st.session_state.stake = st.number_input("💶 INVESTIMENTO (€)", value=10.0)
         timeframe = st.selectbox("⏱️ TIMEFRAME GRAFICO (s)", [60, 120, 180, 300], index=0)
         ema_period = st.selectbox("⏱️ Periodo EMA", [50, 100], index=0)
 
