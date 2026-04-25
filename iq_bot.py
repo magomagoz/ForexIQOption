@@ -1103,7 +1103,7 @@ if st.session_state.connected:
                     df = pd.DataFrame(candles)
                     fig = go.Figure(data=[go.Candlestick(x=df['time'], open=df['open'], high=df['max'], low=df['min'], close=df['close'])])
                     fig.update_layout(height=200, margin=dict(l=0,r=0,t=0,b=0), xaxis_rangeslider_visible=False, template="plotly_dark")
-                    st.plotly_chart(fig, use_container_width=True, key=f"mini_{pair}")
+                    st.plotly_chart(fig, use_container_width=True, key=f"mini_{name}")
                 else:
                     st.warning("In attesa di dati...")
     
