@@ -1098,7 +1098,7 @@ if st.session_state.connected:
         for i, (name) in enumerate(indices):
             with m_cols[i]:
                 st.caption(f"📈 {name}")
-                candles, _ = get_candles(pair, 60, 40)
+                candles, _ = get_candles(name, 60, 40)
                 if candles:
                     df = pd.DataFrame(candles)
                     fig = go.Figure(data=[go.Candlestick(x=df['time'], open=df['open'], high=df['max'], low=df['min'], close=df['close'])])
