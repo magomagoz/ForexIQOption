@@ -111,7 +111,7 @@ def get_market_status():
     new_york = (time(14,30), time(23,0))
     
     if is_weekend_reale: 
-        return "⚠️ **WEEKEND OTC - Trade su Deriv.com**"
+        return "⚠️ **WEEKEND OTC\n\nTrade su Deriv.com**"
     if (londra[0] <= now_time <= londra[1]) and (new_york[0] <= now_time <= new_york[1]):
         return "🔥 **OVERLAP EU+USA**\n\nAlta Volatilità"
     if londra[0] <= now_time <= londra[1]: 
