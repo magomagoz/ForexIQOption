@@ -341,7 +341,7 @@ with st.sidebar:
         use_ema = st.toggle("Usa Filtro Trend (EMA)", value=True, help="Evita di operare contro il trend principale")
         pause_8_1030 = st.toggle("Blocco Londra 08:00-10:30", value=True, help="Blocco mattutino")
         pause_1330_1430 = st.toggle("Blocco pranzo 13:30-14:30", value=True, help="Blocco pranzo")
-        pausa_manuale_overlap = st.toggle("Stop Overlap EU+USA 14:30-18:00", value=True, help="Spegne lo scanner dalle 14:30 alle 18:00")
+        pausa_manuale_overlap = st.toggle("Stop EU+USA 14:30-18:00", value=True, help="Spegne lo scanner dalle 14:30 alle 18:00")
 
         use_spread = st.toggle("Applica Filtro Spread", value=False, help="Richiede che il prezzo superi la banda di una % per compensare lo spread")
         
