@@ -44,11 +44,11 @@ def to_deriv_symbol(pair):
     if pair.startswith("R_"): return pair # Se è un indice Deriv, lo lascia così
     return f"frx{pair}" # Se è forex, aggiunge frx
 
-SQUADRA_FOREX = [
-    "frxEURUSD",
-    "frxGBPUSD",
-    "frxUSDJPY" 
-]
+#SQUADRA_FOREX = [
+    #"frxEURUSD",
+    #"frxGBPUSD",
+    #"frxUSDJPY" 
+#]
 
 def get_candles(pair, timeframe_sec, count):
     try:
@@ -111,7 +111,7 @@ def get_market_status():
     new_york = (time(14,30), time(23,0))
     
     if is_weekend_reale: 
-        return "⚠️ **WEEKEND OTC**"
+        return "⚠️ **WEEKEND OTC - Trade su Deriv.com**"
     if (londra[0] <= now_time <= londra[1]) and (new_york[0] <= now_time <= new_york[1]):
         return "🔥 **OVERLAP EU+USA**\n\nAlta Volatilità"
     if londra[0] <= now_time <= londra[1]: 
@@ -181,7 +181,7 @@ def invia_telegram(messaggio):
 
 def send_telegram_signal(signal_type, pair, price, rsi, trade_id, stake, tipo_mercato): 
     timestamp = datetime.now(fuso_roma).strftime("%H:%M:%S")
-    mapping_nomi = {"EURUSD": "V50", "USDJPY": "V75", "AUDUSD": "V100"}
+    mapping_nomi = {"V50", "V75", "V100"}
     nome_reale = mapping_nomi.get(pair, pair)
     
     message = (
@@ -314,7 +314,7 @@ with st.sidebar:
         st.subheader("🌍 TIPO DI MERCATO")
 
         ora_attuale_time = now_roma.time()
-        is_overlap_time = time(14, 30) <= ora_attuale_time <= time(17, 30) and not st.session_state.weekend_mode
+        is_overlap_time = time(14, 30) <= ora_attuale_time <= time(18, 00) and not st.session_state.weekend_mode
 
         if st.session_state.weekend_mode:
             st.success("🚨 **OTC (Sab-Dom)**\n\nParametri Base: RSI 25-75")
@@ -383,7 +383,7 @@ with st.sidebar:
 
         st.divider()
         st.subheader("🛠️ PARAMETRI TRADING")
-        st.session_state.stake = st.number_input("💶 INVESTIMENTO (€)", value=10.0)
+        st.session_state.stake = st.number_input("💶 INVESTIMENTO (€)", value=50.0)
         timeframe = st.selectbox("⏱️ TIMEFRAME GRAFICO (s)", [60, 120, 180, 300], index=0)
         ema_period = st.selectbox("⏱️ Periodo EMA", [50, 100], index=0)
 
@@ -450,41 +450,41 @@ if st.session_state.connected:
     if st.session_state.weekend_mode:
         # Usa direttamente i nomi degli indici di Deriv!
         CURRENT_PAIRS = ["R_25", "R_50", "R_75", "R_100"] 
-        nome_sessione_attiva = "🎯 SESSIONE WEEKEND OTC (INDICI DERIV)"
+        nome_sessione_attiva = "🎯 SESSIONE WEEKEND OTC - TRADE SU DERIV"
     else:
         # 1. Asiatica (Dalle 23:00 di sera fino alle 08:00 del mattino)
         if ora_attuale_time >= time(23, 0) or ora_attuale_time < time(8, 0):
             CURRENT_PAIRS = ["EURUSD", "GBPUSD", "USDCHF", "USDCAD"]
-            nome_sessione_attiva = "🐌 SESSIONE ASIATICA (Bassa Volatilità)"
+            nome_sessione_attiva = "🐌 SESSIONE ASIATICA"
             
         elif time(8, 0) <= ora_attuale_time < time(10, 30):
             CURRENT_PAIRS = ["AUDUSD", "NZDUSD", "USDJPY"]
-            nome_sessione_attiva = "🇪🇺 SESSIONE EUROPEA - MATTINA PERICOLOSA"
+            nome_sessione_attiva = "🇪🇺 EUROPA - MATTINA PERICOLOSA"
 
         # 2. Europea/Mattino (Dalle 08:00 alle 13:30)
         elif time(10, 30) <= ora_attuale_time < time(13, 30):
             CURRENT_PAIRS = ["AUDUSD", "NZDUSD", "USDJPY"]
-            nome_sessione_attiva = "🇪🇺 SESSIONE EUROPEA (Trend fluidi)"
+            nome_sessione_attiva = "🇪🇺 SESSIONE EUROPEA"
 
         elif time(13, 30) <= ora_attuale_time < time(14, 30):
             CURRENT_PAIRS = ["AUDUSD", "NZDUSD", "USDJPY"]
-            nome_sessione_attiva = "🇪🇺 SESSIONE EUROPEA - PAUSA PRANZO"
+            nome_sessione_attiva = "🇪🇺 EUROPA - PAUSA PRANZO"
         
         # 3. Overlap / Fase Calda (Dalle 13:30 alle 18:00)
         elif time(14, 30) <= ora_attuale_time < time(18, 0):
             CURRENT_PAIRS = ["EURUSD", "USDCAD"] # Verranno bloccate dallo Stop Sicurezza se attivato
-            nome_sessione_attiva = "🔥 OVERLAP EU+USA E DATI MACRO"
+            nome_sessione_attiva = "🔥 OVERLAP EU+USA (LIVE)"
             
         # 4. Serale Americana (Dalle 18:00 alle 23:00)
         else:
             CURRENT_PAIRS = ["EURJPY", "EURGBP", "EURUSD"]
-            nome_sessione_attiva = "🇺🇸 SESSIONE SERALE USA (Ritracciamenti)"
+            nome_sessione_attiva = "🇺🇸 SESSIONE SERALE USA"
     
     st.divider()
     st.subheader("🌍 Market Flow 24h")
     
     if st.session_state.weekend_mode or is_weekend_reale:
-        try: st.image(Image.open("banner11.png"), use_column_width=True, caption="MODALITÀ WEEKEND ATTIVA 🔴 MERCATI CHIUSI")
+        try: st.image(Image.open("banner11.png"), use_column_width=True, caption="MODALITÀ WEEKEND ATTIVA 🔴 TRADE SU DERIV")
         except: st.warning("Immagine banner11.png non trovata.")
     else:
         st.plotly_chart(draw_market_map_inverted(trading_autorizzato), use_container_width=True)
@@ -504,7 +504,7 @@ if st.session_state.connected:
         # --- NUOVO: BATTITO CARDIACO ORARIO SU TELEGRAM (SEMPRE ATTIVO) ---
         if st.session_state.last_status_hour != ora_attuale:
             
-            sezione_stato = "🟢 *ATTIVO*" if trading_autorizzato else f"🛑 *IN PAUSA AUTOMATICA*\n⚠️ Motivo: {motivo_blocco}"
+            sezione_stato = "🟢 *ATTIVO*" if trading_autorizzato else f"🛑 *IN PAUSA*\n⚠️ Motivo: {motivo_blocco}"
             
             stato_msg = (
                 f"⏱️ *SENTINEL AI: STATUS UPDATE*\n"
@@ -1093,7 +1093,7 @@ if st.session_state.connected:
         st.subheader("🖥️ Monitor Asset Globali (OTC)")
         m_cols = st.columns(3)
         
-        indices = [("Volatility 50", "EURUSD"), ("Volatility 75", "USDJPY"), ("Volatility 100", "AUDUSD")]
+        indices = [("Volatility 50"), ("Volatility 75"), ("Volatility 100")]
         
         for i, (name, pair) in enumerate(indices):
             with m_cols[i]:
