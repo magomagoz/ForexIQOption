@@ -1093,7 +1093,7 @@ if st.session_state.connected:
         st.subheader("🖥️ Monitor Asset Globali (OTC)")
         m_cols = st.columns(3)
         
-        indices = [("Volatility 50": "V50"), ("Volatility 75": "V75"), ("Volatility 100": "V100")]
+        indices = [("Volatility 50", "V50"), ("Volatility 75", "V75"), ("Volatility 100", "V100")]
         
         for i, (name, pair) in enumerate(indices):
             with m_cols[i]:
