@@ -44,11 +44,11 @@ def to_deriv_symbol(pair):
     if pair.startswith("R_"): return pair # Se è un indice Deriv, lo lascia così
     return f"frx{pair}" # Se è forex, aggiunge frx
 
-SQUADRA_FOREX = [
-    "frxEURUSD",
-    "frxGBPUSD",
-    "frxUSDJPY" 
-]
+#SQUADRA_FOREX = [
+    #"frxEURUSD",
+    #"frxGBPUSD",
+    #"frxUSDJPY" 
+#]
 
 def get_candles(pair, timeframe_sec, count):
     try:
