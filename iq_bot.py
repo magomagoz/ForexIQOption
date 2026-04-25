@@ -1095,7 +1095,7 @@ if st.session_state.connected:
         
         indices = [("Volatility 50"), ("Volatility 75"), ("Volatility 100")]
         
-        for i, (name, pair) in enumerate(indices):
+        for i, (name) in enumerate(indices):
             with m_cols[i]:
                 st.caption(f"📈 {name}")
                 candles, _ = get_candles(pair, 60, 40)
