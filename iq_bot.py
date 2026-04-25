@@ -41,14 +41,8 @@ now_cet = now_roma.time()
 ora_attuale = now_roma.hour
 
 def to_deriv_symbol(pair):
-    if pair.startswith("R_"): return pair 
-    is_otc = st.session_state.get('weekend_mode', is_weekend_reale)
-    if is_otc:
-        if pair == "EURUSD": return "R_50"
-        if pair == "USDJPY": return "R_75"
-        if pair == "AUDUSD": return "R_100"
-        return "R_50" 
-    return f"frx{pair}"
+    if pair.startswith("R_"): return pair # Se è un indice Deriv, lo lascia così
+    return f"frx{pair}" # Se è forex, aggiunge frx
 
 SQUADRA_FOREX = [
     "frxEURUSD",
@@ -340,8 +334,6 @@ with st.sidebar:
         bb_std = st.selectbox("📏 Deviazione BB", [2.00, 2.10, 2.20, 2.30, 2.35, 2.40, 2.50], index=0)
 
         st.divider()
-        #st.subheader("🎛️ FILTRI ATTIVI")
-        #st.markdown("---")
         st.subheader("🛡️ PROTEZIONI DI SISTEMA")
         
         use_bb = st.toggle("Usa Bollinger Bands (BB)", value=True, help="Se disattivato, ignora le Bande di Bollinger")
@@ -456,8 +448,9 @@ if st.session_state.connected:
     nome_sessione_attiva = ""
     
     if st.session_state.weekend_mode:
-        CURRENT_PAIRS = ["EURUSD", "USDJPY", "AUDUSD", "GBPUSD"]
-        nome_sessione_attiva = "🎯 SESSIONE WEEKEND OTC"
+        # Usa direttamente i nomi degli indici di Deriv!
+        CURRENT_PAIRS = ["R_25", "R_50", "R_75", "R_100"] 
+        nome_sessione_attiva = "🎯 SESSIONE WEEKEND OTC (INDICI DERIV)"
     else:
         # 1. Asiatica (Dalle 23:00 di sera fino alle 08:00 del mattino)
         if ora_attuale_time >= time(23, 0) or ora_attuale_time < time(8, 0):
@@ -522,15 +515,10 @@ if st.session_state.connected:
                 f"• RSI: `{custom_rsi_buy}/{custom_rsi_sell}` (ON: {'Sì' if use_rsi else 'No'})\n"
                 f"• Bande BB: `{bb_period} dev {bb_std}` (ON: {'Sì' if use_bb else 'No'})\n"
                 f"• EMA Trend: `{ema_period}` (ON: {'Sì' if use_ema else 'No'})\n\n"
-                #f"*(Questo è un messaggio automatico orario per confermare che il server è online)*"
             )
             invia_telegram(stato_msg)
             st.session_state.last_status_hour = ora_attuale
 
-        #if not trading_autorizzato:
-            #st.error(motivo_blocco)
-
-        
         st.divider()
         st.subheader("🕵️ Coppie in Scansione (Auto-Selezionate)")
         cols = st.columns(len(CURRENT_PAIRS))
@@ -635,10 +623,10 @@ if st.session_state.connected:
                         'check_120s': "-",
                         'check_180s': "-", 
                         'check_300s': "-", 
-                        'inv_60s': "-",     # Variabile nascosta P&L inverso
-                        'inv_120s': "-",    # Variabile nascosta P&L inverso
-                        'inv_180s': "-",    # Variabile nascosta P&L inverso
-                        'inv_300s': "-",    # Variabile nascosta P&L inverso
+                        'inv_60s': "-",     
+                        'inv_120s': "-",    
+                        'inv_180s': "-",    
+                        'inv_300s': "-",    
                         'pnl_numeric': 0.0
                     })
 
@@ -785,7 +773,7 @@ if st.session_state.connected:
                     win_180 = (exit_180 > entry_price) if dir_trade == "BUY" else (exit_180 < entry_price)
                     win_300 = (exit_300 > entry_price) if dir_trade == "BUY" else (exit_300 < entry_price)
 
-                    # Logica Strategia Inversa (i pareggi matematici restano LOSS per entrambe le strategie)
+                    # Logica Strategia Inversa
                     win_60_inv = (exit_60 < entry_price) if dir_trade == "BUY" else (exit_60 > entry_price)
                     win_120_inv = (exit_120 < entry_price) if dir_trade == "BUY" else (exit_120 > entry_price)
                     win_180_inv = (exit_180 < entry_price) if dir_trade == "BUY" else (exit_180 > entry_price)
@@ -806,7 +794,6 @@ if st.session_state.connected:
                             s['check_180s'] = f"{'✅' if win_180 else '❌'} {'WIN' if win_180 else 'LOSS'}"
                             s['check_300s'] = f"{'✅' if win_300 else '❌'} {'WIN' if win_300 else 'LOSS'}"
                             
-                            # Variabili nascoste per il calcolo della strategia Inversa
                             s['inv_60s'] = "WIN" if win_60_inv else "LOSS"
                             s['inv_120s'] = "WIN" if win_120_inv else "LOSS"
                             s['inv_180s'] = "WIN" if win_180_inv else "LOSS"
@@ -822,14 +809,13 @@ if st.session_state.connected:
                             esito_120s = f"{'✅' if win_120 else '❌'}"
                             esito_180s = f"{'✅' if win_180 else '❌'}"
                             esito_300s = f"{'✅' if win_300 else '❌'}"
-                            tipo_mercato = "OTC" if st.session_state.weekend_mode else "LIVE"
+                            tipo_mercato = "LIVE"
                             
                             p_60 = (trade['stake_num'] * 0.75) if win_60 else -trade['stake_num']
                             p_120 = (trade['stake_num'] * 0.75) if win_120 else -trade['stake_num']
                             p_180 = (trade['stake_num'] * 0.75) if win_180 else -trade['stake_num']
                             p_300 = (trade['stake_num'] * 0.75) if win_300 else -trade['stake_num']
 
-                            # Calcolo Totali Originali
                             storico_df = pd.DataFrame(st.session_state.signal_history)
                             stk = float(st.session_state.stake)
                             
@@ -849,7 +835,6 @@ if st.session_state.connected:
                             l300 = storico_df['check_300s'].astype(str).str.contains("❌").sum()
                             tot_300 = (w300 * stk * 0.75) - (l300 * stk)
 
-                            # Calcolo Totali Inversi
                             if 'inv_60s' in storico_df.columns:
                                 w60_inv = storico_df['inv_60s'].astype(str).str.contains("WIN").sum()
                                 l60_inv = storico_df['inv_60s'].astype(str).str.contains("LOSS").sum()
@@ -869,7 +854,6 @@ if st.session_state.connected:
                             else:
                                 tot_60_inv = tot_120_inv = tot_180_inv = tot_300_inv = 0.0
                             
-                            # 3. Costruzione del nuovo messaggio Telegram
                             msg = (f"🏁 *ESITO TRADE*\n"
                                    f"🆔 ID: `{t_id}`\n"
                                    f"💱 Asset: {pair}\n"
@@ -971,15 +955,14 @@ if st.session_state.connected:
         wins_300 = df_filtered['check_300s'].astype(str).str.contains("✅").sum()
         losses_300 = df_filtered['check_300s'].astype(str).str.contains("❌").sum()
         
-        total_pnl_60 = df_filtered['pnl_numeric'].sum()
-        
         stake_rif = float(st.session_state.stake)
-        total_pnl_120 = (wins_120 * (stake_rif * 0.75)) - (losses_120 * stake_rif)
-        total_pnl_180 = (wins_180 * (stake_rif * 0.75)) - (losses_180 * stake_rif)
-        total_pnl_300 = (wins_300 * (stake_rif * 0.75)) - (losses_300 * stake_rif)
         
-        profit_by_pair = df_filtered.groupby('pair')['pnl_numeric'].sum()
-        
+        def calc_pnl_60(row):
+            val = str(row['result'])
+            if "✅" in val: return stake_rif * 0.75
+            if "❌" in val: return -stake_rif
+            return 0.0
+            
         def calc_pnl_120(row):
             val = str(row['check_120s'])
             if "✅" in val: return stake_rif * 0.75
@@ -997,15 +980,22 @@ if st.session_state.connected:
             if "✅" in val: return stake_rif * 0.75
             if "❌" in val: return -stake_rif
             return 0.0
-            
+        
+        df_filtered['pnl_60_tmp'] = df_filtered.apply(calc_pnl_60, axis=1)    
         df_filtered['pnl_120_tmp'] = df_filtered.apply(calc_pnl_120, axis=1)
         df_filtered['pnl_180_tmp'] = df_filtered.apply(calc_pnl_180, axis=1)
         df_filtered['pnl_300_tmp'] = df_filtered.apply(calc_pnl_300, axis=1)
+        
+        total_pnl_60 = df_filtered['pnl_60_tmp'].sum()
+        total_pnl_120 = df_filtered['pnl_120_tmp'].sum()
+        total_pnl_180 = df_filtered['pnl_180_tmp'].sum()
+        total_pnl_300 = df_filtered['pnl_300_tmp'].sum()
         
         profit_by_pair_120 = df_filtered.groupby('pair')['pnl_120_tmp'].sum()
         profit_by_pair_180 = df_filtered.groupby('pair')['pnl_180_tmp'].sum()
         profit_by_pair_300 = df_filtered.groupby('pair')['pnl_300_tmp'].sum()
         
+        profit_by_pair = df_filtered.groupby('pair')['pnl_numeric'].sum()
         best_pairs_str = ", ".join(profit_by_pair[profit_by_pair == profit_by_pair.max()].index.tolist()) if not profit_by_pair.empty and profit_by_pair.max() > 0 else "-"
         best_pairs_str_120 = ", ".join(profit_by_pair_120[profit_by_pair_120 == profit_by_pair_120.max()].index.tolist()) if not profit_by_pair_120.empty and profit_by_pair_120.max() > 0 else "-"
         best_pairs_str_180 = ", ".join(profit_by_pair_180[profit_by_pair_180 == profit_by_pair_180.max()].index.tolist()) if not profit_by_pair_180.empty and profit_by_pair_180.max() > 0 else "-"
@@ -1047,6 +1037,40 @@ if st.session_state.connected:
     g4.metric("🏆 Top Asset 300s", best_pairs_str_300)
 
     if not df_filtered.empty:
+        
+        # --- NUOVO: GRAFICO EQUITY CURVE (P&L CUMULATIVO) ---
+        st.markdown("### 📈 Andamento P&L Cumulativo")
+        
+        df_chart = df_filtered.copy()
+        df_chart['time_dt'] = pd.to_datetime(df_chart['time'])
+        df_chart = df_chart.sort_values('time_dt')
+        
+        df_chart['cum_60'] = df_chart.get('pnl_60_tmp', pd.Series(dtype=float)).cumsum()
+        df_chart['cum_120'] = df_chart.get('pnl_120_tmp', pd.Series(dtype=float)).cumsum()
+        df_chart['cum_180'] = df_chart.get('pnl_180_tmp', pd.Series(dtype=float)).cumsum()
+        df_chart['cum_300'] = df_chart.get('pnl_300_tmp', pd.Series(dtype=float)).cumsum()
+        
+        fig_pnl = go.Figure()
+        fig_pnl.add_trace(go.Scatter(x=df_chart['time'], y=df_chart['cum_60'], mode='lines+markers', name='1m (60s)', line=dict(color='#ff9999')))
+        fig_pnl.add_trace(go.Scatter(x=df_chart['time'], y=df_chart['cum_120'], mode='lines+markers', name='2m (120s)', line=dict(color='#99ccff')))
+        fig_pnl.add_trace(go.Scatter(x=df_chart['time'], y=df_chart['cum_180'], mode='lines+markers', name='3m (180s)', line=dict(color='#99ff99')))
+        fig_pnl.add_trace(go.Scatter(x=df_chart['time'], y=df_chart['cum_300'], mode='lines+markers', name='5m (300s)', line=dict(color='#ffcc99')))
+        
+        # Aggiunta linea orizzontale dello zero per separare guadagno da perdita
+        fig_pnl.add_hline(y=0, line_dash="dash", line_color="white", opacity=0.7)
+        
+        fig_pnl.update_layout(
+            yaxis_title="P&L Netto (€)",
+            xaxis_title="Orario Segnali",
+            template="plotly_dark",
+            hovermode="x unified",
+            height=400,
+            margin=dict(l=0, r=0, t=30, b=0),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+        )
+        st.plotly_chart(fig_pnl, use_container_width=True)
+        # -----------------------------------------------------
+
         rename_map = {'id': '🆔 ID', 'time': '⏰ DATE', 'pair': '💱 PAIR', 'dir': '🚀 SIG', 'price': '💰 PRICE', 'rsi_val': '📈 RSI IN', 'stake': '💶 STAKE', 'params_bb': '↔️ BB', 'params_rsi': '📉 RSI', 'params_ema': '🌊 EMA', 'mercato': '🌍 MKT', 'result': '⏱️ 60s', 'check_120s': '⏱️ 120s', 'check_180s': '⏱️ 180s', 'check_300s': '⏱️ 300s', 'pnl_numeric': '📈 P&L'}
 
         # Usiamo solo le colonne visibili per la UI (le 'inv_*' non ci sono)
