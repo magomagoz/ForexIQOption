@@ -44,11 +44,11 @@ def to_deriv_symbol(pair):
     if pair.startswith("R_"): return pair # Se è un indice Deriv, lo lascia così
     return f"frx{pair}" # Se è forex, aggiunge frx
 
-#SQUADRA_FOREX = [
-    #"frxEURUSD",
-    #"frxGBPUSD",
-    #"frxUSDJPY" 
-#]
+SQUADRA_FOREX = [
+    "frxEURUSD",
+    "frxGBPUSD",
+    "frxUSDJPY" 
+]
 
 def get_candles(pair, timeframe_sec, count):
     try:
@@ -449,7 +449,7 @@ if st.session_state.connected:
     
     if st.session_state.weekend_mode:
         # Usa direttamente i nomi degli indici di Deriv!
-        CURRENT_PAIRS = ["R_25", "R_50", "R_75", "R_100"] 
+        CURRENT_PAIRS = ["R_50", "R_75", "R_100"] 
         nome_sessione_attiva = "🎯 SESSIONE WEEKEND OTC - TRADE SU DERIV"
     else:
         # 1. Asiatica (Dalle 23:00 di sera fino alle 08:00 del mattino)
