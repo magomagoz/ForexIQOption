@@ -1093,7 +1093,7 @@ if st.session_state.connected:
         
         df_display = df_filtered.iloc[::-1].copy()[[c for c in cols_to_use if c in df_filtered.columns]].rename(columns=rename_map)
         
-        df_display['📈 P&L'] = df_display['📈 P&L'].apply(lambda x: f"{x:.0f}€" if x % 1 != 0 else f"{x:.0f}€")
+        df_display['📈 P&L'] = df_display['📈 P&L'].apply(lambda x: f"{x:.1f}€" if x % 1 != 0 else f"{x:.1f}€")
         try:
             colonne_esito = [c for c in ['🎯 60s', '⏱️ 120s', '⏱️ 180s', '⏱️ 300s'] if c in df_display.columns]
             st.dataframe(df_display.style.applymap(style_result, subset=colonne_esito).applymap(style_pnl, subset=['📈 P&L']), use_container_width=True, hide_index=True)
