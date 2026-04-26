@@ -93,43 +93,6 @@ def get_deriv_balance(token):
     except:
         return None
 
-def execute_deriv_trade(token, symbol, direction, stake, duration_sec):
-    try:
-        ws = websocket.create_connection(f"wss://ws.binaryws.com/websockets/v3?app_id={DERIV_APP_ID}", timeout=5)
-        
-        # 1. Autorizzazione
-        ws.send(json.dumps({"authorize": token}))
-        auth_res = json.loads(ws.recv())
-        if "error" in auth_res:
-            ws.close()
-            return False, auth_res["error"]["message"]
-            
-        # 2. Acquisto Contratto
-        contract_type = "CALL" if direction == "BUY" else "PUT"
-        req = {
-            "buy": 1,
-            "price": stake,
-            "parameters": {
-                "amount": stake,
-                "basis": "stake",
-                "contract_type": contract_type,
-                "currency": "EUR", # Metti "USD" se il tuo conto Deriv è in Dollari
-                "duration": duration_sec,
-                "duration_unit": "s",
-                "symbol": to_deriv_symbol(symbol)
-            }
-        }
-        ws.send(json.dumps(req))
-        buy_res = json.loads(ws.recv())
-        ws.close()
-        
-        if "error" in buy_res:
-            return False, buy_res["error"]["message"]
-        
-        return True, str(buy_res["buy"]["contract_id"])
-    except Exception as e:
-        return False, str(e)
-
 def check_consecutive_candles(df, count=3):
     if len(df) < count: return False
     last_candles = df.tail(count)
@@ -420,16 +383,9 @@ with st.sidebar:
 
         st.divider()
         st.subheader("🛠️ PARAMETRI TRADING")
-        st.session_state.stake = st.number_input("💶 INVESTIMENTO (€)", value=100.0)
+        st.session_state.stake = st.number_input("💶 INVESTIMENTO (€)", value=50.0)
         timeframe = st.selectbox("⏱️ TIMEFRAME GRAFICO (s)", [60, 120, 180, 300], index=0)
         ema_period = st.selectbox("⏱️ Periodo EMA", [50, 100], index=0)
-
-        st.divider()
-        st.subheader("🤖 AUTO-TRADING (Solo Weekend)")
-        auto_trade_weekend = st.toggle("Abilita Auto-Trading su Deriv", value=False, help="Se attivo, piazzerà automaticamente i trade su Deriv durante il weekend.")
-        
-        if auto_trade_weekend and not DERIV_TOKEN:
-            st.error("⚠️ Inserisci il DERIV_TOKEN in st.secrets per usare l'Auto-Trading!")
 
         st.divider()
         st.subheader("🖥️ TEST DASHBOARD")
@@ -676,23 +632,11 @@ if st.session_state.connected:
 
                     save_journal(st.session_state.signal_history)
                     send_telegram_signal(direction, pair, price, curr_rsi, t_id, st.session_state.stake, tipo_mercato)
+                    
                     play_trade_sound(direction.lower())
                     st.session_state.new_signal_alert = {"dir": direction, "pair": pair}
-                    
-                    # --- NUOVO: ESECUZIONE AUTO-TRADE ---
-                    if st.session_state.weekend_mode and auto_trade_weekend:
-                        if DERIV_TOKEN:
-                            success, msg = execute_deriv_trade(DERIV_TOKEN, pair, direction, float(st.session_state.stake), timeframe)
-                            if success:
-                                st.toast(f"✅ Ordine piazzato su Deriv! Contract ID: {msg}", icon="🤖")
-                                invia_telegram(f"🤖 *AUTO-TRADE ESEGUITO!*\nAsset: {pair}\nDir: {direction}\nEsito: Eseguito su Deriv.")
-                            else:
-                                st.error(f"❌ Errore Auto-Trade: {msg}")
-                                invia_telegram(f"❌ *ERRORE AUTO-TRADE*\nMotivo: {msg}")
-                    # ------------------------------------
-
                     st.rerun() 
-    
+
             except Exception as e:
                 continue
     
@@ -1157,7 +1101,7 @@ if st.session_state.connected:
             st.dataframe(df_display, use_container_width=True, hide_index=True)
     else:
         st.info("⏳ Avvia lo Scanner e attendi il primo segnale...")
-        
+    
     if st.session_state.scanner_on:
         time_module.sleep(30)
         st.rerun()
