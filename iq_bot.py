@@ -1038,8 +1038,8 @@ if st.session_state.connected:
 
     if not df_filtered.empty:
         
-        # --- NUOVO: GRAFICO EQUITY CURVE (P&L CUMULATIVO) ---
-        st.markdown("### 📈 Andamento P&L Cumulativo")
+        # --- NUOVO: GRAFICO EQUITY CURVE (P&L CUMULATIVO) SEPARATO ---
+        st.markdown("### 📈 Andamento P&L Cumulativo (Scadenze Separate)")
         
         df_chart = df_filtered.copy()
         df_chart['time_dt'] = pd.to_datetime(df_chart['time'])
@@ -1050,24 +1050,39 @@ if st.session_state.connected:
         df_chart['cum_180'] = df_chart.get('pnl_180_tmp', pd.Series(dtype=float)).cumsum()
         df_chart['cum_300'] = df_chart.get('pnl_300_tmp', pd.Series(dtype=float)).cumsum()
         
-        fig_pnl = go.Figure()
-        fig_pnl.add_trace(go.Scatter(x=df_chart['time'], y=df_chart['cum_60'], mode='lines+markers', name='1m (60s)', line=dict(color='#ff9999')))
-        fig_pnl.add_trace(go.Scatter(x=df_chart['time'], y=df_chart['cum_120'], mode='lines+markers', name='2m (120s)', line=dict(color='#99ccff')))
-        fig_pnl.add_trace(go.Scatter(x=df_chart['time'], y=df_chart['cum_180'], mode='lines+markers', name='3m (180s)', line=dict(color='#99ff99')))
-        fig_pnl.add_trace(go.Scatter(x=df_chart['time'], y=df_chart['cum_300'], mode='lines+markers', name='5m (300s)', line=dict(color='#ffcc99')))
+        # Creiamo un'area con 4 grafici impilati verticalmente, asse X condiviso
+        fig_pnl = make_subplots(
+            rows=4, cols=1, 
+            shared_xaxes=True, 
+            vertical_spacing=0.05,
+            subplot_titles=("Andamento 1m (60s)", "Andamento 2m (120s)", "Andamento 3m (180s)", "Andamento 5m (300s)")
+        )
         
-        # Aggiunta linea orizzontale dello zero per separare guadagno da perdita
-        fig_pnl.add_hline(y=0, line_dash="dash", line_color="white", opacity=0.7)
+        fig_pnl.add_trace(go.Scatter(x=df_chart['time'], y=df_chart['cum_60'], mode='lines+markers', name='1m (60s)', line=dict(color='#ff9999')), row=1, col=1)
+        fig_pnl.add_trace(go.Scatter(x=df_chart['time'], y=df_chart['cum_120'], mode='lines+markers', name='2m (120s)', line=dict(color='#99ccff')), row=2, col=1)
+        fig_pnl.add_trace(go.Scatter(x=df_chart['time'], y=df_chart['cum_180'], mode='lines+markers', name='3m (180s)', line=dict(color='#99ff99')), row=3, col=1)
+        fig_pnl.add_trace(go.Scatter(x=df_chart['time'], y=df_chart['cum_300'], mode='lines+markers', name='5m (300s)', line=dict(color='#ffcc99')), row=4, col=1)
         
+        # Aggiunta linea orizzontale dello zero su tutti e 4 i grafici
+        for i in range(1, 5):
+            fig_pnl.add_hline(y=0, line_dash="dash", line_color="white", opacity=0.5, row=i, col=1)
+        
+        # Layout generale (Aumentiamo l'altezza totale a 800px per far respirare i 4 grafici)
         fig_pnl.update_layout(
-            yaxis_title="P&L Netto (€)",
-            xaxis_title="Orario Segnali",
             template="plotly_dark",
             hovermode="x unified",
-            height=400,
-            margin=dict(l=0, r=0, t=30, b=0),
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+            height=800,  
+            margin=dict(l=0, r=0, t=40, b=0),
+            showlegend=False  # Possiamo nascondere la legenda globale visto che abbiamo i titoli per ogni grafico
         )
+        
+        # Assicuriamoci che solo l'ultimo grafico in basso mostri l'etichetta "Orario Segnali"
+        fig_pnl.update_yaxes(title_text="P&L (€)", row=1, col=1)
+        fig_pnl.update_yaxes(title_text="P&L (€)", row=2, col=1)
+        fig_pnl.update_yaxes(title_text="P&L (€)", row=3, col=1)
+        fig_pnl.update_yaxes(title_text="P&L (€)", row=4, col=1)
+        fig_pnl.update_xaxes(title_text="Orario Segnali", row=4, col=1)
+
         st.plotly_chart(fig_pnl, use_container_width=True)
         # -----------------------------------------------------
 
