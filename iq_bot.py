@@ -1084,7 +1084,6 @@ if st.session_state.connected:
         fig_pnl.update_xaxes(title_text="Orario Segnali", row=4, col=1)
 
         st.plotly_chart(fig_pnl, use_container_width=True)
-        st.divider()
 
         # -----------------------------------------------------
 
