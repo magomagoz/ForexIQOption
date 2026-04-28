@@ -1059,9 +1059,13 @@ if st.session_state.connected:
         )
         
         fig_pnl.add_trace(go.Scatter(x=df_chart['time'], y=df_chart['cum_60'], mode='lines+markers', name='1m (60s)', line=dict(color='#ff9999')), row=1, col=1)
+        st.divider()
         fig_pnl.add_trace(go.Scatter(x=df_chart['time'], y=df_chart['cum_120'], mode='lines+markers', name='2m (120s)', line=dict(color='#99ccff')), row=2, col=1)
+        st.divider()
         fig_pnl.add_trace(go.Scatter(x=df_chart['time'], y=df_chart['cum_180'], mode='lines+markers', name='3m (180s)', line=dict(color='#99ff99')), row=3, col=1)
+        st.divider()
         fig_pnl.add_trace(go.Scatter(x=df_chart['time'], y=df_chart['cum_300'], mode='lines+markers', name='5m (300s)', line=dict(color='#ffcc99')), row=4, col=1)
+        st.divider()
         
         # Aggiunta linea orizzontale dello zero su tutti e 4 i grafici
         for i in range(1, 5):
