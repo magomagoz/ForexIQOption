@@ -1059,13 +1059,9 @@ if st.session_state.connected:
         )
         
         fig_pnl.add_trace(go.Scatter(x=df_chart['time'], y=df_chart['cum_60'], mode='lines+markers', name='1m (60s)', line=dict(color='#ff9999')), row=1, col=1)
-        st.divider()
         fig_pnl.add_trace(go.Scatter(x=df_chart['time'], y=df_chart['cum_120'], mode='lines+markers', name='2m (120s)', line=dict(color='#99ccff')), row=2, col=1)
-        st.divider()
         fig_pnl.add_trace(go.Scatter(x=df_chart['time'], y=df_chart['cum_180'], mode='lines+markers', name='3m (180s)', line=dict(color='#99ff99')), row=3, col=1)
-        st.divider()
         fig_pnl.add_trace(go.Scatter(x=df_chart['time'], y=df_chart['cum_300'], mode='lines+markers', name='5m (300s)', line=dict(color='#ffcc99')), row=4, col=1)
-        st.divider()
         
         # Aggiunta linea orizzontale dello zero su tutti e 4 i grafici
         for i in range(1, 5):
@@ -1088,6 +1084,8 @@ if st.session_state.connected:
         fig_pnl.update_xaxes(title_text="Orario Segnali", row=4, col=1)
 
         st.plotly_chart(fig_pnl, use_container_width=True)
+        st.divider()
+
         # -----------------------------------------------------
 
         rename_map = {'id': '🆔 ID', 'time': '⏰ DATE', 'pair': '💱 PAIR', 'dir': '🚀 SIG', 'price': '💰 PRICE', 'rsi_val': '📈 RSI IN', 'stake': '💶 STAKE', 'params_bb': '↔️ BB', 'params_rsi': '📉 RSI', 'params_ema': '🌊 EMA', 'mercato': '🌍 MKT', 'result': '⏱️ 60s', 'check_120s': '⏱️ 120s', 'check_180s': '⏱️ 180s', 'check_300s': '⏱️ 300s', 'pnl_numeric': '📈 P&L'}
