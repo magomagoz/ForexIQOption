@@ -419,7 +419,7 @@ with st.sidebar:
         if st.session_state.signal_history:
             df_export = pd.DataFrame(st.session_state.signal_history)
             csv_data = df_export.to_csv(index=False).encode('utf-8')
-            st.download_button(label="📥 ESPORTA STORICO (CSV)", data=csv_data, file_name=f"sentinel_history_{now_roma.time().strftime('%d%m%Y_%H%M')}.csv", mime="text/csv", use_container_width=True)
+            st.download_button(label="📥 ESPORTA STORICO (CSV)", data=csv_data, file_name=f"sentinel_history_{now_roma.time().strftime('%dd%mm%YY_%H%M')}.csv", mime="text/csv", use_container_width=True)
         else:
             st.button("📥 ESPORTA STORICO (CSV)", disabled=True, use_container_width=True)
 
