@@ -317,9 +317,9 @@ with st.sidebar:
         is_overlap_time = time(14, 30) <= ora_attuale_time <= time(18, 00) and not st.session_state.weekend_mode
 
         if st.session_state.weekend_mode:
-            st.success("🚨 **OTC (Sab-Dom)**\n\nParametri Base: RSI 25-75")
+            st.success("🚨 **OTC (Sab-Dom)**\n\nParametri Base: RSI 20-80")
             bb_period = 20
-            custom_rsi_buy, custom_rsi_sell = 25, 75
+            custom_rsi_buy, custom_rsi_sell = 20, 80
         
         elif is_overlap_time:
             st.warning("⚠️ **LIVE OVERLAP (Lun-Ven)**\n\nParametri Base: RSI 20-80")
@@ -327,9 +327,9 @@ with st.sidebar:
             custom_rsi_buy, custom_rsi_sell = 20, 80
         
         else:
-            st.success("🟢 **LIVE (Lun-Ven)**\n\nParametri Base: RSI 25-75")
+            st.success("🟢 **LIVE (Lun-Ven)**\n\nParametri Base: RSI 20-80")
             bb_period = 20
-            custom_rsi_buy, custom_rsi_sell = 25, 75
+            custom_rsi_buy, custom_rsi_sell = 20, 80
             
         bb_std = st.selectbox("📏 Deviazione BB", [2.00, 2.10, 2.20, 2.30, 2.35, 2.40, 2.50], index=0)
 
@@ -339,9 +339,9 @@ with st.sidebar:
         use_bb = st.toggle("Usa Bollinger Bands (BB)", value=True, help="Se disattivato, ignora le Bande di Bollinger")
         use_rsi = st.toggle("Usa RSI", value=True, help="Se disattivato, ignora l'ipercomprato/ipervenduto")
         use_ema = st.toggle("Usa Filtro Trend (EMA)", value=True, help="Evita di operare contro il trend principale")
-        pause_8_1030 = st.toggle("Blocco Londra 08:00-10:30", value=False, help="Blocco mattutino")
-        pause_1330_1430 = st.toggle("Blocco pranzo 13:30-14:30", value=False, help="Blocco pranzo")
-        pausa_manuale_overlap = st.toggle("Stop EU+USA 14:30-18:00", value=False, help="Spegne lo scanner dalle 14:30 alle 18:00")
+        pause_8_1030 = st.toggle("Blocco Londra 08:00-10:30", value=True, help="Blocco mattutino")
+        pause_1330_1430 = st.toggle("Blocco pranzo 13:30-14:30", value=True, help="Blocco pranzo")
+        pausa_manuale_overlap = st.toggle("Stop EU+USA 14:30-18:00", value=True, help="Spegne lo scanner dalle 14:30 alle 18:00")
 
         use_spread = st.toggle("Applica Filtro Spread", value=False, help="Richiede che il prezzo superi la banda di una % per compensare lo spread")
         
@@ -385,7 +385,7 @@ with st.sidebar:
         st.subheader("🛠️ PARAMETRI TRADING")
         st.session_state.stake = st.number_input("💶 INVESTIMENTO (€)", value=100.0)
         timeframe = st.selectbox("⏱️ TIMEFRAME GRAFICO (s)", [60, 120, 180, 300], index=0)
-        ema_period = st.selectbox("⏱️ Periodo EMA", [50, 100], index=0)
+        ema_period = st.selectbox("⏱️ Periodo EMA", [50, 100, 200], index=0)
 
         st.divider()
         st.subheader("🖥️ TEST DASHBOARD")
