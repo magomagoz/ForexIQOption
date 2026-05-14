@@ -143,16 +143,20 @@ def draw_market_map_inverted(trading_autorizzato):
 
 def send_morning_report():
     history = load_journal()
+    ieri = (datetime.now(fuso_roma) - timedelta(days=1)).date()
+
+    # Correzione 1: Se non c'è proprio lo storico, invia il messaggio e poi fermati.
     if not history:
-        return "Buongiorno! ☕️ Nessun trade registrato ieri."
+        invia_telegram(f"Buongiorno! ☕️ Nessun trade registrato nel sistema ({ieri}).")
+        return
 
     df = pd.DataFrame(history)
     df['time'] = pd.to_datetime(df['time'])
-    ieri = (datetime.now(fuso_roma) - timedelta(days=1)).date()
     df_ieri = df[df['time'].dt.date == ieri]
 
+    # Correzione 2: Se c'è lo storico ma ieri non hai fatto trade, invia questo.
     if df_ieri.empty:
-        msg = f"☀️ **MORNING REPORT ({ieri})**"
+        msg = f"☀️ **MORNING REPORT ({ieri})**\n\nNessun trade effettuato nella giornata di ieri."
     else:
         wins = df_ieri['result'].astype(str).str.contains("WIN").sum()
         losses = df_ieri['result'].astype(str).str.contains("LOSS").sum()
@@ -164,20 +168,27 @@ def send_morning_report():
             f"📊 **Performance di Ieri:**\n"
             f"✅ Win: {wins} | ❌ Loss: {losses}\n"
             f"🏁 Win Rate: {wr:.1f}%\n"
-            f"💰 P&L Totale: {pnl:.2f}€\n\n"
+            f"💰 P&L Totale: `{pnl:.2f}€`\n"
         )
-        try:
-            news = get_daily_economic_alerts()
-            for n in news:
-                msg += f"{n}\n"
-        except: pass
-            
+        
+    # L'invio finale che prima mancava in alcuni casi!
     invia_telegram(msg)
 
 def invia_telegram(messaggio):
+    # 1. Sanifichiamo il messaggio: togliamo l'underscore dagli indici Deriv (R_50 diventa R 50)
+    # per evitare che Telegram lo interpreti come un errore di formattazione Markdown.
+    msg_sicuro = messaggio.replace("R_", "R ")
+    
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    try: requests.post(url, data={"chat_id": TELEGRAM_CHAT_ID, "text": messaggio, "parse_mode": "Markdown"}, timeout=5)
-    except: pass
+    try: 
+        response = requests.post(url, data={"chat_id": TELEGRAM_CHAT_ID, "text": msg_sicuro, "parse_mode": "Markdown"}, timeout=5)
+        
+        # 2. Rimuoviamo il "pass" omertoso: se Telegram rifiuta il messaggio, ora lo vedrai a schermo!
+        if response.status_code != 200:
+            st.error(f"⚠️ Errore Telegram dal Server: {response.text}")
+            
+    except Exception as e: 
+        st.error(f"⚠️ Errore di connessione a Telegram: {e}")
 
 def send_telegram_signal(signal_type, pair, price, rsi, trade_id, stake, tipo_mercato): 
     timestamp = datetime.now(fuso_roma).strftime("%H:%M:%S")
@@ -276,7 +287,7 @@ if st.session_state.new_signal_alert:
     st.rerun()
 
 ora_attuale_report = now_roma.time()
-if time(9, 30) <= ora_attuale_report <= time(9, 30) and not st.session_state.report_sent:
+if time(9, 30) <= ora_attuale_report <= time(10, 00) and not st.session_state.report_sent:
     send_morning_report()
     st.session_state.report_sent = True
 
