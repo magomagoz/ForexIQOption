@@ -406,6 +406,11 @@ with st.sidebar:
             play_trade_sound("buy")
             invia_telegram("✅ **SENTINEL AI: SYSTEM CHECK**\nBot online e sincronizzato con Deriv 🚀")
             st.toast("Test completato!", icon="📲")
+
+        if st.button("☀️ **TEST MORNING REPORT**", use_container_width=True):
+            send_morning_report()
+            st.toast("Report forzato inviato!", icon="🚀")
+
             
         if st.button("🔔 **TEST AUDIO SELL**", use_container_width=True):
             play_trade_sound("sell")
