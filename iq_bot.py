@@ -192,12 +192,13 @@ def invia_telegram(messaggio):
 
 def send_telegram_signal(signal_type, pair, price, rsi, trade_id, stake, tipo_mercato): 
     timestamp = datetime.now(fuso_roma).strftime("%H:%M:%S")
-    mapping_nomi = {"V50", "V75", "V100"}
-    nome_reale = mapping_nomi.get(pair, pair)
+    
+    # Puliamo il nome rimuovendo 'frx' (gli indici Deriv non ce l'hanno)
+    nome_asset = pair.replace('frx', '')
     
     message = (
         f"🚀 *NUOVO TRADE*\n🔔 *Segnale:* {signal_type}\n🆔 ID: `{trade_id}`\n"
-        f"💱 Asset: {pair.replace('frx', '')}\n" 
+        f"💱 Asset: {nome_asset}\n" 
         f"🌍 Market: {tipo_mercato}\n💵 Stake: `{stake:.0f} €` \n" 
         f"💰 Prezzo: `{price:.5f}`\n📈 RSI Ingresso: `{rsi:.1f}`\n⏰ Ora: {timestamp}"
     )
