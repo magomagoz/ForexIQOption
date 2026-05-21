@@ -411,11 +411,6 @@ with st.sidebar:
             send_morning_report()
             st.toast("Report forzato inviato!", icon="🚀")
 
-            
-        if st.button("🔔 **TEST AUDIO SELL**", use_container_width=True):
-            play_trade_sound("sell")
-            st.toast("Test Suono SELL completato!", icon="⬇️")
-
         if st.button("🗑️ **PULISCI SEGNALI**", use_container_width=True):
             st.session_state.signal_history = []
             st.session_state.session_pnl = 0.0  
