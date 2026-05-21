@@ -411,14 +411,32 @@ with st.sidebar:
             send_morning_report()
             st.toast("Report forzato inviato!", icon="🚀")
 
-        if st.button("🗑️ **PULISCI SEGNALI**", use_container_width=True):
-            st.session_state.signal_history = []
-            st.session_state.session_pnl = 0.0  
-            st.session_state.local_balance = 1000.0 
-            save_journal([]) 
-            st.success("Memoria pulita e PNL resettato!")
-            time_module.sleep(1)
-            st.rerun()
+        # --- PULSANTE PULISCI SEGNALI CON CONFERMA ---
+        if 'conferma_pulizia' not in st.session_state:
+            st.session_state.conferma_pulizia = False
+
+        if not st.session_state.conferma_pulizia:
+            if st.button("🗑️ **PULISCI SEGNALI**", use_container_width=True):
+                st.session_state.conferma_pulizia = True
+                st.rerun()
+        else:
+            st.warning("⚠️ Sei sicuro di voler cancellare tutto lo storico?")
+            c1, c2 = st.columns(2)
+            with c1:
+                if st.button("✔️ SÌ", use_container_width=True, type="primary"):
+                    st.session_state.signal_history = []
+                    st.session_state.session_pnl = 0.0  
+                    st.session_state.local_balance = 1000.0 
+                    save_journal([]) 
+                    st.session_state.conferma_pulizia = False
+                    st.success("Memoria pulita e PNL resettato!")
+                    time_module.sleep(1)
+                    st.rerun()
+            with c2:
+                if st.button("❌ NO", use_container_width=True):
+                    st.session_state.conferma_pulizia = False
+                    st.rerun()
+
 
         stress_test = st.toggle("🚀 **STRESS MODE**", value=False)
         if stress_test:
