@@ -138,13 +138,13 @@ def draw_market_map_inverted(trading_autorizzato, pause_8_1030=False, pause_1330
 
     # --- AREE DI PAUSA (Filtri visivi sulla mappa) ---
     if pause_8_1030:
-        fig.add_vrect(x0=8, x1=10.5, fillcolor="#ff4b4b", opacity=0.3, layer="below", line_width=0, annotation_text="LONDRA", annotation_font_color="white", annotation_position="top left")
+        fig.add_vrect(x0=8, x1=10.5, fillcolor="#ff4b4b", opacity=0.3, layer="above", line_width=0, annotation_text="LONDRA", annotation_font_color="white", annotation_position="top left")
     if pause_1330_1430:
-        fig.add_vrect(x0=13.5, x1=14.5, fillcolor="#ff4b4b", opacity=0.3, layer="below", line_width=0, annotation_text="PRANZO", annotation_font_color="white", annotation_position="top left")
+        fig.add_vrect(x0=13.5, x1=14.5, fillcolor="#ff4b4b", opacity=0.3, layer="above", line_width=0, annotation_text="PRANZO", annotation_font_color="white", annotation_position="top left")
     if pausa_manuale_overlap:
-        fig.add_vrect(x0=14.5, x1=18, fillcolor="#ff4b4b", opacity=0.3, layer="below", line_width=0, annotation_text="OVERLAP", annotation_font_color="white", annotation_position="top left")
+        fig.add_vrect(x0=14.5, x1=18, fillcolor="#ff4b4b", opacity=0.3, layer="above", line_width=0, annotation_text="OVERLAP", annotation_font_color="white", annotation_position="top left")
     if is_domenica_sera:
-        fig.add_vrect(x0=17, x1=24, fillcolor="#ff4b4b", opacity=0.3, layer="below", line_width=0, annotation_text="OTC PRE-OPEN", annotation_font_color="white", annotation_position="top left")
+        fig.add_vrect(x0=17, x1=24, fillcolor="#ff4b4b", opacity=0.3, layer="above", line_width=0, annotation_text="OTC PRE-OPEN", annotation_font_color="white", annotation_position="top left")
 
     color_laser = "#FFD700" if trading_autorizzato else "#0F3ADA"
     fig.add_shape(type="line", x0=x_pos, x1=x_pos, y0=0, y1=4.5, line=dict(color=color_laser, width=3))
