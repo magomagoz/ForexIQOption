@@ -122,7 +122,7 @@ def get_market_status():
         return "🐌 **SESSIONE ASIATICA (TOKYO+SIDNEY)**"
     return "💤 **MERCATI CHIUSI**"
 
-def draw_market_map_inverted(trading_autorizzato):
+def draw_market_map_inverted(trading_autorizzato, pause_8_1030=False, pause_1330_1430=False, pausa_manuale_overlap=False, is_domenica_sera=False):
     fig = go.Figure()
     tz_roma = pytz.timezone('Europe/Rome')
     now_roma = datetime.now(tz_roma)
@@ -136,8 +136,20 @@ def draw_market_map_inverted(trading_autorizzato):
     if bg_image:
         fig.add_layout_image(dict(source=bg_image, xref="x", yref="y", x=24, y=4.5, sizex=24, sizey=4.5, sizing="stretch", opacity=1.0, layer="below"))
 
+    # --- AREE DI PAUSA (Filtri visivi sulla mappa) ---
+    if pause_8_1030:
+        fig.add_vrect(x0=8, x1=10.5, fillcolor="#ff4b4b", opacity=0.3, layer="below", line_width=0, annotation_text="LONDRA", annotation_font_color="white", annotation_position="top left")
+    if pause_1330_1430:
+        fig.add_vrect(x0=13.5, x1=14.5, fillcolor="#ff4b4b", opacity=0.3, layer="below", line_width=0, annotation_text="PRANZO", annotation_font_color="white", annotation_position="top left")
+    if pausa_manuale_overlap:
+        fig.add_vrect(x0=14.5, x1=18, fillcolor="#ff4b4b", opacity=0.3, layer="below", line_width=0, annotation_text="OVERLAP", annotation_font_color="white", annotation_position="top left")
+    if is_domenica_sera:
+        fig.add_vrect(x0=17, x1=24, fillcolor="#ff4b4b", opacity=0.3, layer="below", line_width=0, annotation_text="OTC PRE-OPEN", annotation_font_color="white", annotation_position="top left")
+
     color_laser = "#FFD700" if trading_autorizzato else "#0F3ADA"
     fig.add_shape(type="line", x0=x_pos, x1=x_pos, y0=0, y1=4.5, line=dict(color=color_laser, width=3))
+    
+    # Rispettate le direttive di layout (nessun superamento limite griglia)
     fig.update_layout(xaxis=dict(range=[24, 0], showgrid=False, visible=False, fixedrange=True), yaxis=dict(range=[0, 4.5], showgrid=False, visible=False, fixedrange=True), template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", margin=dict(l=0, r=0, t=0, b=0), height=350)
     return fig
 
@@ -517,8 +529,18 @@ if st.session_state.connected:
         try: st.image(Image.open("banner11.png"), use_column_width=True, caption="MODALITÀ WEEKEND ATTIVA 🔴 TRADE SU DERIV")
         except: st.warning("Immagine banner11.png non trovata.")
     else:
-        st.plotly_chart(draw_market_map_inverted(trading_autorizzato), use_container_width=True)
-
+        # Recupero lo stato della domenica per la stampa grafica
+        is_domenica = (now_roma.weekday() == 6)
+        is_domenica_sera = st.session_state.weekend_mode and is_domenica
+        
+        st.plotly_chart(draw_market_map_inverted(
+            trading_autorizzato, 
+            pause_8_1030, 
+            pause_1330_1430, 
+            pausa_manuale_overlap, 
+            is_domenica_sera
+        ), use_container_width=True)
+    
     if st.session_state.scanner_on:
         if not trading_autorizzato:
             st.error(motivo_blocco)
