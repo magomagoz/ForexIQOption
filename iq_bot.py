@@ -409,7 +409,7 @@ with st.sidebar:
         st.subheader("🛠️ PARAMETRI TRADING")
         st.session_state.stake = st.number_input("💶 INVESTIMENTO (€)", value=100.0)
         timeframe = st.selectbox("⏱️ TIMEFRAME GRAFICO (s)", [60, 120, 180, 300], index=0)
-        ema_period = st.selectbox("⏱️ Periodo EMA", [50, 100, 200], index=1)
+        ema_period = st.selectbox("⏱️ Periodo EMA", [50, 100, 200], index=0)
 
         st.divider()
         st.subheader("🖥️ TEST DASHBOARD")
