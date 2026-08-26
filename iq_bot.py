@@ -263,8 +263,8 @@ def play_trade_sound(sound_type="buy"):
 st.set_page_config(page_title="Sentinel AI", page_icon="🚀", layout="wide")
 st.markdown("""<style>[data-testid="stAppViewContainer"] * { transition: none !important; } div[data-testid="stVerticalBlock"] { opacity: 1 !important; }</style>""", unsafe_allow_html=True)
 
-try: st.image(Image.open("banner.png"), use_column_width=True)
-except: st.image("https://via.placeholder.com/800x100/ff4b4b/white?text=SENTINEL+AI", use_column_width=True)
+try: st.image(Image.open("banner.png"), use_container_width=True)
+except: st.image("https://via.placeholder.com/800x100/ff4b4b/white?text=SENTINEL+AI", use_container_width=True)
 
 if 'connected' not in st.session_state: st.session_state.connected = False
 if 'connection_source' not in st.session_state: st.session_state.connection_source = "Nessuna"
@@ -526,7 +526,7 @@ if st.session_state.connected:
     st.subheader("🌍 Market Flow 24h")
     
     if st.session_state.weekend_mode or is_weekend_reale:
-        try: st.image(Image.open("banner11.png"), use_column_width=True, caption="MODALITÀ WEEKEND ATTIVA 🔴 TRADE SU DERIV")
+        try: st.image(Image.open("banner11.png"), use_container_width=True, caption="MODALITÀ WEEKEND ATTIVA 🔴 TRADE SU DERIV")
         except: st.warning("Immagine banner11.png non trovata.")
     else:
         # Recupero lo stato della domenica per la stampa grafica
